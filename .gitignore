@@ -1,0 +1,22 @@
+# Swift / SwiftPM
+.build/
+.swiftpm/
+Packages/
+xcuserdata/
+*.xcodeproj/
+DerivedData/
+
+# 打包产物
+*.app/
+*.zip
+SHA256.txt
+
+# macOS / 编辑器
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# 照片旁挂（不要把别人照片的调整文件提交上来）
+*.rawforge.json
+build/

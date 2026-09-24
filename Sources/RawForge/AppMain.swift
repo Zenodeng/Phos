@@ -49,6 +49,11 @@ final class AppState: ObservableObject {
     @Published var mergeMode: MergeMode = .fusion
     @Published var mergeRunning = false
     @Published var mergeProgress: String = ""
+    @Published var alignEnabled = true        // 合成前先做帧对齐
+    @Published var alignMethod: AlignMethod = .translation
+
+    // 当前照片是否带人像深度辅助数据
+    @Published var hasDisparity = false
 
     let history = History()
     let cluts = CLUTLibrary.shared
@@ -121,6 +126,7 @@ final class AppState: ObservableObject {
         }
         history.stack = [params]; history.index = 0
         selectedMask = nil
+        hasDisparity = Engine.hasDisparity(u)
         render()
     }
 
@@ -218,11 +224,20 @@ final class AppState: ObservableObject {
         let p = cropMode ? params.cropNeutral : params
         let longEdge = previewLongEdge
         let needFull = fullResPreview || oneToOne
+        let isCropMode = cropMode
+        let currentURL = current?.url
         renderTask = Task.detached(priority: .userInitiated) {
             let e = src.extent
             let s: CGFloat = needFull ? 1.0 : min(1, longEdge / max(e.width, e.height))
             let base = s < 1 ? src.transformed(by: CGAffineTransform(scaleX: s, y: s)) : src
-            let out = Engine.render(base, p)
+            // 散景深度：用户没涂深度蒙版时，尝试 HEIC disparity（裁剪/旋转校正场景不接，避免错配）
+            var disp: CIImage? = nil
+            if !isCropMode, p.bokehAmount > 0,
+               !p.masks.contains(where: { $0.kind == .depth && $0.enabled }),
+               let u = currentURL {
+                disp = Engine.disparityBokehMask(for: u, target: base.extent)
+            }
+            let out = Engine.render(base, p, disparityMask: disp)
             let cg = Engine.ctx.createCGImage(out, from: out.extent, format: .RGBA8, colorSpace: Engine.srgb)
             let h = Engine.histogram(out)
             await MainActor.run {
@@ -306,37 +321,52 @@ final class AppState: ObservableObject {
         mergeRunning = true
         mergeProgress = "解码 \(urls.count) 张…"
         let mode = mergeMode
+        // 降噪模式必须对齐；其余按开关
+        let doAlign = alignEnabled || mode == .denoise
+        let am = alignMethod
 
-        let dest: URL? = await Task.detached(priority: .userInitiated) {
+        let dest: (url: URL, dropped: Int, used: Int)? = await Task.detached(priority: .userInitiated) {
             var frames: [CIImage] = []
             for u in urls {
                 autoreleasepool {
                     if let ci = Engine.decode(u) { frames.append(ci) }
                 }
             }
-            guard frames.count >= 2, let merged = Engine.fuse(frames, mode: mode) else { return nil }
+            var dropped = 0
+            if doAlign {
+                await MainActor.run { self.mergeProgress = "对齐帧（Vision 注册 + 质量门）…" }
+                let outcome = Engine.alignFrames(frames, method: am, threshold: 0.7)
+                frames = outcome.frames
+                dropped = outcome.dropped
+            }
+            guard frames.count >= 2 else { return nil }
+            await MainActor.run {
+                self.mergeProgress = "融合 \(frames.count) 帧…"
+            }
+            guard let merged = Engine.fuse(frames, mode: mode) else { return nil }
             let first = urls[0].deletingPathExtension()
             let out = first.deletingLastPathComponent()
                 .appendingPathComponent(first.lastPathComponent + "_合成.tif")
-            do { try Engine.write16(merged, to: out); return out } catch { return nil }
+            do { try Engine.write16(merged, to: out) } catch { return nil }
+            return (out, dropped, frames.count)
         }.value
 
-        guard let out = dest else {
+        guard let dest else {
             mergeRunning = false
             mergeProgress = ""
-            status = "合成失败（解码或写盘出错）"
+            status = "合成失败：对齐质量门后有效帧不足，或解码/写盘出错"
             return
         }
 
         // 结果若在当前文件夹里，插进列表并选中
-        if let f = folder, out.deletingLastPathComponent().standardizedFileURL == f.standardizedFileURL {
-            var it = PhotoItem(url: out)
-            if let sc = SidecarStore.load(for: out) { it.rating = sc.rating; it.picked = sc.picked }
+        if let f = folder, dest.url.deletingLastPathComponent().standardizedFileURL == f.standardizedFileURL {
+            var it = PhotoItem(url: dest.url)
+            if let sc = SidecarStore.load(for: dest.url) { it.rating = sc.rating; it.picked = sc.picked }
             items.append(it)
             items.sort { $0.url.lastPathComponent.localizedStandardCompare($1.url.lastPathComponent) == .orderedAscending }
-            if let idx = items.firstIndex(where: { $0.url == out }) {
+            if let idx = items.firstIndex(where: { $0.url == dest.url }) {
                 select(idx)
-                let u = out
+                let u = dest.url
                 let cg = await Task.detached { Self.thumb(for: u) }.value
                 if let cg, idx < items.count { items[idx].thumb = cg }
             }
@@ -344,7 +374,11 @@ final class AppState: ObservableObject {
         mergeRunning = false
         mergeProgress = ""
         showMerge = false
-        status = "已合成 \(urls.count) 张 → \(out.lastPathComponent)"
+        if dest.dropped > 0 {
+            status = "已合成 \(dest.used) 张（剔除 \(dest.dropped) 张对齐不合格）→ \(dest.url.lastPathComponent)"
+        } else {
+            status = "已合成 \(dest.used) 张 → \(dest.url.lastPathComponent)"
+        }
     }
 
     func mergePicked() async {
@@ -365,6 +399,41 @@ final class AppState: ObservableObject {
             status = "已导出 \(url.lastPathComponent)"
         } catch {
             status = "导出失败：\(error.localizedDescription)"
+        }
+    }
+
+    /// 主体抠图导出：渲染整图 → 用「主体抠图」蒙版做 alpha → 透明背景落盘（PNG/TIFF）
+    func exportCutout(to url: URL) {
+        guard let src = source,
+              let fm = params.masks.first(where: { $0.kind == .foreground && $0.enabled })
+        else {
+            status = "没有可用的「主体抠图」蒙版，先在局部调整里新建一个"
+            return
+        }
+        let rendered = Engine.render(src, params)
+        guard let mask = Engine.maskImage(for: fm, extent: rendered.extent,
+                                          analyzed: rendered) else {
+            status = "抠图蒙版计算失败"
+            return
+        }
+        // 蒙版亮度 → alpha（RGB 原样保留）
+        let alphaMask = mask.applyingFilter("CIColorMatrix", parameters: [
+            "inputRVector": CIVector(x: 1, y: 0, z: 0, w: 0),
+            "inputGVector": CIVector(x: 0, y: 1, z: 0, w: 0),
+            "inputBVector": CIVector(x: 0, y: 0, z: 1, w: 0),
+            "inputAVector": CIVector(x: 1, y: 0, z: 0, w: 0)
+        ])
+        let transparent = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0))
+            .cropped(to: rendered.extent)
+        let cut = rendered.applyingFilter("CIBlendWithAlphaMask", parameters: [
+            kCIInputBackgroundImageKey: transparent,
+            kCIInputMaskImageKey: alphaMask
+        ])
+        do {
+            try Engine.write(cut, to: url, settings: exportSettings)
+            status = "已导出抠图 \(url.lastPathComponent)"
+        } catch {
+            status = "抠图导出失败：\(error.localizedDescription)"
         }
     }
 

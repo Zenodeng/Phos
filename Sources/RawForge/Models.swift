@@ -182,7 +182,7 @@ struct LocalAdjust: Codable, Equatable {
 
 // MARK: - 蒙版
 enum MaskKind: String, Codable, CaseIterable {
-    case linear, radial, brush, colorRange, luminanceRange, subject, person
+    case linear, radial, brush, colorRange, luminanceRange, subject, person, foreground, depth
     var label: String {
         switch self {
         case .linear: return "线性渐变"
@@ -192,10 +192,12 @@ enum MaskKind: String, Codable, CaseIterable {
         case .luminanceRange: return "亮度范围"
         case .subject: return "选择主体"
         case .person: return "选择人物"
+        case .foreground: return "主体抠图"
+        case .depth: return "深度涂绘"
         }
     }
     /// 是否用到了系统视觉模型（Vision），这类蒙版计算较重，需要缓存
-    var usesVision: Bool { self == .subject || self == .person }
+    var usesVision: Bool { self == .subject || self == .person || self == .foreground }
     var isSampler: Bool { self == .colorRange || self == .luminanceRange }
 }
 
@@ -317,6 +319,10 @@ struct EditParams: Codable, Equatable {
     var halationThreshold: Double = 60 // 高光阈值 0...100
     var halationRadius: Double = 0.33  // 半径 0...1 → 长边的 0.5%~2%
 
+    // 焦外散景：0 = 关闭，0...100 控制虚化强度。
+    // 深度蒙版来源：iPhone 人像 HEIC 的 disparity 辅助数据，或一张「深度涂绘」蒙版（涂白=被虚化）
+    var bokehAmount: Double = 0
+
     // 镜头校正
     var caAmount: Double = 0           // 横向色差 -100...100
     var purpleFringe: Double = 0       // 紫边抑制 0...100
@@ -370,6 +376,7 @@ struct EditParams: Codable, Equatable {
         case denoise, denoiseColor, grain, grainSize
         case vignette, vignetteStart
         case halation, halationThreshold, halationRadius
+        case bokehAmount
         case caAmount, purpleFringe
         case primRed, primGreen, primBlue, calibShadowTint
         case clutName, clutStrength
@@ -431,6 +438,7 @@ struct EditParams: Codable, Equatable {
         halation       = try c.decodeIfPresent(Double.self, forKey: .halation)       ?? base.halation
         halationThreshold = try c.decodeIfPresent(Double.self, forKey: .halationThreshold) ?? base.halationThreshold
         halationRadius = try c.decodeIfPresent(Double.self, forKey: .halationRadius) ?? base.halationRadius
+        bokehAmount    = try c.decodeIfPresent(Double.self, forKey: .bokehAmount) ?? base.bokehAmount
         caAmount       = try c.decodeIfPresent(Double.self, forKey: .caAmount)       ?? base.caAmount
         purpleFringe   = try c.decodeIfPresent(Double.self, forKey: .purpleFringe)   ?? base.purpleFringe
         perspectiveAuto = try c.decodeIfPresent(Bool.self, forKey: .perspectiveAuto) ?? base.perspectiveAuto
@@ -467,17 +475,19 @@ struct ExportSettings: Codable, Equatable {
 
 // MARK: - 多重曝光合成模式
 enum MergeMode: String, Codable, CaseIterable {
-    case average, fusion
+    case average, fusion, denoise
     var label: String {
         switch self {
         case .average: return "平均合成"
         case .fusion:  return "曝光融合"
+        case .denoise: return "手持降噪"
         }
     }
     var hint: String {
         switch self {
         case .average: return "所有帧等权叠加：适合降噪、流水/星轨，张数越多越干净"
         case .fusion:  return "按每像素的曝光合适度加权：每张取它曝光最好的部分，适合大光比的包围曝光"
+        case .denoise: return "对齐后逐像素平均：偏离参考帧 kσ 的像素按参考值取，压手持噪点与移动物体鬼影（自动开启帧对齐）"
         }
     }
 }

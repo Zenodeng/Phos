@@ -20,16 +20,110 @@ struct SliderRow: View {
     @Binding var value: Double
     var range: ClosedRange<Double> = -100...100
     var onEdit: () -> Void = {}
+
+    /// 双极滑块（范围跨 0）显示中心零位标记
+    private var bipolar: Bool { range.lowerBound < 0 && range.upperBound > 0 }
+
+    /// 按量程决定小数位：大量程取整，小量程保留 1~2 位
+    private var text: String {
+        let span = range.upperBound - range.lowerBound
+        if span >= 50 { return String(format: "%.0f", value) }
+        if span > 5   { return String(format: "%.1f", value) }
+        return String(format: "%.2f", value)
+    }
+
+    // 数值直接输入
+    @State private var editing = false
+    @State private var draft = ""
+    @FocusState private var fieldFocused: Bool
+    @State private var valueHover = false
+
     var body: some View {
-        HStack(spacing: 6) {
-            Text(label).frame(width: 58, alignment: .leading).font(.system(size: 11))
-            Slider(value: $value, in: range) { editing in if !editing { onEdit() } }
-                .controlSize(.small)
-            Text(String(format: "%.0f", value))
-                .font(.system(size: 10, design: .monospaced))
-                .frame(width: 34, alignment: .trailing)
+        HStack(spacing: 7) {
+            Text(label)
+                .frame(width: 52, alignment: .leading)
+                .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.secondary)
+            ZStack {
+                Slider(value: $value, in: range) { editing in if !editing { onEdit() } }
+                    .controlSize(.small)
+                if bipolar {
+                    Capsule()
+                        .fill(Color.primary.opacity(0.3))
+                        .frame(width: 2, height: 7)
+                        .allowsHitTesting(false)
+                }
+            }
+            valueField
+                .frame(width: 44, alignment: .trailing)
         }
+    }
+
+    @ViewBuilder
+    private var valueField: some View {
+        if editing {
+            TextField("", text: $draft)
+                .textFieldStyle(.roundedBorder)
+                .controlSize(.small)
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .multilineTextAlignment(.trailing)
+                .focused($fieldFocused)
+                .onSubmit(commitInput)
+                .onExitCommand { cancelInput() }
+                .onAppear { fieldFocused = true }
+                .onChange(of: fieldFocused) { focused in
+                    // 点到别处（失焦）等同确认
+                    if !focused { commitInput() }
+                }
+        } else {
+            Text(text)
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .foregroundStyle(valueHover ? Color.primary : .secondary)
+                .padding(.horizontal, 4).padding(.vertical, 1)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(valueHover ? Color(nsColor: .rfPill) : .clear)
+                )
+                .contentShape(Rectangle())
+                .help("单击直接输入数值（最多两位小数，范围 \(format(range.lowerBound)) ~ \(format(range.upperBound))）")
+                .onHover { valueHover = $0 }
+                .onTapGesture { startInput() }
+        }
+    }
+
+    private func format(_ v: Double) -> String {
+        var s = String(format: "%.2f", v)
+        if s.contains(".") {
+            s = s.trimmingCharacters(in: ["0"]).trimmingCharacters(in: ["."])
+        }
+        return s
+    }
+
+    private func startInput() {
+        draft = format(value)
+        editing = true
+    }
+
+    private func cancelInput() {
+        editing = false
+        draft = ""
+    }
+
+    private func commitInput() {
+        guard editing else { return }
+        var raw = draft.trimmingCharacters(in: .whitespaces)
+        // 兼容中文输入法里的逗号小数点，如 1,5
+        if raw.contains("."), !raw.contains(",") { } else if raw.contains(",") {
+            raw = raw.replacingOccurrences(of: ",", with: ".")
+        }
+        if let v = Double(raw) {
+            // 最多两位小数 + 夹到合法范围
+            let rounded = (v * 100).rounded() / 100
+            let clamped = min(max(rounded, range.lowerBound), range.upperBound)
+            value = clamped
+            onEdit()
+        }
+        cancelInput()
     }
 }
 
@@ -39,6 +133,7 @@ struct MainWindow: View {
     var body: some View {
         VStack(spacing: 0) {
             TopBar()
+            Divider()
             HSplitView {
                 BrowserPane().frame(minWidth: 200, idealWidth: 250, maxWidth: 380)
                 VStack(spacing: 0) {
@@ -61,44 +156,70 @@ struct MainWindow: View {
 struct TopBar: View {
     @EnvironmentObject var s: AppState
     var body: some View {
-        HStack(spacing: 10) {
-            Button("打开文件夹") {
+        HStack(spacing: 6) {
+            ToolButton(systemImage: "folder", title: "打开文件夹（⌘O）") {
                 let p = NSOpenPanel(); p.canChooseDirectories = true; p.canChooseFiles = false
                 if p.runModal() == .OK, let u = p.url { s.openFolder(u) }
             }
-            Button("前后对比") { s.refreshBefore(); s.showBefore.toggle() }
-                .keyboardShortcut("b")
-            Toggle("全像素", isOn: $s.fullResPreview)
-                .toggleStyle(.checkbox).controlSize(.small)
-                .help("关：预览走 2200px 代理图（快）。开：整条管线按原图全分辨率渲染（慢但所见即所得）")
-            Button("1:1") {
+            ToolDivider()
+            ToolButton(systemImage: "square.on.square", title: "前后对比（⌘B）",
+                       active: s.showBefore) { s.refreshBefore(); s.showBefore.toggle() }
+            ToolDivider()
+            PillToggle(title: "全像素", isOn: $s.fullResPreview,
+                       helpText: "关：预览走 2200px 代理图（快）。开：整条管线按原图全分辨率渲染（慢但所见即所得）")
+            PillButton(title: "1:1", active: s.oneToOne,
+                       helpText: "按屏幕像素 1:1 显示，检查锐度用") {
                 s.fullResPreview = true
                 s.oneToOne.toggle()
             }
-            .help("按屏幕像素 1:1 显示，检查锐度用")
-            Button("撤销") { s.undo() }.disabled(!s.history.canUndo)
-            Button("重做") { s.redo() }.disabled(!s.history.canRedo)
-            Menu("预设") {
+            ToolDivider()
+            ToolButton(systemImage: "arrow.uturn.backward", title: "撤销（⌘Z）",
+                       disabled: !s.history.canUndo) { s.undo() }
+            ToolButton(systemImage: "arrow.uturn.forward", title: "重做（⇧⌘Z）",
+                       disabled: !s.history.canRedo) { s.redo() }
+            ToolDivider()
+            Menu {
                 ForEach(s.loadPresets()) { p in
                     Button(p.name) { s.commit(p.params) }
                 }
                 Divider()
                 Button("保存当前为预设…") { savePreset() }
+            } label: {
+                Image(systemName: "wand.and.stars")
+                    .font(.system(size: 13.5, weight: .medium))
+                    .frame(width: 30, height: 26)
+                    .foregroundStyle(Color.primary)
             }
-            .frame(width: 80)
-            Button("导出") { s.showExport = true }
-            Button("批量导出") { s.showBatch = true }
-            Button(s.cropMode ? "退出裁剪" : "裁剪") { s.toggleCropMode() }
-                .keyboardShortcut("r")
-                .help("裁剪与方向调整（R）：画布上拖角/边裁剪，工具条切画幅、旋转、自动校直")
-            Button("多重曝光") { s.showMerge = true }
-                .help("把多张包围曝光/多帧合成一张（曝光融合 / 平均）")
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+            .help("预设")
+            ToolDivider()
+            ToolButton(systemImage: "square.and.arrow.down", title: "导出当前照片（⌘E）") {
+                s.showExport = true
+            }
+            ToolButton(systemImage: "tray.and.arrow.down", title: "批量导出") {
+                s.showBatch = true
+            }
+            ToolDivider()
+            ToolButton(systemImage: "scissors", title: "裁剪（⌘R）",
+                       active: s.cropMode, shortcut: "r") { s.toggleCropMode() }
+            ToolButton(systemImage: "rectangle.stack", title: "多重曝光合成（⇧⌘M）") {
+                s.showMerge = true
+            }
             Spacer()
-            if s.previewing { ProgressView().controlSize(.small) }
+            if s.previewing {
+                ProgressView().controlSize(.small).padding(.trailing, 2)
+            }
             Text(s.current?.url.lastPathComponent ?? "未打开")
-                .font(.system(size: 11)).foregroundStyle(.secondary)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .padding(.trailing, 4)
         }
-        .padding(.horizontal, 10).padding(.vertical, 6)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.bar)
     }
 
     func savePreset() {
@@ -118,14 +239,26 @@ struct TopBar: View {
 // MARK: - 浏览器
 struct BrowserPane: View {
     @EnvironmentObject var s: AppState
-    let cols = [GridItem(.adaptive(minimum: 92), spacing: 6)]
+    let cols = [GridItem(.adaptive(minimum: 92), spacing: 8)]
+    var visibleCount: Int {
+        s.items.filter { s.filterRating == 0 || $0.rating >= s.filterRating }.count
+    }
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
+            HStack(spacing: 5) {
+                Image(systemName: "folder.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
                 Text(s.folder?.lastPathComponent ?? "未选择文件夹")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 11, weight: .semibold))
                     .lineLimit(1)
+                    .truncationMode(.middle)
                 Spacer()
+                Text("\(visibleCount)")
+                    .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 5).padding(.vertical, 1)
+                    .background(Capsule().fill(Color(nsColor: .rfPill)))
                 Menu {
                     Button("全部") { s.filterRating = 0 }
                     ForEach(1...5, id: \.self) { r in
@@ -134,13 +267,15 @@ struct BrowserPane: View {
                 } label: {
                     Image(systemName: s.filterRating == 0 ? "line.3.horizontal.decrease" : "star.fill")
                         .font(.system(size: 11))
+                        .frame(width: 22, height: 20)
                 }
-                .menuStyle(.borderlessButton).frame(width: 26)
+                .menuStyle(.borderlessButton)
+                .fixedSize()
             }
-            .padding(.horizontal, 8).padding(.vertical, 5)
+            .padding(.horizontal, 9).padding(.vertical, 7)
 
             ScrollView {
-                LazyVGrid(columns: cols, spacing: 6) {
+                LazyVGrid(columns: cols, spacing: 8) {
                     ForEach(Array(s.items.enumerated()), id: \.element.id) { idx, it in
                         if s.filterRating == 0 || it.rating >= s.filterRating {
                             ThumbCell(item: it, selected: idx == s.currentIndex)
@@ -148,7 +283,7 @@ struct BrowserPane: View {
                         }
                     }
                 }
-                .padding(6)
+                .padding(8)
             }
         }
         .background(Color(nsColor: .controlBackgroundColor))
@@ -158,33 +293,50 @@ struct BrowserPane: View {
 struct ThumbCell: View {
     let item: PhotoItem
     let selected: Bool
+    @State private var hover = false
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             Group {
                 if let cg = item.thumb {
                     Image(decorative: cg, scale: 1).resizable().scaledToFill()
                 } else {
-                    Rectangle().fill(.quaternary)
+                    ZStack {
+                        Rectangle().fill(.quaternary)
+                        ProgressView().controlSize(.mini)
+                    }
                 }
             }
             .frame(width: 92, height: 92).clipped()
-            .cornerRadius(4)
+            .cornerRadius(6)
+
             HStack(spacing: 1) {
                 ForEach(1...5, id: \.self) { i in
                     Image(systemName: i <= item.rating ? "star.fill" : "star")
-                        .font(.system(size: 7)).foregroundStyle(i <= item.rating ? .yellow : .white.opacity(0.7))
+                        .font(.system(size: 7))
+                        .foregroundStyle(i <= item.rating ? .yellow : .white.opacity(0.75))
                 }
             }
-            .padding(3)
-            .background(.black.opacity(0.35), in: RoundedRectangle(cornerRadius: 3))
-            .padding(3)
+            .padding(.horizontal, 4).padding(.vertical, 2)
+            .background(.black.opacity(0.45), in: Capsule())
+            .padding(4)
+
             if item.picked {
-                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                    .font(.system(size: 13)).padding(3)
+                Image(systemName: "checkmark.circle.fill")
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.white, .green)
+                    .font(.system(size: 15))
+                    .padding(3)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
             }
         }
-        .overlay(RoundedRectangle(cornerRadius: 4)
-            .stroke(selected ? Color.accentColor : .clear, lineWidth: 2))
+        .scaleEffect(hover && !selected ? 1.03 : 1)
+        .overlay(RoundedRectangle(cornerRadius: 6)
+            .stroke(selected ? Color.accentColor : Color(nsColor: .rfCardBorder),
+                    lineWidth: selected ? 2.5 : 0.5))
+        .shadow(color: selected ? Color.accentColor.opacity(0.35) : .clear,
+                radius: 5, x: 0, y: 2)
+        .animation(.easeOut(duration: 0.12), value: hover)
+        .onHover { hover = $0 }
     }
 }
 
@@ -211,7 +363,7 @@ struct CanvasPane: View {
                 y: (geo.size.height - fit.height * scale) / 2 + offset.height,
                 width: fit.width * scale, height: fit.height * scale)
             ZStack {
-                Color.black.opacity(0.92)
+                Color(white: 0.08)
                 if s.oneToOne, let cg = img {
                     // 1:1：按屏幕像素原样摆，外面套滚动视图，检查锐度用
                     ScrollView([.horizontal, .vertical]) {
@@ -234,10 +386,16 @@ struct CanvasPane: View {
                             }
                         }
                 } else {
-                    VStack(spacing: 6) {
-                        Text("打开一个文件夹开始").foregroundStyle(.secondary)
+                    VStack(spacing: 10) {
+                        Image(systemName: "photo.on.rectangle.angled")
+                            .font(.system(size: 40, weight: .light))
+                            .foregroundStyle(.white.opacity(0.35))
+                        Text("打开一个文件夹开始")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.7))
                         Text("支持 RAW · HEIF/HEIC · JPEG · PNG · TIFF · AVIF")
-                            .font(.system(size: 11)).foregroundStyle(.tertiary)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.white.opacity(0.35))
                     }
                 }
                 }
@@ -249,7 +407,7 @@ struct CanvasPane: View {
             })
             .onChange(of: s.currentIndex) { scale = 1; offset = .zero }
             // 裁剪模式：叠加裁剪框（作为画布兄弟视图，需要真实显示矩形）
-            if s.cropMode, let cg = img, !s.oneToOne {
+            if s.cropMode, img != nil, !s.oneToOne {
                 CropOverlay(frame: dispRect)
                 CropBar()
             }
@@ -273,14 +431,14 @@ struct CanvasPane: View {
                 if let id = s.selectedMask,
                    let m = s.params.masks.first(where: { $0.id == id }) {
                     switch m.kind {
-                    case .brush:
+                    case .brush, .depth:
                         paint(v.location, frame: frame, mask: m)
                     case .linear, .radial:
                         moveMask(v.translation, frame: frame, mask: m)
                     case .colorRange, .luminanceRange:
                         // 取样类蒙版：在画布上拖到哪儿就取哪儿的颜色/亮度
                         sample(v.location, frame: frame, mask: m)
-                    case .subject, .person:
+                    case .subject, .person, .foreground:
                         break        // AI 蒙版不需要手绘
                     }
                 } else {
@@ -414,23 +572,33 @@ struct Handle: View {
 struct HistogramBar: View {
     @EnvironmentObject var s: AppState
     var body: some View {
-        HStack(alignment: .center, spacing: 8) {
-            HistogramView(bins: s.hist).frame(width: 260, height: 66)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(s.showBefore ? "原图" : "调整后").font(.system(size: 11, weight: .medium))
+        HStack(alignment: .center, spacing: 10) {
+            HistogramView(bins: s.hist)
+                .frame(width: 260, height: 62)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(s.showBefore ? Color.orange : Color.accentColor)
+                        .frame(width: 6, height: 6)
+                    Text(s.showBefore ? "原图" : "调整后")
+                        .font(.system(size: 11, weight: .semibold))
+                }
                 Text(String(format: "原图 %d × %d",
                             Int(s.sourceSize.width), Int(s.sourceSize.height)))
                     .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.secondary)
                 Text(s.lastPreviewScale >= 0.999
                      ? "预览：全像素"
                      : String(format: "预览：%d%%（代理图）", Int(s.lastPreviewScale * 100)))
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
                     .foregroundStyle(s.lastPreviewScale >= 0.999 ? Color.green : .secondary)
             }
             Spacer()
         }
-        .padding(.horizontal, 10).padding(.vertical, 6)
+        .padding(.horizontal, 12).padding(.vertical, 8)
         .background(Color(nsColor: .controlBackgroundColor))
+        .overlay(Rectangle().fill(Color(nsColor: .rfCardBorder)).frame(height: 0.5),
+                 alignment: .top)
     }
 }
 
@@ -453,13 +621,15 @@ struct HistogramView: View {
                 p.closeSubpath()
                 return p
             }
-            ctx.fill(path(bins.l), with: .color(.white.opacity(0.25)))
+            ctx.fill(path(bins.l), with: .color(.white.opacity(0.22)))
             ctx.fill(path(bins.r), with: .color(.red.opacity(0.45)))
             ctx.fill(path(bins.g), with: .color(.green.opacity(0.45)))
             ctx.fill(path(bins.b), with: .color(.blue.opacity(0.45)))
         }
-        .background(Color.black.opacity(0.85))
-        .cornerRadius(4)
+        .background(Color(white: 0.10))
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous)
+            .stroke(Color(nsColor: .rfCardBorder), lineWidth: 0.5))
     }
 }
 
@@ -468,23 +638,77 @@ struct CropBar: View {
     @EnvironmentObject var s: AppState
     private let presets: [(String, Double?)] = [("自由", nil), ("1:1", 1), ("4:3", 4.0/3), ("3:2", 3.0/2), ("16:9", 16.0/9)]
     var body: some View {
-        HStack(spacing: 6) {
-            Text("画幅").font(.system(size: 10)).foregroundStyle(.secondary)
-            ForEach(presets, id: \.0) { name, ratio in
-                Button(name) { s.applyCropAspect(ratio) }.controlSize(.small)
-            }
-            Divider().frame(height: 14)
-            Text("方向").font(.system(size: 10)).foregroundStyle(.secondary)
-            Button("↺") { s.set(\.rotation, (s.params.rotation + 270) % 360); s.endEdit() }.controlSize(.small)
-            Button("↻") { s.set(\.rotation, (s.params.rotation + 90) % 360); s.endEdit() }.controlSize(.small)
-            Button("⇋") { s.set(\.flipped, !s.params.flipped); s.endEdit() }.controlSize(.small)
-            Button("自动校直") { s.autoStraighten() }.controlSize(.small)
-            Spacer()
-            Button("完成") { s.toggleCropMode() }.controlSize(.small)
+        VStack {
+            HStack(spacing: 3) {
+                Text("画幅")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.6))
+                    .padding(.leading, 4)
+                ForEach(presets, id: \.0) { name, ratio in
+                    BarButton(title: name) { s.applyCropAspect(ratio) }
+                }
+                Rectangle()
+                    .fill(.white.opacity(0.2))
+                    .frame(width: 1, height: 14)
+                    .padding(.horizontal, 3)
+                BarButton(title: "↺", help: "逆时针旋转 90°") {
+                    s.set(\.rotation, (s.params.rotation + 270) % 360); s.endEdit()
+                }
+                BarButton(title: "↻", help: "顺时针旋转 90°") {
+                    s.set(\.rotation, (s.params.rotation + 90) % 360); s.endEdit()
+                }
+                BarButton(title: "⇋", help: "水平翻转") {
+                    s.set(\.flipped, !s.params.flipped); s.endEdit()
+                }
+                BarButton(title: "自动校直", help: "Vision 检测地平线并自动裁切") {
+                    s.autoStraighten()
+                }
+                Rectangle()
+                    .fill(.white.opacity(0.2))
+                    .frame(width: 1, height: 14)
+                    .padding(.horizontal, 3)
+                Button {
+                    s.toggleCropMode()
+                } label: {
+                    Text("完成")
+                        .font(.system(size: 11, weight: .semibold))
+                        .padding(.horizontal, 10).padding(.vertical, 3)
+                        .background(Capsule().fill(Color.accentColor))
+                        .foregroundStyle(.white)
+                }
+                .buttonStyle(.plain)
                 .keyboardShortcut(.return)
+                .padding(.trailing, 2)
+            }
+            .padding(.horizontal, 6).padding(.vertical, 5)
+            .background(.ultraThinMaterial, in: Capsule(style: .continuous))
+            .overlay(Capsule(style: .continuous)
+                .stroke(.white.opacity(0.15), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.35), radius: 12, x: 0, y: 4)
+            .padding(.top, 10)
+            Spacer()
         }
-        .padding(.horizontal, 8).padding(.vertical, 4)
-        .background(Color(nsColor: .controlBackgroundColor))
+    }
+}
+
+/// 裁剪浮动条里的小按钮
+struct BarButton: View {
+    let title: String
+    var help: String = ""
+    let action: () -> Void
+    @State private var hover = false
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 10.5, weight: .medium))
+                .padding(.horizontal, 7).padding(.vertical, 3)
+                .foregroundStyle(hover ? .white : .white.opacity(0.75))
+                .background(Capsule().fill(hover ? .white.opacity(0.18) : .clear))
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .help(help)
+        .onHover { hover = $0 }
     }
 }
 
@@ -599,24 +823,40 @@ struct CropOverlay: View {
 struct StatusBar: View {
     @EnvironmentObject var s: AppState
     var body: some View {
-        HStack {
-            Text(s.status).font(.system(size: 11))
+        HStack(spacing: 8) {
+            Image(systemName: "circle.fill")
+                .font(.system(size: 5))
+                .foregroundStyle(s.previewing ? Color.orange : Color.green)
+            Text(s.status)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
             Spacer()
             if let it = s.current {
-                HStack(spacing: 2) {
+                HStack(spacing: 3) {
                     ForEach(1...5, id: \.self) { i in
                         Image(systemName: i <= it.rating ? "star.fill" : "star")
-                            .foregroundStyle(i <= it.rating ? .yellow : .secondary)
-                            .font(.system(size: 12))
+                            .foregroundStyle(i <= it.rating ? .yellow : .secondary.opacity(0.5))
+                            .font(.system(size: 11))
                             .onTapGesture { s.setRating(i == it.rating ? 0 : i) }
                     }
                 }
-                Button(it.picked ? "已选" : "标记") { s.togglePick() }
-                    .controlSize(.small)
+                Button {
+                    s.togglePick()
+                } label: {
+                    Label(it.picked ? "已标记" : "标记",
+                          systemImage: it.picked ? "checkmark" : "flag")
+                        .font(.system(size: 10.5, weight: .medium))
+                        .padding(.horizontal, 8).padding(.vertical, 2)
+                        .foregroundStyle(it.picked ? Color.white : Color.primary)
+                        .background(Capsule().fill(it.picked ? Color.accentColor
+                                                      : Color(nsColor: .rfPill)))
+                }
+                .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 10).padding(.vertical, 4)
-        .background(Color(nsColor: .controlBackgroundColor))
+        .padding(.horizontal, 12).padding(.vertical, 5)
+        .background(.bar)
     }
 }
 
@@ -624,71 +864,166 @@ struct StatusBar: View {
 struct MergeSheet: View {
     @EnvironmentObject var s: AppState
     @Environment(\.dismiss) var dismiss
-    @State private var files: [URL] = []
 
-    var pickedURLs: [URL] { s.items.filter { $0.picked }.map { $0.url } }
-    var list: [URL] { files.isEmpty ? pickedURLs : files }
+    /// 面板内直接勾选的当前文件夹照片
+    @State private var selected: Set<UUID> = []
+    /// 从文件夹外另外添加的文件
+    @State private var external: [URL] = []
+
+    /// 最终合成顺序：文件夹照片按列表顺序，外部文件追加在后
+    var list: [URL] {
+        let inFolder = s.items.filter { selected.contains($0.id) }.map { $0.url }
+        return inFolder + external
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("多重曝光合成").font(.headline)
-
-            Picker("方式", selection: $s.mergeMode) {
-                ForEach(MergeMode.allCases, id: \.self) { m in Text(m.label).tag(m) }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            Text(s.mergeMode.hint)
-                .font(.system(size: 11)).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Divider()
-
-            HStack(spacing: 8) {
-                Button("用已标记的照片（\(pickedURLs.count) 张）") { files = [] }
-                    .controlSize(.small)
-                Button("选择文件…") { choose() }.controlSize(.small)
-                Spacer()
-                if !files.isEmpty { Button("清除选择") { files = [] }.controlSize(.small) }
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 9) {
+                Image(systemName: "rectangle.stack")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 30, height: 30)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.accentColor))
+                Text("多重曝光合成")
+                    .font(.system(size: 15, weight: .bold))
             }
 
-            Text("将合成 \(list.count) 张").font(.system(size: 11, weight: .medium))
-            ScrollView {
-                VStack(alignment: .leading, spacing: 2) {
-                    ForEach(list, id: \.self) { u in
-                        Text(u.lastPathComponent)
-                            .font(.system(size: 10, design: .monospaced))
-                            .lineLimit(1).foregroundStyle(.secondary)
+            // 合成方式
+            VStack(alignment: .leading, spacing: 6) {
+                Picker("方式", selection: $s.mergeMode) {
+                    ForEach(MergeMode.allCases, id: \.self) { m in Text(m.label).tag(m) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .disabled(s.mergeRunning)
+                Text(s.mergeMode.hint)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            // 对齐选项
+            VStack(alignment: .leading, spacing: 6) {
+                Toggle("先对齐帧（重叠区 NCC < 0.7 的帧自动剔除）", isOn: Binding(
+                    get: { s.alignEnabled || s.mergeMode == .denoise },
+                    set: { s.alignEnabled = $0 }))
+                    .font(.system(size: 10.5))
+                    .disabled(s.mergeMode == .denoise || s.mergeRunning)
+                if s.alignEnabled || s.mergeMode == .denoise {
+                    Picker("对齐方式", selection: $s.alignMethod) {
+                        ForEach(AlignMethod.allCases, id: \.self) { m in
+                            Text(m.label).tag(m)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .disabled(s.mergeRunning)
+                    Text("平移：只补偿手持位移，快。透视：额外抗旋转/透视错位，帧歪得厉害时用")
+                        .font(.system(size: 9.5))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            // 照片多选列表
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Text("点击勾选要合成的照片")
+                        .font(.system(size: 11, weight: .semibold))
+                    Spacer()
+                    Button("全选") { selected = Set(s.items.map { $0.id }) }
+                    Button("全不选") { selected.removeAll() }
+                    Button("选已标记") {
+                        selected = Set(s.items.filter { $0.picked }.map { $0.id })
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(4)
+                .buttonStyle(.borderless)
+                .controlSize(.small)
+                .disabled(s.mergeRunning)
+
+                ScrollView {
+                    VStack(spacing: 2) {
+                        if s.items.isEmpty {
+                            Text("还没有打开文件夹：点下面「添加文件…」直接选，或先 ⌘O 打开文件夹")
+                                .font(.system(size: 10.5))
+                                .foregroundStyle(.secondary)
+                                .padding(10)
+                        }
+                        ForEach(s.items) { item in
+                            MergeRow(
+                                title: item.url.lastPathComponent,
+                                thumb: item.thumb,
+                                checked: selected.contains(item.id)) {
+                                    toggle(item.id)
+                                }
+                        }
+                        // 文件夹外添加的文件
+                        ForEach(Array(external.enumerated()), id: \.offset) { i, u in
+                            MergeRow(title: u.lastPathComponent, thumb: nil,
+                                     checked: true, removable: true) {
+                                external.remove(at: i)
+                            }
+                        }
+                    }
+                    .padding(6)
+                }
+                .frame(height: 210)
+                .background(Color(nsColor: .textBackgroundColor),
+                            in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(Color(nsColor: .rfCardBorder), lineWidth: 0.5))
+
+                HStack(spacing: 8) {
+                    Button {
+                        choose()
+                    } label: {
+                        Label("添加文件夹外的文件…", systemImage: "doc.badge.plus")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .disabled(s.mergeRunning)
+                    Spacer()
+                    Text("已选 \(list.count) 张" + (list.count < 2 ? "（至少选 2 张）" : ""))
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(list.count >= 2 ? Color.green : .secondary)
+                }
             }
-            .frame(height: 110)
-            .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 4))
 
             if s.mergeRunning {
-                HStack(spacing: 6) {
+                HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
                     Text(s.mergeProgress).font(.system(size: 11))
                 }
             }
-            Text("输出 16 位 TIFF，文件名为「首张_合成.tif」，落在首张所在目录，合成后自动载入继续调色")
-                .font(.system(size: 10)).foregroundStyle(.secondary)
+            Label("输出 16 位 TIFF，文件名为「首张_合成.tif」，落在首张所在目录，合成后自动载入继续调色",
+                  systemImage: "info.circle")
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack {
                 Button("取消") { dismiss() }
-                Button("开始合成") {
-                    let l = list
-                    Task { await s.mergeExposures(l) }
+                    .keyboardShortcut(.cancelAction)
+                    .disabled(s.mergeRunning)
+                Button {
+                    let urls = list
+                    Task { await s.mergeExposures(urls) }
+                } label: {
+                    Label("开始合成", systemImage: "play.fill")
                 }
+                .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
                 .disabled(list.count < 2 || s.mergeRunning)
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .padding(18).frame(width: 430)
+        .padding(20).frame(width: 470)
+        .onAppear {
+            // 默认带上之前已标记的照片
+            selected = Set(s.items.filter { $0.picked }.map { $0.id })
+        }
+    }
+
+    private func toggle(_ id: UUID) {
+        if selected.contains(id) { selected.remove(id) } else { selected.insert(id) }
     }
 
     func choose() {
@@ -696,6 +1031,57 @@ struct MergeSheet: View {
         p.canChooseFiles = true
         p.canChooseDirectories = false
         p.allowsMultipleSelection = true
-        if p.runModal() == .OK { files = p.urls }
+        p.message = "选择要加入合成的照片（可按住 ⌘ 多选）"
+        if p.runModal() == .OK {
+            for u in p.urls where !external.contains(u) { external.append(u) }
+        }
+    }
+}
+
+// 合成面板里的可勾选行
+struct MergeRow: View {
+    let title: String
+    let thumb: CGImage?
+    let checked: Bool
+    var removable: Bool = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                ZStack {
+                    if let thumb {
+                        Image(decorative: thumb, scale: 1)
+                            .resizable().scaledToFill()
+                    } else {
+                        Image(systemName: "doc")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(width: 30, height: 30)
+                .clipped()
+                .cornerRadius(4)
+
+                Text(title)
+                    .font(.system(size: 11))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Spacer()
+                Image(systemName: removable ? "xmark.circle.fill"
+                    : (checked ? "checkmark.circle.fill" : "circle"))
+                    .font(.system(size: 14))
+                    .foregroundStyle(removable ? AnyShapeStyle(Color.secondary)
+                        : (checked ? AnyShapeStyle(Color.accentColor)
+                           : AnyShapeStyle(HierarchicalShapeStyle.tertiary)))
+            }
+            .padding(.horizontal, 6).padding(.vertical, 3)
+            .contentShape(Rectangle())
+            .background(
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(checked && !removable
+                          ? Color.accentColor.opacity(0.08) : .clear))
+        }
+        .buttonStyle(.plain)
     }
 }

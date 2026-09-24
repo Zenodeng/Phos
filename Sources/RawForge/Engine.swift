@@ -5,6 +5,7 @@ import ImageIO
 import UniformTypeIdentifiers
 import Vision
 import CoreVideo
+import simd
 
 enum Engine {
 
@@ -40,7 +41,7 @@ enum Engine {
     }
 
     // MARK: - 主渲染
-    static func render(_ source: CIImage, _ p: EditParams) -> CIImage {
+    static func render(_ source: CIImage, _ p: EditParams, disparityMask: CIImage? = nil) -> CIImage {
         var img = source
 
         // 1) 翻转 / 90° 旋转
@@ -304,6 +305,11 @@ enum Engine {
                               radiusFactor: p.halationRadius)
         }
 
+        // 11d) 焦外散景：深度蒙版白色区域按半径可变模糊（CIMaskedVariableBlur 实测白=模糊）
+        if p.bokehAmount > 0 {
+            img = applyBokeh(img, p, disparityMask: disparityMask)
+        }
+
         // 12) 颗粒
         if p.grain > 0 {
             img = addGrain(img, amount: p.grain, size: p.grainSize)
@@ -335,7 +341,8 @@ enum Engine {
     // MARK: - 蒙版
     private static func applyMasks(_ base: CIImage, _ p: EditParams) -> CIImage {
         var out = base
-        for m in p.masks where m.enabled && !m.adjust.isNeutral {
+        // depth 蒙版只喂散景，不做局部调整
+        for m in p.masks where m.enabled && m.kind != .depth && !m.adjust.isNeutral {
             // Vision 蒙版要拿当前画面去跑模型（缓存按蒙版 id + 画幅尺寸）
             let maskImg = maskImage(for: m, extent: out.extent, analyzed: out)
             guard let maskImg else { continue }
@@ -414,7 +421,8 @@ enum Engine {
                 "inputRadius1": NSNumber(value: r1),
                 "inputColor0": CIColor.white, "inputColor1": CIColor.black
             ])!.outputImage!.cropped(to: extent)
-        case .brush:
+        case .brush, .depth:
+            // depth 复用笔刷位图：用户涂白的区域 = 散景里被虚化的区域（不进局部调整，只喂给散景）
             guard let b = brushImage(m, extent: extent) else { return nil }
             img = b
         case .colorRange:
@@ -429,7 +437,7 @@ enum Engine {
             guard let srcImg = analyzed else { return nil }
             img = cubeWeight(RangeCube.luminanceMask(low: m.lumLow, high: m.lumHigh, soft: max(m.lumSoft, 0.01)),
                              appliedTo: srcImg, extent: extent)
-        case .subject, .person:
+        case .subject, .person, .foreground:
             // Vision 蒙版：拿当前画面跑模型（按 蒙版id + 画幅 缓存，不会每次渲染都跑）
             guard let srcImg = analyzed,
                   let ai = aiMask(for: m, extent: extent, analyzed: srcImg) else { return nil }
@@ -472,77 +480,34 @@ enum Engine {
     }
 
     // MARK: - 多重曝光合成
-    /// 把多帧合成一张。mode = .average 等权平均；.fusion 按曝光合适度加权（每张取它曝光最好的部分）。
+    /// 把多帧合成一张。mode = .average 等权平均；.fusion 按曝光合适度加权；
+    /// .denoise 对齐后平均 + 离群剔除（调用前应先走 alignFrames）。
     /// 走 CPU 分条融合：CI 的加法混合会把 1+1 截断成白，做不了加权求和，所以自己算。
-    /// 不做对齐——手持包围曝光会有轻微错位，上三脚架或机身防抖连拍是稳的。
     static func fuse(_ images: [CIImage], mode: MergeMode) -> CGImage? {
         guard images.count >= 2 else { return nil }
-        let base = images[0].extent
+        let frames = normalizedCanvas(images)
+        let base = frames[0].extent
         let w = Int(base.width.rounded()), h = Int(base.height.rounded())
         guard w > 1, h > 1 else { return nil }
-
-        // 统一画幅：按短边放大对齐再居中裁切
-        let frames: [CIImage] = images.map { img in
-            let e = img.extent
-            if abs(e.width - base.width) < 1 && abs(e.height - base.height) < 1 { return img }
-            let s = max(base.width / e.width, base.height / e.height)
-            let t = img.transformed(by: CGAffineTransform(scaleX: s, y: s))
-            let te = t.extent
-            let crop = CGRect(x: te.midX - base.width / 2, y: te.midY - base.height / 2,
-                              width: base.width, height: base.height)
-            return t.cropped(to: crop)
-                .transformed(by: CGAffineTransform(translationX: -crop.minX, y: -crop.minY))
-        }
 
         guard let out = CGContext(data: nil, width: w, height: h, bitsPerComponent: 16,
                                   bytesPerRow: w * 8, space: srgb,
                                   bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
                                       | CGBitmapInfo.byteOrder16Little.rawValue) else { return nil }
 
-        let strip = 512
         var yOff = 0
         while yOff < h {
-            let th = min(strip, h - yOff)
-            let rect = CGRect(x: base.minX, y: base.minY + CGFloat(yOff), width: base.width, height: CGFloat(th))
-            var num = [Float](repeating: 0, count: w * th * 4)
-            var den = [Float](repeating: 0, count: w * th)
-            let px = w * th
-
-            for f in frames {
-                var buf = [Float](repeating: 0, count: px * 4)
-                ctx.render(f, toBitmap: &buf, rowBytes: w * 4 * MemoryLayout<Float>.size,
-                           bounds: rect, format: .RGBAf, colorSpace: srgb)
-                var wt = [Float](repeating: 1, count: px)
-                if mode == .fusion {
-                    for i in 0..<px {
-                        let r = buf[i * 4], g = buf[i * 4 + 1], b = buf[i * 4 + 2]
-                        let lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
-                        let d = (lum - Float(WellExposed.center)) / Float(WellExposed.sigma)
-                        wt[i] = max(expf(-0.5 * d * d), 0.002)
-                    }
-                    // 权重先空间平滑，避免帧与帧之间留下硬缝
-                    boxBlur(&wt, w: w, h: th, radius: 12)
-                }
-                for i in 0..<px {
-                    let k = wt[i]
-                    num[i * 4]     += buf[i * 4]     * k
-                    num[i * 4 + 1] += buf[i * 4 + 1] * k
-                    num[i * 4 + 2] += buf[i * 4 + 2] * k
-                    num[i * 4 + 3] += buf[i * 4 + 3] * k
-                    den[i]         += k
-                }
+            // 降噪要同时持有所有帧的同位置像素，条带取矮点控制内存
+            let th = min(mode == .denoise ? 128 : 512, h - yOff)
+            let rect = CGRect(x: base.minX, y: base.minY + CGFloat(yOff),
+                              width: base.width, height: CGFloat(th))
+            let tile: CGImage?
+            if mode == .denoise {
+                tile = denoiseTile(frames: frames, rect: rect, w: w, h: th)
+            } else {
+                tile = blendTile(frames: frames, rect: rect, w: w, h: th, mode: mode)
             }
-            for i in 0..<px {
-                let d = max(den[i], 1e-5)
-                num[i * 4] /= d; num[i * 4 + 1] /= d; num[i * 4 + 2] /= d
-                num[i * 4 + 3] = 1
-            }
-
-            let size = CGSize(width: w, height: th)
-            let ci = CIImage(bitmapData: Data(bytes: num, count: num.count * 4),
-                             bytesPerRow: w * 16, size: size, format: .RGBAf, colorSpace: srgb)
-            guard let tile = ctx.createCGImage(ci, from: CGRect(origin: .zero, size: size),
-                                               format: .RGBA16, colorSpace: srgb) else { return nil }
+            guard let tile else { return nil }
             out.draw(tile, in: CGRect(x: 0, y: yOff, width: w, height: th))
             yOff += th
         }
@@ -550,7 +515,7 @@ enum Engine {
     }
 
     /// 可分离盒式模糊（只用于权重图，够用且 O(n)）
-    private static func boxBlur(_ a: inout [Float], w: Int, h: Int, radius: Int) {
+    static func boxBlur(_ a: inout [Float], w: Int, h: Int, radius: Int) {
         guard radius > 0, w > 1, h > 1 else { return }
         var tmp = [Float](repeating: 0, count: w * h)
         let n = Float(radius * 2 + 1)
@@ -610,18 +575,30 @@ enum Engine {
         guard let cg = ctx.createCGImage(small, from: small.extent, format: .RGBA8, colorSpace: srgb) else { return nil }
 
         var pixelBuffer: CVPixelBuffer?
-        if kind == .person {
+        switch kind {
+        case .person:
             let req = VNGeneratePersonSegmentationRequest()
             req.qualityLevel = .accurate
             req.outputPixelFormat = kCVPixelFormatType_OneComponent8
             let handler = VNImageRequestHandler(cgImage: cg, options: [:])
             do { try handler.perform([req]) } catch { return nil }
             pixelBuffer = req.results?.first?.pixelBuffer
-        } else {
+        case .foreground:
+            // 主体抠图：前景实例模型，取分析分辨率 float 软蒙版，下面统一放大到全画幅
+            let req = VNGenerateForegroundInstanceMaskRequest()
+            let handler = VNImageRequestHandler(cgImage: cg, options: [:])
+            do { try handler.perform([req]) } catch { return nil }
+            guard let obs = req.results?.first else { return nil }
+            do {
+                pixelBuffer = try obs.generateMask(forInstances: obs.allInstances)
+            } catch { return nil }
+        case .subject:
             let req = VNGenerateAttentionBasedSaliencyImageRequest()
             let handler = VNImageRequestHandler(cgImage: cg, options: [:])
             do { try handler.perform([req]) } catch { return nil }
             pixelBuffer = req.results?.first?.pixelBuffer
+        default:
+            return nil
         }
         guard let pb = pixelBuffer else { return nil }
 
@@ -641,6 +618,15 @@ enum Engine {
             mask = mask.applyingFilter("CIColorControls", parameters: [
                 kCIInputContrastKey: NSNumber(value: 2.2),
                 kCIInputBrightnessKey: NSNumber(value: -0.22)
+            ])
+        }
+        if kind == .foreground {
+            // 边缘精修 levels：轻提对比 = 边界略向外扩；软边来自 createScaledMask
+            mask = mask.applyingFilter("CIColorControls", parameters: [
+                kCIInputContrastKey: NSNumber(value: 1.25)
+            ])
+            mask = mask.applyingFilter("CIGammaAdjust", parameters: [
+                "inputPower": NSNumber(value: 0.92)
             ])
         }
         return mask.cropped(to: extent)

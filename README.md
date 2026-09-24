@@ -1,170 +1,214 @@
 # RawForge
 
-一个只为自己写的、专业向的 RAW 修图软件（macOS 原生，Swift + Core Image）。
-**没有 AI 蒙版**，其余常用的都在。
+**A native RAW photo editor for macOS, built for a personal, professional-grade workflow.**
+**为个人摄影流程打造的原生 macOS RAW 修图软件。**
 
-## 装在哪
+[![Build & Release](https://github.com/Zenodeng/RawForge/actions/workflows/release.yml/badge.svg)](https://github.com/Zenodeng/RawForge/actions/workflows/release.yml)
+[![Release](https://img.shields.io/github/v/release/Zenodeng/RawForge)](https://github.com/Zenodeng/RawForge/releases)
+[![Platform](https://img.shields.io/badge/platform-macOS%2015%2B-blue)](#requirements)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-`/Applications/RawForge.app`，源码在 `RawForge/` 目录，改完跑 `./build.sh` 一键重建。
+---
 
-## 能读什么格式
+## English
 
-点「打开文件夹」，里面这些后缀都会列出来：
+### Overview
 
-| 类别 | 后缀 |
+RawForge is a non-destructive RAW photo editor written in Swift on top of Core Image, Vision and AppKit. It runs entirely on the local machine: no cloud services, no accounts, no subscription. Every pixel operation is executed on the GPU, and no third-party dependencies are used.
+
+The project deliberately favours a small, complete set of high-frequency editing capabilities over breadth of features. All edits are stored in a sidecar file next to the original image, and the original file is never modified.
+
+### Requirements
+
+| Item | Requirement |
 |---|---|
-| RAW | arw / cr2 / cr3 / nef / raf / orf / rw2 / dng / pef / erf / sr2 / srf |
-| 手机与通用 | **heic / heif / hif**（iPhone 直出）、**jpg / jpeg / jpe / jfif**、png、tif / tiff、avif |
+| OS | macOS 15.0 or later |
+| CPU | Apple silicon (arm64) |
+| Supported inputs | RAW (ARW / CR3 / NEF / …), HEIF / HEIC / HIF, JPEG, PNG, TIFF, AVIF |
+| Signing | Ad-hoc (free); Apple notarisation is **not** available |
 
-- HEIF 和 JPEG **本来就能读**，跟 RAW 一样进同一条处理管线，调色、套胶片、蒙版全都一视同仁。
-- 解码走系统 ImageIO，并且**强制应用 EXIF 方向**——手机竖拍的照片不会躺倒（这条已实测：
-  1280×1707 带方向 6 的图，正确解成 1707×1280）。
-- RAW 优先用 `CIRAWFilter`，它打不开时自动退回 ImageIO。
-- 非破坏编辑对任何格式都生效，调整一样写进 `原名.rawforge.json`。
+### Installation
 
-## 有的功能
+1. Download `RawForge-macOS-apple-silicon.zip` from [Releases](https://github.com/Zenodeng/RawForge/releases).
+2. Verify integrity against `SHA256.txt`:
+   ```sh
+   shasum -a 256 RawForge-macOS-apple-silicon.zip
+   ```
+3. Unzip and move `RawForge.app` to `/Applications`.
+4. **The first launch is blocked by macOS — this is expected** (the app is not notarised).
+   - Either open it once, then go to *System Settings → Privacy & Security*, scroll to the bottom and choose **Open Anyway**;
+   - or remove the quarantine attribute:
+     ```sh
+     xattr -dr com.apple.quarantine /Applications/RawForge.app
+     ```
 
-**基本**　色温 / 色调 / 曝光 / 对比 / 高光 / 阴影 / 白色 / 黑色 / 纹理 / 清晰度 / 去朦胧 / 鲜艳度 / 饱和度 / **HDR 模式 + HDR 极限**
-- 去朦胧：矩阵「提对比 + 压雾」，正值去雾、负值加空气感
-- HDR：压高光拉暗部（实测过曝图死白 37% → 22%），极限越大压得越狠
-- 纹理：比清晰度细一档的中频，管皮肤和材质
+> [!IMPORTANT]
+> **App Sandbox is intentionally not enabled.** Under ad-hoc signing, entitlements are not bound correctly; enabling the sandbox would break folder access and sidecar writing. The repository contains no entitlements file, and none should be added.
 
-**曲线**　正方形面板，控制点**随便加、任意方向拖**（像 Lightroom），五种曲线独立保存：
-- **色调曲线**：三通道共用一条
-- **亮度曲线**：只动明暗，按亮度等比缩放，饱和度和色调基本不动（提亮最自然）
-- **R / G / B 通道曲线**：单独校色偏，往下压加补色、往上提加本色
-
-操作：**单击空白加点**、**拖动任意移动**、**双击点删除**（也可以右键点 → 删除）。
-首尾两点只锁左右不锁上下；中间点不会越过邻居，所以曲线永远是一条函数。
-控制点之间用单调三次插值（Fritsch–Carlson），严格过点且不会过冲回勾。
-
-五条曲线会一起烘进一张 64³ 的 LUT 一次应用，不会因为多次采样掉层次。
-色调曲线与高光/阴影/白/黑滑块现在是**各自独立**的两层，互不干扰。
-旧副档里 5 点固定格式的曲线会自动转成自由控制点，不用重新调。
-
-**HSL 混色**　8 个色相分区（红橙黄绿青蓝紫洋红），各自调 色相 / 饱和 / 明亮，相邻分区带羽化过渡
-
-**黑白**　通道混合，可自定义红绿蓝权重
-
-**细节**　锐化四件套（**数量 / 半径 / 细节 / 蒙版**）/ 降噪（亮度降噪+颜色降噪，双通道）/ 颗粒（量+粗细）
-- 细节：粗细两档锐化的混合比例
-- 蒙版：高通掩膜限制锐化只落在边缘，平区不放噪点（实测锐区保留 62%、平区压掉 67%）
-
-**多重曝光合成**　顶栏「多重曝光」（⇧⌘M）：
-- **曝光融合**：按每个像素的曝光合适度加权，每张只取它曝光最好的部分 —— 大光比包围曝光用这个
-- **平均合成**：等权叠加 —— 降噪、流水、星轨用这个，张数越多越干净
-- 源可以是浏览器里已标记的照片，也可以直接选文件；全分辨率计算，结果写 16 位 TIFF
-  （`首张_合成.tif`，落在首张旁边），合成完自动载入浏览器继续调色
-- 不做对齐：三脚架或开防抖的连拍是稳的，手持轻微错位目前不修
-- 实测：+2EV 那帧有 36% 死白，融合后 0.0%，且无死黑
-  
-**颜色分级**　LR 式色轮：顶部三个圆点切换 阴影 / 中间调 / 高光，**一次显示一个大色轮**（不并排，够大够好拖）：
-- 拖动选色相 + 饱和（外圈最浓、圆心无色），双击色轮复位该档
-- 每档独立「明亮」滑块，底部「混合」（50=标准量，0=不上色）和「平衡」
-- 上色时减掉色差里的亮度分量：只上色不改明暗，也不会把暗部压死
-
-**校准**　改 RGB 三原色的色相 / 饱和度（3×3 矩阵，行归一化保证白点不变形）+ 阴影偏绿偏洋红。定风格的隐藏武器
-
-**胶片 CLUT**　直接读取已装好的 303 个 HALD CLUT，带浓度滑块（浓度直接烘进 LUT，不额外混合）
-
-**局部调整（蒙版）**　七种：
-- 线性渐变（拖两端手柄，或直接在画布上拖）
-- 径向渐变（拖圆心 + 半径滑块 + 羽化，或直接在画布上拖）
-- 画笔（**选中蒙版后在画布上按住拖动即可涂抹**，一次拖动算一笔；可调笔刷大小和羽化）
-- **颜色范围**：在画布上拖到哪就取哪点的颜色，「容差」控制收进来的范围
-- **亮度范围**：取样亮度或手动设上下界，选中中间调那一档
-- **选择主体**：Vision 显著性模型算画面主体（本地跑，不联网）
-- **选择人物**：Vision 人物分割，自动圈出画面里的人；换图或不准时点「重算」
-
-AI 蒙版结果按「蒙版 id + 画幅」缓存，第一次算要等一两秒，之后拖滑块不再重算。
-
-每个蒙版独立控制 曝光 / 对比 / 饱和 / 色温 / 清晰 / 锐化，可反相、可开关。
-
-**效果**　暗角（强度+范围）、**Halation 光晕**（强度 / 高光阈值 / 半径：高光提取 → 大半径模糊 → 暖色染色 → 屏幕混合，模拟胶片红通道晕光）
-
-**镜头校正**　横向色差（R/B 通道反向微缩放，通道重组走运行时 CIColorKernel）、紫边抑制（高亮度 AND 高蓝偏 → 向灰度收敛）
-
-**变换与裁剪**　**画布交互裁剪**（顶栏「裁剪」或 R 键进入：拖角/边裁剪、框内拖动移位、暗化外部、三分线）、画幅预设（自由 / 1:1 / 4:3 / 3:2 / 16:9）、90° 旋转 / 镜像 / 水平矫正、**地平线自动校直**（VNDetectHorizonRequest 检测倾角 → 反向旋转 + 最大内接矩形裁切）、**透视校正**（自动：Vision 矩形检测直接喂 CIPerspectiveCorrection；手动：垂直 / 水平透视滑块）、自由框选裁剪
-
-**其它**　实时直方图（RGB + 亮度）、前后对比（⌘B 或点按钮）、缩放平移、撤销重做（⌘Z / ⇧⌘Z）、星级与标记筛选、预设、单张导出、批量导出。
-
-## 非破坏编辑
-
-所有调整写在图片旁边的 `原名.rawforge.json`。**拷图时记得连它一起拷**，只拷原图等于调整全丢。
-想重来就把这个 json 删掉。
-
-## 快捷键
-
-| 键 | 作用 |
-|---|---|
-| ⌘O | 打开文件夹 |
-| ⌘E | 导出当前照片 |
-| ⇧⌘M | 多重曝光合成 |
-| ⌘B | 前后对比 |
-| ⌘Z / ⇧⌘Z | 撤销 / 重做 |
-
-## 技术要点
-
-- RAW 解码走 **Apple 的 `CIRAWFilter`**，索尼 ARW 官方支持，新机型跟着系统走，无需 LibRaw
-- 全部处理走 Core Image，GPU 加速
-- HALD CLUT 约定：图像边长 S、立方体边长 N，满足 `S² = N³`；索引 `idx = r + g·N + b·N²`，像素在 `(idx % S, idx / S)`。这条公式用 RawTherapee 的身份文件实测验证过
-- CLUT 的 144 级立方体会重采样到 64 级（Core Image 的上限），浓度直接烘进去
-- HSL 是把 8 个分区的调整烘成一张 32³ 的 LUT
-- 预览渲染在 2200px 代理图上跑，导出才走全分辨率
-
-## 预览精度 vs 全像素
-
-**导出和批量导出永远是全像素**，这点没商量。区别在于「屏幕上看的那张」：
-
-| 模式 | 行为 | 什么时候用 |
-|---|---|---|
-| 默认（关） | 预览走 **2200px 长边**的代理图，拖动滑块跟手 | 常规调色 |
-| **全像素** 勾选 | 整条管线按**原图分辨率**渲染，所见即所得 | 调锐度、颗粒、暗角这类跟像素强相关的参数 |
-| **1:1** 按钮 | 自动开全像素，并按屏幕像素原样铺开（可滚动） | 逐像素检查锐度 |
-
-直方图下面会实时写「原图 4128 × 6192 / 预览：36%（代理图）」或「预览：全像素」，
-不会再让你猜当前看的是不是缩小版。
-
-实测（4128×6192 的 HEIC）：渲染 4128×6192，导出文件 4128×6192，11.7MB —— 全像素无缩放。
-
-## 已知取舍
-
-- 默认预览用代理图，所以「锐化半径 / 颗粒粗细」在预览上看着跟导出略有差别（这两个是按像素算的）。
-  **调这两个参数时把「全像素」勾上**，就完全一致了
-- 没有历史面板，只有线性撤销栈（上限 200 步）
-- 没有 AI 蒙版（本来就不打算做）
-- 自签名，macOS 大版本更新后如果打不开，跑一遍 `./build.sh` 重新签就行
-
-## 构建与发布
-
-**本地构建并安装**（已装 Command Line Tools 的机器）：
+### Building from source
 
 ```sh
-./build.sh                      # 编译 + 装进 /Applications
-./Scripts/package_app.sh        # 只在仓库里打出 RawForge.app（不安装）
+git clone https://github.com/Zenodeng/RawForge.git
+cd RawForge
+./Scripts/package_app.sh      # builds RawForge.app in the repository root
+./build.sh                    # compiles and installs to /Applications
 ```
 
-**CI 自动构建**：仓库里的 `.github/workflows/release.yml` 在 GitHub Actions 的 macOS 机器上编译打包，
-Actions → "Build & Release RawForge" → Run workflow（或者推一个 `v*` 标签会自动发 Release）。
+`Scripts/package_app.sh` compiles the sources with `swiftc` directly, and retries with an older SDK if the default SDK is newer than the installed compiler. A `Package.swift` is provided for use with SwiftPM-aware editors; the release pipeline does not depend on it.
 
-⚠️ **首次开 Actions 前必须开权限**：Settings → Actions → General → Workflow permissions → 选 **Read and write permissions**，否则 CI 上传 Release 会 403。
+### Features
 
-## 签名与首次打开（必读）
+**Editing pipeline** — White balance, exposure, contrast, highlights/shadows, whites/blacks, texture, clarity, dehaze, vibrance, saturation, and an HDR mode with a limit control.
 
-- 本项目**不启用 App Sandbox**。免费 ad-hoc 签名下 entitlements 不会正确 bind，一旦 sandbox 生效，读照片文件夹、写 `.rawforge.json` 旁挂会全部失效。仓库里没有任何 entitlements 文件，请不要加。
-- 没有 Apple 付费开发者证书，无法公证。**首次打开会被 macOS 拦截，这是正常的**：
-  - 方式一：双击打开一次 → 系统设置 → 隐私与安全性 → 滚到底 → 点「仍要打开」
-  - 方式二：`xattr -dr com.apple.quarantine /Applications/RawForge.app`
-- 校验下载完整性：`shasum -a 256 RawForge-macOS-apple-silicon.zip`，与 Release 里的 `SHA256.txt` 对比
+**Tone curves** — Free-form point curves (any number of control points, draggable in both axes) across five independent channels: composite, luminance, and R / G / B. Monotone cubic interpolation (Fritsch–Carlson) guarantees that the curve passes through every control point without overshoot. A *Refine Sat* control restores saturation after tonal changes. All five curves are baked into a single 64³ LUT.
 
-## 目录结构
+**Colour tools** — HSL mixer across eight hue bands; colour grading with Lightroom-style wheels for shadows, midtones and highlights (hue, saturation, luminance, blend and balance); camera calibration via RGB primary adjustments, implemented as a row-normalised 3×3 matrix.
 
+**Detail** — Sharpening with amount, radius, detail and masking; dual-channel luminance and colour noise reduction; film grain; halation (highlight extraction, wide-radius blur, warm tint, screen blend).
+
+**Local adjustments / masking** — Linear and radial gradients, brush, colour range, luminance range, subject selection, person segmentation, foreground cut-out, and a depth-painting mask for bokeh. Vision-based masks run entirely on-device and are cached per mask and canvas size.
+
+**Geometry** — Interactive crop overlay with eight handles, aspect-ratio presets, 90° rotation, mirroring, horizon auto-straightening (Vision horizon detection plus maximum-inscribed-rectangle cropping), automatic perspective correction from a detected quadrilateral, manual vertical and horizontal perspective, lateral chromatic aberration correction, and purple-fringe suppression.
+
+**Multi-exposure** — Frame alignment via Vision registration with a quality gate (frames whose overlap NCC scores below 0.7 are dropped), selectable translation or homography alignment, and three modes: average, fusion, and hand-held denoise (pixel-wise averaging that rejects pixels deviating from the reference frame by more than *kσ*). Results are produced at full resolution as 16-bit TIFF and can be edited further.
+
+**Workflow** — Sidecar-based non-destructive editing (`<image>.rawforge.json`), 200-step undo, presets, an export panel with format (JPEG / PNG / TIFF / HEIC), long-edge sizing and quality controls, batch export applying each image's own sidecar, cut-out export with a transparent background, 303 built-in HALD film-emulation LUTs, and an adaptive light/dark interface theme.
+
+### Keyboard shortcuts
+
+| Action | Shortcut |
+|---|---|
+| Open folder | ⌘O |
+| Crop and geometry | ⌘R |
+| Export current photo | ⌘E |
+| Before / after comparison | ⌘B |
+| Multi-exposure compositing | ⇧⌘M |
+| Undo / Redo | ⌘Z / ⇧⌘Z |
+
+### Architecture
+
+| File | Responsibility |
+|---|---|
+| `Sources/RawForge/Engine.swift` | Decoding, the full adjustment pipeline, LUT construction, masking, Vision-backed analysis |
+| `Sources/RawForge/Alignment.swift` | Frame registration, quality gating, canvas normalisation for compositing |
+| `Sources/RawForge/Models.swift` | Parameter model and tolerant decoding for forward compatibility |
+| `Sources/RawForge/AppMain.swift` | Application state, render scheduling, undo stack, export and batch processing |
+| `Sources/RawForge/Views.swift` | Browser, canvas, crop overlay, toolbars |
+| `Sources/RawForge/Inspector.swift` | Adjustment panels, curve editor, colour wheels |
+| `Sources/RawForge/Theme.swift` | Adaptive colour palette |
+| `Sources/RawForge/CLUT.swift` | Film LUT loading and baking |
+
+The application is non-destructive by design: all parameters are serialised to a sidecar file, and rendering is a pure function of (source image, parameters).
+
+### Release pipeline
+
+`.github/workflows/release.yml` builds, packages and publishes on GitHub Actions macOS runners. Pushing a `v*` tag produces a release containing the zip and its SHA256, and the workflow can also be dispatched manually from the Actions tab.
+
+> Before the first run, make sure *Settings → Actions → General → Workflow permissions* is set to **Read and write permissions**; otherwise uploading release assets returns 403.
+
+### License
+
+Released under the [MIT License](LICENSE).
+
+---
+
+## 中文
+
+### 概述
+
+RawForge 是一款用 Swift 编写、基于 Core Image、Vision 与 AppKit 的**非破坏性 RAW 修图软件**。它完全在本机运行：不联网、无账号、无订阅。全部像素处理在 GPU 上完成，不依赖任何第三方库。
+
+项目刻意选择「把高频能力做全做透」而非堆砌功能。所有调整写入原图旁边的副档，**原始文件一个字节都不会被修改**。
+
+### 运行要求
+
+| 项目 | 要求 |
+|---|---|
+| 系统 | macOS 15.0 及以上 |
+| 芯片 | Apple silicon（arm64） |
+| 支持格式 | RAW（ARW / CR3 / NEF 等）、HEIF / HEIC / HIF、JPEG、PNG、TIFF、AVIF |
+| 签名 | ad-hoc 本地签名（免费），**未做 Apple 公证** |
+
+### 安装
+
+1. 从 [Releases](https://github.com/Zenodeng/RawForge/releases) 下载 `RawForge-macOS-apple-silicon.zip`。
+2. 校验完整性：
+   ```sh
+   shasum -a 256 RawForge-macOS-apple-silicon.zip
+   ```
+   与 Release 中的 `SHA256.txt` 比对。
+3. 解压后把 `RawForge.app` 拖进 `/Applications`。
+4. **首次打开会被 macOS 拦截，这是正常现象**（应用未公证）：
+   - 双击打开一次 → 系统设置 → 隐私与安全性 → 滚到底 → 点「仍要打开」；
+   - 或直接去除隔离标记：
+     ```sh
+     xattr -dr com.apple.quarantine /Applications/RawForge.app
+     ```
+
+> [!IMPORTANT]
+> **本项目不启用 App Sandbox。** 免费 ad-hoc 签名下 entitlements 不会正确 bind，一旦 sandbox 生效，读取照片文件夹与写入 `.rawforge.json` 旁挂会全部失效。仓库中没有任何 entitlements 文件，也请不要添加。
+
+### 从源码构建
+
+```sh
+git clone https://github.com/Zenodeng/RawForge.git
+cd RawForge
+./Scripts/package_app.sh      # 在仓库根目录打出 RawForge.app
+./build.sh                    # 编译并安装到 /Applications
 ```
-RawForge/
-├── Package.swift              # SwiftPM 描述（VS Code / Cursor 开发用，CI 走 swiftc）
-├── Sources/RawForge/*.swift   # 全部源码
-├── Resources/AppIcon.icns
-├── Scripts/package_app.sh     # 编译 + 打 .app
-├── build.sh                   # 本机一键构建安装
-└── .github/workflows/release.yml
-```
+
+`Scripts/package_app.sh` 直接用 `swiftc` 编译，并在默认 SDK 比编译器新时自动回退到较旧 SDK。仓库同时提供 `Package.swift` 供支持 SwiftPM 的编辑器使用，但发布流程不依赖它。
+
+### 功能
+
+**调整管线** — 白平衡、曝光、对比、高光 / 阴影、白色 / 黑色、纹理、清晰度、去朦胧、鲜艳度、饱和度、HDR 模式（含强度上限）。
+
+**色调曲线** — 自由控制点曲线（点数任意、横竖均可拖），五个独立通道：合成、亮度、R / G / B。控制点之间采用单调三次插值（Fritsch–Carlson），**严格过点且不过冲**。*Refine Sat* 在改变调子后把饱和度拉回。五条曲线一次烘进 64³ LUT。
+
+**色彩工具** — 8 个色相分区的 HSL 混色器；Lightroom 式颜色分级色轮（阴影 / 中间调 / 高光，含色相、饱和、明亮度、混合与平衡）；校准面板通过 RGB 三原色调整实现（行归一化 3×3 矩阵，保证白点不变形）。
+
+**细节** — 锐化（数量 / 半径 / 细节 / 蒙版）；亮度与颜色双通道降噪；胶片颗粒；Halation 光晕（高光提取 → 大半径模糊 → 暖色染色 → 屏幕混合）。
+
+**局部调整（蒙版）** — 线性渐变、径向渐变、画笔、颜色范围、亮度范围、选择主体、选择人物、主体抠图，以及用于焦外散景的深度涂绘。基于系统视觉模型的蒙版全部在本机计算，并按「蒙版 + 画幅尺寸」缓存。
+
+**几何与镜头** — 画布交互裁剪（八向手柄、画幅预设）、90° 旋转、镜像、地平线自动校直（Vision 检测倾角 + 最大内接矩形裁切）、自动透视校正（检测四边形后交给透视校正）、手动垂直 / 水平透视、横向色差校正、紫边抑制。
+
+**多重曝光** — Vision 配准的帧对齐与质量门（重叠区 NCC 低于 0.7 的帧自动剔除），对齐方式可选平移或透视（homography），三种模式：平均、曝光融合、手持降噪（逐像素平均，偏离参考帧超过 *kσ* 的像素按参考值取，压噪同时去鬼影）。合成结果按全分辨率输出 16 位 TIFF，并可继续调整。
+
+**工作流** — 副档非破坏编辑（`<原图名>.rawforge.json`）、200 步撤销、预设、导出面板（格式 JPEG / PNG / TIFF / HEIC、长边尺寸、质量）、批量导出（套用每张照片各自的调整）、透明背景抠图导出、内置 303 个 HALD 胶片模拟 LUT、浅色 / 深色自适应界面主题。
+
+### 快捷键
+
+| 操作 | 快捷键 |
+|---|---|
+| 打开文件夹 | ⌘O |
+| 裁剪与几何 | ⌘R |
+| 导出当前照片 | ⌘E |
+| 前后对比 | ⌘B |
+| 多重曝光合成 | ⇧⌘M |
+| 撤销 / 重做 | ⌘Z / ⇧⌘Z |
+
+### 架构
+
+| 文件 | 职责 |
+|---|---|
+| `Sources/RawForge/Engine.swift` | 解码、完整调整管线、LUT 构建、蒙版、视觉分析 |
+| `Sources/RawForge/Alignment.swift` | 帧配准、质量门、合成画幅归一化 |
+| `Sources/RawForge/Models.swift` | 参数模型与宽容解码（向前兼容旧副档） |
+| `Sources/RawForge/AppMain.swift` | 应用状态、渲染调度、撤销栈、导出与批处理 |
+| `Sources/RawForge/Views.swift` | 浏览器、画布、裁剪叠加层、工具条 |
+| `Sources/RawForge/Inspector.swift` | 调整面板、曲线编辑器、色轮 |
+| `Sources/RawForge/Theme.swift` | 自适应调色板 |
+| `Sources/RawForge/CLUT.swift` | 胶片 LUT 读取与烘焙 |
+
+设计上不可变：所有参数序列化到副档，渲染是关于「源图 + 参数」的纯函数。
+
+### 发布流程
+
+`.github/workflows/release.yml` 在 GitHub Actions 的 macOS 运行器上编译、打包并发布。推送 `v*` 标签会生成 Release（含 zip 与 SHA256），也可在 Actions 页面手动触发。
+
+> 首次使用前请确认仓库 Settings → Actions → General → Workflow permissions 已设为 **Read and write permissions**，否则 Release 上传会返回 403。
+
+### 许可证
+
+以 [MIT 许可证](LICENSE) 发布。

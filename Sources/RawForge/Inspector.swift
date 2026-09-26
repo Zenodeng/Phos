@@ -49,6 +49,21 @@ struct InspectorPane: View {
         ScrollView {
             VStack(spacing: 0) {
                 GroupBox(title: "基本") {
+                    HStack {
+                        Text("白平衡").font(.system(size: 11)).foregroundStyle(.secondary)
+                        Spacer()
+                        ToolButton(systemImage: "eyedropper", title: "白平衡灰点取样",
+                                   active: s.whiteBalancePicker,
+                                   disabled: s.source == nil || s.previewing || s.whiteBalanceRunning || s.cropMode) {
+                            s.showBefore = false
+                            s.whiteBalancePicker.toggle()
+                        }
+                        ToolButton(systemImage: "arrow.counterclockwise", title: "重置白平衡") {
+                            var p = s.params
+                            p.whiteBalanceGains = [1, 1, 1]; p.temperature = 0; p.tint = 0
+                            s.commit(p)
+                        }
+                    }
                     SliderRow(label: "色温", value: bind(\.temperature, s)) { s.endEdit() }
                     SliderRow(label: "色调", value: bind(\.tint, s)) { s.endEdit() }
                     Divider().padding(.vertical, 2)
@@ -466,8 +481,9 @@ struct GradeWheel: View {
     var onEnd: () -> Void
     @State private var dragging = false
 
-    private let hueColors: [Color] = (0..<13).map {
-        Color(hue: Double($0) / 12, saturation: 1, brightness: 1)
+    // 每 3° 一个色标：色标稀疏时 RGB 线性插值会把中间色相拉偏最多 10°，够密才对得准
+    private let hueColors: [Color] = (0..<121).map {
+        Color(hue: Double($0) / 120, saturation: 1, brightness: 1)
     }
 
     var body: some View {
@@ -477,8 +493,11 @@ struct GradeWheel: View {
             let center = CGPoint(x: r, y: r)
             let dot = dotPosition(radius: r)
             ZStack {
+                // AngularGradient 的 0° 默认在 3 点钟方向且顺时针递增，
+                // 而拖拽/圆点用「0° 朝上、顺时针」（同 LR / HSL 惯例），故起点要 -90° 才对齐
                 Circle()
-                    .fill(AngularGradient(colors: hueColors, center: .center))
+                    .fill(AngularGradient(colors: hueColors, center: .center,
+                                          startAngle: .degrees(-90), endAngle: .degrees(270)))
                     .overlay(Circle().fill(RadialGradient(colors: [.white, .white.opacity(0)],
                                                           center: .center, startRadius: 0, endRadius: r)))
                     .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 1))
@@ -727,14 +746,11 @@ struct MaskPane: View {
                         .help("删除蒙版")
                     }
                     if s.selectedMask == m.id {
+                        MaskEditingControls()
                         if m.kind.usesVision {
                             HStack(spacing: 6) {
                                 Button("重算 AI 蒙版") {
-                                    var x = m
-                                    Engine.invalidateAIMask(id: x.id)
-                                    // 换个 id 强制刷新（缓存按 id 存）
-                                    x.id = UUID()
-                                    s.updateMask(x)
+                                    s.recomputeMask(m.id)
                                 }
                                 .controlSize(.small)
                                 Spacer()
@@ -752,53 +768,53 @@ struct MaskPane: View {
                             }
                             SliderRow(label: "容差", value: Binding(
                                 get: { m.tolerance },
-                                set: { var x = m; x.tolerance = $0; s.updateMask(x) }), range: 0.02...0.8) { s.endEdit() }
+                                set: { var x = m; x.tolerance = $0; s.updateMaskLive(x) }), range: 0.02...0.8) { s.endEdit() }
                         }
                         if m.kind == .luminanceRange {
                             SliderRow(label: "下限", value: Binding(
                                 get: { m.lumLow },
-                                set: { var x = m; x.lumLow = min($0, x.lumHigh); s.updateMask(x) }), range: 0...1) { s.endEdit() }
+                                set: { var x = m; x.lumLow = min($0, x.lumHigh); s.updateMaskLive(x) }), range: 0...1) { s.endEdit() }
                             SliderRow(label: "上限", value: Binding(
                                 get: { m.lumHigh },
-                                set: { var x = m; x.lumHigh = max($0, x.lumLow); s.updateMask(x) }), range: 0...1) { s.endEdit() }
+                                set: { var x = m; x.lumHigh = max($0, x.lumLow); s.updateMaskLive(x) }), range: 0...1) { s.endEdit() }
                             SliderRow(label: "软边", value: Binding(
                                 get: { m.lumSoft },
-                                set: { var x = m; x.lumSoft = $0; s.updateMask(x) }), range: 0.01...0.5) { s.endEdit() }
+                                set: { var x = m; x.lumSoft = $0; s.updateMaskLive(x) }), range: 0.01...0.5) { s.endEdit() }
                         }
                         if m.kind == .brush || m.kind == .depth {
                             SliderRow(label: "笔刷", value: Binding(
                                 get: { m.strokes.last?.radius ?? 0.05 },
-                                set: { var x = m; if !x.strokes.isEmpty { x.strokes[x.strokes.count - 1].radius = $0 } else { x.strokes.append(Stroke(pts: [], radius: $0, feather: x.feather)) }; s.updateMask(x) }),
+                                set: { var x = m; if !x.strokes.isEmpty { x.strokes[x.strokes.count - 1].radius = $0 } else { x.strokes.append(Stroke(pts: [], radius: $0, feather: x.feather)) }; s.updateMaskLive(x) }),
                                 range: 0.005...0.3) { s.endEdit() }
                         }
                         if m.kind == .radial {
                             SliderRow(label: "半径", value: Binding(
                                 get: { m.radius },
-                                set: { var x = m; x.radius = $0; s.updateMask(x) }), range: 0.05...1) { s.endEdit() }
+                                set: { var x = m; x.radius = $0; s.updateMaskLive(x) }), range: 0.05...1) { s.endEdit() }
                         }
                         SliderRow(label: "羽化", value: Binding(
                             get: { m.feather },
-                            set: { var x = m; x.feather = $0; s.updateMask(x) }), range: 0...1) { s.endEdit() }
+                            set: { var x = m; x.feather = $0; s.updateMaskLive(x) }), range: 0...1) { s.endEdit() }
                         if m.kind != .depth {
                             Divider()
                             SliderRow(label: "曝光", value: Binding(
                                 get: { m.adjust.exposure },
-                                set: { var x = m; x.adjust.exposure = $0; s.updateMask(x) }), range: -4...4) { s.endEdit() }
+                                set: { var x = m; x.adjust.exposure = $0; s.updateMaskLive(x) }), range: -4...4) { s.endEdit() }
                             SliderRow(label: "对比", value: Binding(
                                 get: { m.adjust.contrast },
-                                set: { var x = m; x.adjust.contrast = $0; s.updateMask(x) })) { s.endEdit() }
+                                set: { var x = m; x.adjust.contrast = $0; s.updateMaskLive(x) })) { s.endEdit() }
                             SliderRow(label: "饱和", value: Binding(
                                 get: { m.adjust.saturation },
-                                set: { var x = m; x.adjust.saturation = $0; s.updateMask(x) })) { s.endEdit() }
+                                set: { var x = m; x.adjust.saturation = $0; s.updateMaskLive(x) })) { s.endEdit() }
                             SliderRow(label: "色温", value: Binding(
                                 get: { m.adjust.temperature },
-                                set: { var x = m; x.adjust.temperature = $0; s.updateMask(x) })) { s.endEdit() }
+                                set: { var x = m; x.adjust.temperature = $0; s.updateMaskLive(x) })) { s.endEdit() }
                             SliderRow(label: "清晰", value: Binding(
                                 get: { m.adjust.clarity },
-                                set: { var x = m; x.adjust.clarity = $0; s.updateMask(x) }), range: 0...100) { s.endEdit() }
+                                set: { var x = m; x.adjust.clarity = $0; s.updateMaskLive(x) }), range: 0...100) { s.endEdit() }
                             SliderRow(label: "锐化", value: Binding(
                                 get: { m.adjust.sharpen },
-                                set: { var x = m; x.adjust.sharpen = $0; s.updateMask(x) }), range: 0...100) { s.endEdit() }
+                                set: { var x = m; x.adjust.sharpen = $0; s.updateMaskLive(x) }), range: 0...100) { s.endEdit() }
                         }
                     }
                 }
@@ -817,6 +833,132 @@ struct MaskPane: View {
 }
 
 // MARK: - 导出
+/// 水印设置（导出 / 批量导出共用）：文字或图片，九宫格定位、大小、不透明度、旋转
+struct WatermarkControls: View {
+    @Binding var settings: ExportSettings
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Picker("类型", selection: $settings.watermarkKind) {
+                Text("文字").tag("text"); Text("图片").tag("image")
+            }.pickerStyle(.segmented)
+
+            if settings.watermarkKind == "text" {
+                TextField("水印文字", text: $settings.watermarkText)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 11))
+                Toggle("黑字（浅色画面用）", isOn: $settings.watermarkDarkText)
+                    .font(.system(size: 10.5))
+            } else {
+                HStack(spacing: 6) {
+                    Button("选择图片…") {
+                        let p = NSOpenPanel()
+                        p.allowedContentTypes = [.png, .jpeg, .tiff, .heic]
+                        if p.runModal() == .OK, let u = p.url {
+                            settings.watermarkImagePath = u.path
+                        }
+                    }
+                    Text(settings.watermarkImagePath.isEmpty
+                         ? "未选择（PNG 带透明最佳）"
+                         : URL(fileURLWithPath: settings.watermarkImagePath).lastPathComponent)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    Spacer()
+                }
+            }
+
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("位置").font(.system(size: 10)).foregroundStyle(.secondary)
+                    WMPosGrid(pos: $settings.watermarkPosition)
+                }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(settings.watermarkKind == "text" ? "字号（占长边）" : "宽度（占长边）")
+                        .font(.system(size: 10)).foregroundStyle(.secondary)
+                    Slider(value: $settings.watermarkScale, in: 0.01...0.30)
+                    Text("不透明度 \(Int(settings.watermarkOpacity * 100))%")
+                        .font(.system(size: 10)).foregroundStyle(.secondary)
+                    Slider(value: $settings.watermarkOpacity, in: 0.05...1)
+                    Text("旋转 \(Int(settings.watermarkRotation))°")
+                        .font(.system(size: 10)).foregroundStyle(.secondary)
+                    Slider(value: $settings.watermarkRotation, in: -45...45)
+                }
+            }
+            SliderRow(label: "边距", value: $settings.watermarkMargin, range: 0...0.12)
+            Text("水印只叠在导出文件上，不进预览、不进副档")
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+        }
+        .onChange(of: settings.watermarkKind) { k in
+            // 换类型时给个合适的默认大小，免得文字水印小得看不见
+            if k == "image" { if settings.watermarkScale < 0.08 { settings.watermarkScale = 0.15 } }
+            else            { if settings.watermarkScale > 0.12 { settings.watermarkScale = 0.05 } }
+        }
+    }
+}
+
+/// 3×3 九宫格位置选择
+struct WMPosGrid: View {
+    @Binding var pos: String
+    private let rows = [["topLeft", "topCenter", "topRight"],
+                        ["midLeft", "center", "midRight"],
+                        ["bottomLeft", "bottomCenter", "bottomRight"]]
+    var body: some View {
+        VStack(spacing: 3) {
+            ForEach(rows, id: \.self) { row in
+                HStack(spacing: 3) {
+                    ForEach(row, id: \.self) { p in
+                        Button { pos = p } label: {
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(pos == p ? Color.accentColor : Color.secondary.opacity(0.22))
+                                .frame(width: 22, height: 14)
+                        }
+                        .buttonStyle(.plain)
+                        .help(p)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - 导出目录行
+/// 显示当前固定导出文件夹，可更改（写进 UserDefaults，源码不含个人路径）/ 在访达中显示
+struct ExportDirRow: View {
+    @AppStorage(ExportPaths.key) private var dir: String = ""
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "folder")
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+            Text(ExportPaths.defaultDir.path)
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .help(ExportPaths.defaultDir.path)
+            Spacer()
+            Button("更改…") {
+                let p = NSOpenPanel()
+                p.canChooseDirectories = true
+                p.canChooseFiles = false
+                p.directoryURL = ExportPaths.defaultDir
+                if p.runModal() == .OK, let u = p.url { dir = u.path }
+            }.controlSize(.small)
+            Button {
+                NSWorkspace.shared.activateFileViewerSelecting([ExportPaths.defaultDir])
+            } label: {
+                Image(systemName: "macwindow.on.rectangle")
+            }
+            .controlSize(.small)
+            .buttonStyle(.borderless)
+            .help("在访达中显示")
+        }
+    }
+}
+
 struct ExportSheet: View {
     @EnvironmentObject var s: AppState
     @Environment(\.dismiss) var dismiss
@@ -839,15 +981,26 @@ struct ExportSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
+                ExportDirRow()
+                Divider()
                 Picker("格式", selection: $s.exportSettings.format) {
                     Text("JPEG").tag("jpg"); Text("PNG").tag("png")
                     Text("TIFF").tag("tiff"); Text("HEIC").tag("heic")
                 }.pickerStyle(.segmented)
+                OutputPrecisionControls(settings: $s.exportSettings)
                 SliderRow(label: "质量", value: $s.exportSettings.quality, range: 0.3...1)
+                    .disabled(s.exportSettings.format == "tiff" || s.exportSettings.format == "png")
                 SliderRow(label: "长边", value: Binding(
                     get: { Double(s.exportSettings.maxLongEdge) },
                     set: { s.exportSettings.maxLongEdge = Int($0) }), range: 0...8000)
                 Toggle("输出锐化", isOn: $s.exportSettings.sharpenForOutput)
+
+                Divider()
+                Toggle("添加水印", isOn: $s.exportSettings.watermarkEnabled)
+                    .font(.system(size: 11))
+                if s.exportSettings.watermarkEnabled {
+                    WatermarkControls(settings: $s.exportSettings)
+                }
 
                 Divider()
                 Toggle("透明背景抠图（用主体抠图蒙版）", isOn: $cutoutMode)
@@ -875,6 +1028,7 @@ struct ExportSheet: View {
                     let ext = cutoutMode ? s.exportSettings.format
                                          : s.exportSettings.format
                     let p = NSSavePanel()
+                    p.directoryURL = ExportPaths.defaultDir
                     p.nameFieldStringValue = (s.current?.url.deletingPathExtension()
                         .lastPathComponent ?? "out") + "." + ext
                     if p.runModal() == .OK, let u = p.url {
@@ -887,10 +1041,11 @@ struct ExportSheet: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
+                .disabled(s.source == nil || s.exportRunning)
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .padding(20).frame(width: 400)
+        .padding(20).frame(width: 430)
     }
 }
 
@@ -916,15 +1071,25 @@ struct BatchSheet: View {
                       systemImage: "info.circle")
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
+                ExportDirRow()
+                Divider()
                 Picker("格式", selection: $s.exportSettings.format) {
                     Text("JPEG").tag("jpg"); Text("PNG").tag("png")
                     Text("TIFF").tag("tiff"); Text("HEIC").tag("heic")
                 }.pickerStyle(.segmented)
+                OutputPrecisionControls(settings: $s.exportSettings)
                 SliderRow(label: "质量", value: $s.exportSettings.quality, range: 0.3...1)
+                    .disabled(s.exportSettings.format == "tiff" || s.exportSettings.format == "png")
                 SliderRow(label: "长边", value: Binding(
                     get: { Double(s.exportSettings.maxLongEdge) },
                     set: { s.exportSettings.maxLongEdge = Int($0) }), range: 0...8000)
                 Toggle("只导出已标记的照片", isOn: $onlyPicked)
+                Divider()
+                Toggle("添加水印", isOn: $s.exportSettings.watermarkEnabled)
+                    .font(.system(size: 11))
+                if s.exportSettings.watermarkEnabled {
+                    WatermarkControls(settings: $s.exportSettings)
+                }
                 if s.batchRunning {
                     ProgressView(value: s.batchProgress)
                         .controlSize(.small)
@@ -936,20 +1101,26 @@ struct BatchSheet: View {
             HStack {
                 Button("取消", role: .cancel) { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button {
+                Button("选其他目录…") {
                     let p = NSOpenPanel(); p.canChooseDirectories = true; p.canChooseFiles = false
+                    p.directoryURL = ExportPaths.defaultDir
                     if p.runModal() == .OK, let u = p.url {
                         Task { await s.batchExport(to: u, onlyPicked: onlyPicked) }
                     }
                     dismiss()
+                }
+                Button {
+                    let dest = ExportPaths.defaultDir
+                    Task { await s.batchExport(to: dest, onlyPicked: onlyPicked) }
+                    dismiss()
                 } label: {
-                    Label("选择目录并导出", systemImage: "folder")
+                    Label("导出到固定文件夹", systemImage: "folder")
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .padding(20).frame(width: 420)
+        .padding(20).frame(width: 430)
     }
 }

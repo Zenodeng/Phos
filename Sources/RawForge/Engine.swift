@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 import Vision
 import CoreVideo
 import simd
+import AppKit
 
 enum Engine {
 
@@ -41,7 +42,7 @@ enum Engine {
     }
 
     // MARK: - 主渲染
-    static func render(_ source: CIImage, _ p: EditParams, disparityMask: CIImage? = nil) -> CIImage {
+    static func geometry(_ source: CIImage, _ p: EditParams) -> CIImage {
         var img = source
 
         // 1) 翻转 / 90° 旋转
@@ -90,6 +91,20 @@ enum Engine {
             if !r.isEmpty { img = img.cropped(to: r) }
         }
 
+        return img
+    }
+
+    static func render(_ source: CIImage, _ p: EditParams, disparityMask: CIImage? = nil,
+                       selectedMask: UUID? = nil, maskPreview: ((CIImage) -> Void)? = nil) -> CIImage {
+        var img = geometry(source, p)
+        let gains = p.whiteBalanceGains
+        if gains.count == 3, gains != [1, 1, 1], gains.allSatisfy({ $0.isFinite && $0 > 0 }) {
+            img = img.applyingFilter("CIColorMatrix", parameters: [
+                "inputRVector": CIVector(x: gains[0], y: 0, z: 0, w: 0),
+                "inputGVector": CIVector(x: 0, y: gains[1], z: 0, w: 0),
+                "inputBVector": CIVector(x: 0, y: 0, z: gains[2], w: 0)
+            ])
+        }
         // 2b) 镜头校正：横向色差（R/B 通道反向微缩放）与紫边抑制
         if p.caAmount != 0 { img = correctLateralCA(img, amount: p.caAmount) }
         if p.purpleFringe > 0 { img = defringePurple(img, strength: p.purpleFringe) }
@@ -316,7 +331,11 @@ enum Engine {
         }
 
         // 13) 蒙版
-        img = applyMasks(img, p)
+        if let mask = p.masks.first(where: { $0.id == selectedMask && $0.kind == .depth }),
+           let image = maskImage(for: mask, extent: img.extent, analyzed: img) {
+            maskPreview?(image)
+        }
+        img = applyMasks(img, p, selectedMask: selectedMask, maskPreview: maskPreview)
 
         return img
     }
@@ -339,13 +358,16 @@ enum Engine {
     }
 
     // MARK: - 蒙版
-    private static func applyMasks(_ base: CIImage, _ p: EditParams) -> CIImage {
+    private static func applyMasks(_ base: CIImage, _ p: EditParams,
+                                   selectedMask: UUID?, maskPreview: ((CIImage) -> Void)?) -> CIImage {
         var out = base
         // depth 蒙版只喂散景，不做局部调整
-        for m in p.masks where m.enabled && m.kind != .depth && !m.adjust.isNeutral {
+        for m in p.masks where m.kind != .depth && (m.id == selectedMask || (m.enabled && !m.adjust.isNeutral)) {
             // Vision 蒙版要拿当前画面去跑模型（缓存按蒙版 id + 画幅尺寸）
             let maskImg = maskImage(for: m, extent: out.extent, analyzed: out)
             guard let maskImg else { continue }
+            if m.id == selectedMask { maskPreview?(maskImg) }
+            guard m.enabled, !m.adjust.isNeutral else { continue }
             var adj = out
             let a = m.adjust
             if a.exposure != 0 {
@@ -413,8 +435,9 @@ enum Engine {
             ])!.outputImage!.cropped(to: extent)
         case .radial:
             let c = CIVector(x: extent.minX + w * m.x0, y: extent.minY + h * m.y0)
-            let r0 = max(0, w * m.radius * (1 - m.feather))
-            let r1 = max(r0 + 1, w * m.radius * (1 + m.feather * 0.5))
+            let radiusBase = min(w, h)
+            let r0 = max(0, radiusBase * m.radius * (1 - m.feather))
+            let r1 = max(r0 + 1, radiusBase * m.radius * (1 + m.feather * 0.5))
             img = CIFilter(name: "CIRadialGradient", parameters: [
                 "inputCenter": c,
                 "inputRadius0": NSNumber(value: r0),
@@ -446,7 +469,34 @@ enum Engine {
         if m.inverted {
             img = img.applyingFilter("CIColorInvert")
         }
+        if !m.refinements.isEmpty, let paint = refinementImage(m.refinements, extent: extent) {
+            img = paint.composited(over: img).cropped(to: extent)
+        }
         return img
+    }
+
+    private static func refinementImage(_ strokes: [Stroke], extent: CGRect) -> CIImage? {
+        let side = 1024
+        guard let context = CGContext(data: nil, width: side, height: side, bitsPerComponent: 8,
+                                      bytesPerRow: side * 4, space: srgb,
+                                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        for stroke in strokes {
+            let value: CGFloat = stroke.erasing ? 0 : 1
+            let radius = max(2, stroke.radius * Double(side))
+            let feather = min(max(stroke.feather, 0.01), 1)
+            let colors = [CGColor(colorSpace: srgb, components: [value, value, value, 1])!,
+                          CGColor(colorSpace: srgb, components: [value, value, value, 0])!] as CFArray
+            guard let gradient = CGGradient(colorsSpace: srgb, colors: colors, locations: [0, 1]) else { continue }
+            for point in stroke.points {
+                let center = CGPoint(x: point.x * Double(side), y: point.y * Double(side))
+                context.drawRadialGradient(gradient, startCenter: center, startRadius: radius * (1 - feather),
+                                           endCenter: center, endRadius: radius, options: [.drawsBeforeStartLocation])
+            }
+        }
+        guard let image = context.makeImage() else { return nil }
+        return CIImage(cgImage: image).transformed(by:
+            CGAffineTransform(translationX: extent.minX, y: extent.minY)
+                .scaledBy(x: extent.width / Double(side), y: extent.height / Double(side)))
     }
 
     private static func brushImage(_ m: Mask, extent: CGRect) -> CIImage? {
@@ -475,7 +525,7 @@ enum Engine {
         }
         // 由 1024 方形拉伸到实际画幅（笔刷坐标是归一化的，允许长宽比拉伸）
         let sx = extent.width / CGFloat(side), sy = extent.height / CGFloat(side)
-        img = img.transformed(by: CGAffineTransform(scaleX: sx, y: sy))
+        img = img.transformed(by: CGAffineTransform(translationX: extent.minX, y: extent.minY).scaledBy(x: sx, y: sy))
         return img.cropped(to: extent.integral)
     }
 
@@ -550,11 +600,11 @@ enum Engine {
     }
 
     // MARK: - AI 蒙版（系统 Vision，全本地、不联网）
-    private static var aiCache: [String: CIImage] = [:]
+    private static let aiCache = BoundedCache<String, CIImage>(capacity: 16)
 
     /// 手动刷新（换图、改参数后点「重算」时用）
     static func invalidateAIMask(id: UUID) {
-        for k in aiCache.keys where k.hasPrefix(id.uuidString) { aiCache.removeValue(forKey: k) }
+        aiCache.removeAll { $0.hasPrefix(id.uuidString) }
     }
 
     static func aiMask(for m: Mask, extent: CGRect, analyzed: CIImage) -> CIImage? {
@@ -660,17 +710,15 @@ enum Engine {
         let lh = hh * (1 + hp * 0.35), rh = hh * (1 - hp * 0.35)
         return (CGPoint(x: cx - tw, y: cy + hh),
                 CGPoint(x: cx + tw, y: cy + hh),
-                CGPoint(x: cx + hw, y: cy - rh),
-                CGPoint(x: cx - hw, y: cy - lh))
+                CGPoint(x: cx + bw, y: cy - rh),
+                CGPoint(x: cx - bw, y: cy - lh))
     }
 
-    private static var perspectiveCache: [String: Quad] = [:]
 
     /// 自动透视：Vision 矩形检测，取最大且最接近四边形的候选
     static func autoPerspectiveQuad(from source: CIImage) -> Quad? {
         let e = source.extent
-        let key = "persp-\(Int(e.width))x\(Int(e.height))"
-        if let c = perspectiveCache[key] { return c }
+        // 不跨照片复用 Vision 四边形，避免同尺寸图片串用检测结果。
         let side: CGFloat = 1024
         let sc = min(1, side / max(e.width, e.height))
         let small = sc < 1 ? source.transformed(by: CGAffineTransform(scaleX: sc, y: sc)) : source
@@ -687,7 +735,7 @@ enum Engine {
             CGPoint(x: e.minX + n.x * e.width, y: e.minY + n.y * e.height)
         }
         let quad = (pt(obs.topLeft), pt(obs.topRight), pt(obs.bottomRight), pt(obs.bottomLeft))
-        perspectiveCache[key] = quad
+        // 结果只用于本次检测，不写入跨照片缓存。
         return quad
     }
 
@@ -770,7 +818,7 @@ enum Engine {
     }
 
     // —— 紫边抑制：高亮度 且 蓝分量显著高于 R/G 均值 → 向灰度收敛 ——
-    private static var purpleCubeCache: [Int: Data] = [:]
+    private static let purpleCubeCache = BoundedCache<Int, Data>(capacity: 16)
     static func defringePurple(_ img: CIImage, strength: Double) -> CIImage {
         let key = Int(strength.rounded())
         let data: Data
@@ -814,7 +862,7 @@ enum Engine {
     }
 
     // —— Halation 光晕 ——
-    private static var highlightCubeCache: [Int: Data] = [:]
+    private static let highlightCubeCache = BoundedCache<Int, Data>(capacity: 16)
     static func addHalation(_ img: CIImage, amount: Double, threshold: Double, radiusFactor: Double) -> CIImage {
         let e = img.extent
         let tKey = Int(threshold.rounded())
@@ -907,8 +955,8 @@ enum Engine {
             let e = img.extent
             let s = Double(settings.maxLongEdge) / Double(max(e.width, e.height))
             if s < 1 {
-                out = img.transformed(by: CGAffineTransform(scaleX: s, y: s))
-                out = out.applyingFilter("CILanczosScaleTransform", parameters: ["inputScale": NSNumber(value: s)])
+                // 一次 Lanczos 即可（早先这里先 transform 再 Lanczos，等于缩了两次，长边会变成 s² 倍）
+                out = img.applyingFilter("CILanczosScaleTransform", parameters: ["inputScale": NSNumber(value: s)])
             }
         }
         if settings.sharpenForOutput {
@@ -917,7 +965,15 @@ enum Engine {
                 kCIInputIntensityKey: NSNumber(value: 0.4)
             ])
         }
-        let cg = ctx.createCGImage(out, from: out.extent, format: .RGBA8, colorSpace: srgb)!
+        // 水印放在最后叠：尺寸按输出图算，锐化也不会把字描出毛边
+        if settings.watermarkEnabled {
+            out = applyWatermark(out, settings)
+        }
+        let format: CIFormat = settings.format == "tiff" && settings.tiffBitDepth == 16 ? .RGBA16 : .RGBA8
+        guard let cg = ctx.createCGImage(out, from: out.extent, format: format,
+                                        colorSpace: settings.colorSpace.cgColorSpace) else {
+            throw NSError(domain: "RawForge", code: 12, userInfo: [NSLocalizedDescriptionKey: "无法生成导出图像"])
+        }
         let ut: UTType
         switch settings.format {
         case "png": ut = .png
@@ -937,12 +993,109 @@ enum Engine {
             throw NSError(domain: "RawForge", code: 11, userInfo: [NSLocalizedDescriptionKey: "写出失败"])
         }
     }
+
+    // MARK: - 水印
+    /// 出图时叠加水印（只影响导出文件，不进预览 / 副档）。
+    /// 文字用 AppKit 栅格化（带柔和投影），图片按比例缩放；九宫格定位 + 旋转 + 不透明度。
+    static func applyWatermark(_ img: CIImage, _ s: ExportSettings) -> CIImage {
+        let e = img.extent
+        let longEdge = Double(max(e.width, e.height))
+        guard longEdge > 1, s.watermarkOpacity > 0.002, s.watermarkScale > 0.001 else { return img }
+
+        var layer: CIImage?
+        if s.watermarkKind == "image", !s.watermarkImagePath.isEmpty {
+            layer = imageWatermark(URL(fileURLWithPath: s.watermarkImagePath),
+                                   width: CGFloat(longEdge * s.watermarkScale))
+        }
+        if layer == nil {
+            let txt = s.watermarkText.trimmingCharacters(in: .whitespacesAndNewlines)
+            layer = textWatermark(txt.isEmpty ? "RawForge" : txt,
+                                  fontPx: CGFloat(longEdge * s.watermarkScale),
+                                  dark: s.watermarkDarkText)
+        }
+        guard var wm = layer else { return img }
+
+        // 九宫格定位（CI 坐标 y 向上）
+        let we = wm.extent
+        let margin = Double(min(e.width, e.height)) * s.watermarkMargin
+        let cx: Double, cy: Double
+        switch s.watermarkPosition {
+        case "topLeft":      cx = e.minX + margin + we.width / 2;  cy = e.maxY - margin - we.height / 2
+        case "topCenter":    cx = e.midX;                          cy = e.maxY - margin - we.height / 2
+        case "topRight":     cx = e.maxX - margin - we.width / 2;  cy = e.maxY - margin - we.height / 2
+        case "midLeft":      cx = e.minX + margin + we.width / 2;  cy = e.midY
+        case "center":       cx = e.midX;                          cy = e.midY
+        case "midRight":     cx = e.maxX - margin - we.width / 2;  cy = e.midY
+        case "bottomLeft":   cx = e.minX + margin + we.width / 2;  cy = e.minY + margin + we.height / 2
+        case "bottomCenter": cx = e.midX;                          cy = e.minY + margin + we.height / 2
+        default:             cx = e.maxX - margin - we.width / 2;  cy = e.minY + margin + we.height / 2
+        }
+        // 先挪到锚点中心，再绕中心旋转，最后把水印自身中心对齐过去
+        var t = CGAffineTransform(translationX: cx, y: cy)
+        if s.watermarkRotation != 0 {
+            t = t.rotated(by: CGFloat(s.watermarkRotation * .pi / 180))
+        }
+        t = t.translatedBy(x: -we.width / 2, y: -we.height / 2)
+        wm = wm.transformed(by: t)
+
+        // 不透明度：alpha 整体乘系数（RGB 不动）
+        if s.watermarkOpacity < 0.999 {
+            wm = wm.applyingFilter("CIColorMatrix", parameters: [
+                "inputAVector": CIVector(x: 0, y: 0, z: 0, w: s.watermarkOpacity)
+            ])
+        }
+        // 裁回原幅面：贴边 + 旋转时水印角会伸出图外，不裁的话画布会被撑大、整图错位
+        return wm.composited(over: img).cropped(to: e)
+    }
+
+    /// 文字水印层：系统粗体 + 柔和投影，栅格化成带 alpha 的 CIImage
+    private static func textWatermark(_ text: String, fontPx: CGFloat, dark: Bool) -> CIImage? {
+        let px = max(8, fontPx)
+        let font = NSFont.systemFont(ofSize: px, weight: .semibold)
+        let shadow = NSShadow()
+        shadow.shadowColor = NSColor.black.withAlphaComponent(0.5)
+        shadow.shadowBlurRadius = max(1, px * 0.07)
+        shadow.shadowOffset = NSSize(width: 0, height: -max(1, px * 0.035))
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: dark ? NSColor.black : NSColor.white,
+            .shadow: shadow
+        ]
+        let str = NSAttributedString(string: text, attributes: attrs)
+        let ts = str.size()
+        let pad = ceil(px * 0.4)   // 给投影留边，别裁掉
+        let w = Int(ceil(ts.width + pad * 2)), h = Int(ceil(ts.height + pad * 2))
+        guard w > 1, h > 1,
+              let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: w, pixelsHigh: h,
+                                         bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true,
+                                         isPlanar: false, colorSpaceName: .deviceRGB,
+                                         bytesPerRow: 0, bitsPerPixel: 0),
+              let gc = NSGraphicsContext(bitmapImageRep: rep)
+        else { return nil }
+        rep.size = NSSize(width: w, height: h)   // 点 == 像素，避免被按 2x 缩
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = gc
+        str.draw(at: NSPoint(x: pad, y: pad))
+        gc.flushGraphics()
+        NSGraphicsContext.restoreGraphicsState()
+        guard let cg = rep.cgImage else { return nil }
+        return CIImage(cgImage: cg)
+    }
+
+    /// 图片水印层（logo / 拍摄者签名图）：按目标宽度等比缩放
+    private static func imageWatermark(_ url: URL, width: CGFloat) -> CIImage? {
+        guard let src = CIImage(contentsOf: url, options: [.applyOrientationProperty: true]) else { return nil }
+        let e = src.extent
+        guard e.width > 1, width > 1 else { return nil }
+        let k = width / e.width
+        return src.transformed(by: CGAffineTransform(scaleX: k, y: k))
+    }
 }
 
 // MARK: - HSL 立方体（把 8 个色相分区的选择性调整烘进一张 LUT）
 enum HSLCube {
     static let dim = 32
-    private static var cache: [UInt64: Data] = [:]
+    private static let cache = BoundedCache<UInt64, Data>(capacity: 24)
 
     static func filter(_ mix: HSLMix) -> CIFilter? {
         let key = hash(mix)
@@ -1050,7 +1203,7 @@ enum HSLCube {
 // MARK: - 曲线立方体（亮度曲线 + 单独 RGB 通道曲线，一起烘成一张 LUT）
 enum CurveCube {
     static let dim = 64
-    private static var cache: [UInt64: Data] = [:]
+    private static let cache = BoundedCache<UInt64, Data>(capacity: 12)
 
     static func needs(_ p: EditParams) -> Bool {
         !p.curve.isIdentity || !p.lumaCurve.isIdentity || !p.curveR.isIdentity
@@ -1162,20 +1315,26 @@ enum CurveCube {
             return (hue2(h + 1.0 / 3), hue2(h), hue2(h - 1.0 / 3))
         }
 
+        // These stages depend on one channel only, not on the other two cube axes.
+        var channelR = [Double](repeating: 0, count: D)
+        var channelG = channelR, channelB = channelR, perceptualInput = channelR
+        for i in 0..<D {
+            let input = Double(i) / Double(last)
+            let tone = toneActive ? look(lutT, input) : input
+            channelR[i] = look(lutR, tone)
+            channelG[i] = look(lutG, tone)
+            channelB[i] = look(lutB, tone)
+            perceptualInput[i] = toPerc(input)
+        }
+
         var out = [Float](repeating: 0, count: D * D * D * 4)
         for bi in 0..<D {
             for gi in 0..<D {
                 for ri in 0..<D {
                     // 线性索引值 →（色调曲线）→ 单独通道曲线 → （亮度曲线）
-                    var rv = Double(ri) / Double(last)
-                    var gv = Double(gi) / Double(last)
-                    var bv = Double(bi) / Double(last)
-                    if toneActive {
-                        rv = look(lutT, rv); gv = look(lutT, gv); bv = look(lutT, bv)
-                    }
-                    var r = look(lutR, rv)
-                    var g = look(lutG, gv)
-                    var b = look(lutB, bv)
+                    var r = channelR[ri]
+                    var g = channelG[gi]
+                    var b = channelB[bi]
                     if lumaActive {
                         // 亮度曲线：按目标亮度等比缩放 RGB，色调和饱和度基本不动
                         let y = 0.2126 * r + 0.7152 * g + 0.0722 * b
@@ -1194,14 +1353,12 @@ enum CurveCube {
                         var pr = toPerc(r), pg = toPerc(g), pb = toPerc(b)
                         if refine {
                             // 原始感知值（曲线前）用于取真实色度；把色度挂回新的亮度上
-                            let y0 = luma(toPerc(Double(ri) / Double(last)),
-                                          toPerc(Double(gi) / Double(last)),
-                                          toPerc(Double(bi) / Double(last)))
+                            let y0 = luma(perceptualInput[ri], perceptualInput[gi], perceptualInput[bi])
                             let y1 = luma(pr, pg, pb)
                             let k = (y1 + 0.05) / (max(y0, 0.001) + 0.05)
-                            let p0r = toPerc(Double(ri) / Double(last))
-                            let p0g = toPerc(Double(gi) / Double(last))
-                            let p0b = toPerc(Double(bi) / Double(last))
+                            let p0r = perceptualInput[ri]
+                            let p0g = perceptualInput[gi]
+                            let p0b = perceptualInput[bi]
                             let keepR = y1 + (p0r - y0) * k
                             let keepG = y1 + (p0g - y0) * k
                             let keepB = y1 + (p0b - y0) * k
@@ -1292,6 +1449,8 @@ enum Calibration {
 // MARK: - 范围蒙版（按颜色 / 按亮度取样）
 enum RangeCube {
     static let dim = 32
+    private static let colorCache = BoundedCache<[Double], Data>(capacity: 16)
+    private static let luminanceCache = BoundedCache<[Double], Data>(capacity: 16)
 
     /// 线性 → 感知（取样色和亮度上下界都是感知值，比较必须在同一空间里做，
     /// 否则亮部会被线性空间放大距离、容差完全落空 —— 实测踩过）
@@ -1306,6 +1465,8 @@ enum RangeCube {
         let sg = sample.count == 3 ? sample[1] : 0.5
         let sb = sample.count == 3 ? sample[2] : 0.5
         let tol = max(tolerance, 0.02)
+        let key = [sr, sg, sb, tol]
+        if let data = colorCache[key] { return data }
         var out = [Float](repeating: 0, count: D * D * D * 4)
         for bi in 0..<D {
             for gi in 0..<D {
@@ -1320,7 +1481,9 @@ enum RangeCube {
                 }
             }
         }
-        return out.withUnsafeBytes { Data($0) }
+        let data = out.withUnsafeBytes { Data($0) }
+        colorCache[key] = data
+        return data
     }
 
     /// 亮度落在 [low, high] 内为白，软边由 soft 控制
@@ -1328,6 +1491,8 @@ enum RangeCube {
         let D = dim, last = D - 1
         let lo = min(low, high), hi = max(low, high)
         let s = max(soft, 0.001)
+        let key = [lo, hi, s]
+        if let data = luminanceCache[key] { return data }
         var out = [Float](repeating: 0, count: D * D * D * 4)
         for bi in 0..<D {
             for gi in 0..<D {
@@ -1343,7 +1508,9 @@ enum RangeCube {
                 }
             }
         }
-        return out.withUnsafeBytes { Data($0) }
+        let data = out.withUnsafeBytes { Data($0) }
+        luminanceCache[key] = data
+        return data
     }
 }
 

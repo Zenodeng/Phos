@@ -13,8 +13,10 @@ struct ToneCurve: Codable, Equatable {
 
     /// 排序 + 夹到 [0,1] + 合并过近的点，保证曲线始终是一条函数
     static func sanitize(_ raw: [[Double]]) -> [[Double]] {
-        var p = raw.map { [min(max($0[0], 0), 1), min(max($0[1], 0), 1)] }
-            .sorted { $0[0] < $1[0] }
+        var p = raw.compactMap { pair -> [Double]? in
+            guard pair.count >= 2, pair[0].isFinite, pair[1].isFinite else { return nil }
+            return [min(max(pair[0], 0), 1), min(max(pair[1], 0), 1)]
+        }.sorted { $0[0] < $1[0] }
         guard p.count >= 2 else { return identityPoints }
         var out: [[Double]] = []
         for q in p {
@@ -25,6 +27,10 @@ struct ToneCurve: Codable, Equatable {
             }
         }
         if out.count < 2 { return identityPoints }
+        if out[0][0] > 0 { out.insert([0, out[0][1]], at: 0) }
+        if out[out.count - 1][0] < 1 { out.append([1, out[out.count - 1][1]]) }
+        out[0][0] = 0
+        out[out.count - 1][0] = 1
         return out
     }
 
@@ -206,6 +212,19 @@ struct Stroke: Codable, Equatable {
     var pts: [[Double]] = []
     var radius: Double = 0.05
     var feather: Double = 0.5
+    var erasing: Bool = false
+
+    init(pts: [[Double]] = [], radius: Double = 0.05, feather: Double = 0.5, erasing: Bool = false) {
+        self.pts = pts; self.radius = radius; self.feather = feather; self.erasing = erasing
+    }
+    enum CodingKeys: String, CodingKey { case pts, radius, feather, erasing }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        pts = try c.decodeIfPresent([[Double]].self, forKey: .pts) ?? []
+        radius = try c.decodeIfPresent(Double.self, forKey: .radius) ?? 0.05
+        feather = try c.decodeIfPresent(Double.self, forKey: .feather) ?? 0.5
+        erasing = try c.decodeIfPresent(Bool.self, forKey: .erasing) ?? false
+    }
 }
 
 struct Mask: Codable, Equatable, Identifiable {
@@ -221,6 +240,7 @@ struct Mask: Codable, Equatable, Identifiable {
     var radius: Double = 0.3
     var feather: Double = 0.6
     var strokes: [Stroke] = []
+    var refinements: [Stroke] = []
     var adjust = LocalAdjust()
     var name: String = "蒙版"
 
@@ -234,6 +254,7 @@ struct Mask: Codable, Equatable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case id, kind, enabled, inverted, x0, y0, x1, y1, radius, feather, strokes, adjust, name
         case sampleRGB, tolerance, lumLow, lumHigh, lumSoft
+        case refinements
     }
 
     // 宽容解码：旧副档缺取样/范围字段时用默认值
@@ -251,6 +272,7 @@ struct Mask: Codable, Equatable, Identifiable {
         radius     = try c.decodeIfPresent(Double.self, forKey: .radius)   ?? base.radius
         feather    = try c.decodeIfPresent(Double.self, forKey: .feather)  ?? base.feather
         strokes    = try c.decodeIfPresent([Stroke].self, forKey: .strokes) ?? base.strokes
+        refinements = try c.decodeIfPresent([Stroke].self, forKey: .refinements) ?? []
         adjust     = try c.decodeIfPresent(LocalAdjust.self, forKey: .adjust) ?? base.adjust
         name       = try c.decodeIfPresent(String.self, forKey: .name)     ?? base.name
         sampleRGB  = try c.decodeIfPresent([Double].self, forKey: .sampleRGB) ?? base.sampleRGB
@@ -266,6 +288,7 @@ struct EditParams: Codable, Equatable {
     // 基本
     var temperature: Double = 0      // -100...100
     var tint: Double = 0
+    var whiteBalanceGains: [Double] = [1, 1, 1]
     var exposure: Double = 0         // EV
     var contrast: Double = 0
     var highlights: Double = 0
@@ -367,6 +390,7 @@ struct EditParams: Codable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case temperature, tint, exposure, contrast, highlights, shadows, whites, blacks
+        case whiteBalanceGains
         case clarity, vibrance, saturation, texture, dehaze, hdrMode, hdrLimit
         case curve, hsl
         case lumaCurve, curveR, curveG, curveB, refineSat
@@ -392,6 +416,7 @@ struct EditParams: Codable, Equatable {
         let base = EditParams()
         temperature    = try c.decodeIfPresent(Double.self, forKey: .temperature)    ?? base.temperature
         tint           = try c.decodeIfPresent(Double.self, forKey: .tint)           ?? base.tint
+        whiteBalanceGains = try c.decodeIfPresent([Double].self, forKey: .whiteBalanceGains) ?? [1, 1, 1]
         exposure       = try c.decodeIfPresent(Double.self, forKey: .exposure)       ?? base.exposure
         contrast       = try c.decodeIfPresent(Double.self, forKey: .contrast)       ?? base.contrast
         highlights     = try c.decodeIfPresent(Double.self, forKey: .highlights)     ?? base.highlights
@@ -471,6 +496,54 @@ struct ExportSettings: Codable, Equatable {
     var quality: Double = 0.95
     var maxLongEdge: Int = 0         // 0 = 不缩放
     var sharpenForOutput: Bool = false
+    var tiffBitDepth: Int = 16
+    var colorSpace: ExportColorSpace = .sRGB
+
+    // MARK: 水印（只在出图时叠加，不进预览、不进副档）
+    var watermarkEnabled: Bool = false
+    var watermarkKind: String = "text"        // text / image
+    var watermarkText: String = "RawForge"
+    var watermarkDarkText: Bool = false       // false=白字，true=黑字（浅色画面用）
+    var watermarkImagePath: String = ""       // 图片水印的本地路径（png 带透明最好）
+    var watermarkPosition: String = "bottomRight"  // 九宫格：topLeft…bottomRight
+    var watermarkScale: Double = 0.05         // 占输出长边比例：文字=字号，图片=宽度
+    var watermarkOpacity: Double = 0.55
+    var watermarkRotation: Double = 0         // 度，绕水印中心
+    var watermarkMargin: Double = 0.03        // 距边缘留白，占短边比例
+
+    /// 九宫格锚点（左上 → 右下），给 UI 用
+    static let wmPositions: [String] = [
+        "topLeft", "topCenter", "topRight",
+        "midLeft", "center", "midRight",
+        "bottomLeft", "bottomCenter", "bottomRight"
+    ]
+}
+
+// MARK: - 导出目录
+/// 导出 / 批量导出的默认落盘目录。
+/// 本机偏好写在 UserDefaults（`defaults write com.zeno.rawforge exportDirectory <路径>`），
+/// 源码不含任何个人路径 —— 发到 GitHub 上就是通用逻辑，无需删改：
+/// 未配置时退回桌面。目录不存在会自动创建。
+enum ExportPaths {
+    static let key = "exportDirectory"
+
+    static var configured: String {
+        UserDefaults.standard.string(forKey: key) ?? ""
+    }
+
+    static var defaultDir: URL {
+        let fm = FileManager.default
+        let base: URL
+        let s = configured
+        if !s.isEmpty {
+            base = URL(fileURLWithPath: (s as NSString).expandingTildeInPath)
+        } else {
+            base = fm.urls(for: .desktopDirectory, in: .userDomainMask).first
+                ?? fm.homeDirectoryForCurrentUser
+        }
+        try? fm.createDirectory(at: base, withIntermediateDirectories: true)
+        return base
+    }
 }
 
 // MARK: - 多重曝光合成模式
@@ -494,28 +567,54 @@ enum MergeMode: String, Codable, CaseIterable {
 
 // MARK: - 副档存档（非破坏编辑）
 struct Sidecar: Codable {
-    var version: Int = 1
+    var version: Int = 2
     var app: String = "RawForge"
     var params: EditParams
     var rating: Int = 0
     var picked: Bool = false
+    var snapshots: [EditSnapshot] = []
+
+    init(params: EditParams, rating: Int = 0, picked: Bool = false, snapshots: [EditSnapshot] = []) {
+        self.params = params; self.rating = rating; self.picked = picked; self.snapshots = snapshots
+    }
+    enum CodingKeys: String, CodingKey { case version, app, params, rating, picked, snapshots }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 1
+        app = try c.decodeIfPresent(String.self, forKey: .app) ?? "RawForge"
+        params = try c.decode(EditParams.self, forKey: .params)
+        rating = try c.decodeIfPresent(Int.self, forKey: .rating) ?? 0
+        picked = try c.decodeIfPresent(Bool.self, forKey: .picked) ?? false
+        snapshots = try c.decodeIfPresent([EditSnapshot].self, forKey: .snapshots) ?? []
+    }
 }
 
 enum SidecarStore {
     static func url(for imageURL: URL) -> URL {
-        imageURL.deletingPathExtension().appendingPathExtension("rawforge.json")
+        imageURL.appendingPathExtension("rawforge.json")
     }
-    static func load(for url: URL) -> Sidecar? {
-        let s = url.deletingPathExtension().appendingPathExtension("rawforge.json")
-        guard let d = try? Data(contentsOf: s),
-              let c = try? JSONDecoder().decode(Sidecar.self, from: d) else { return nil }
-        return c
+    static func existingURL(for imageURL: URL) -> URL {
+        let modern = url(for: imageURL)
+        if FileManager.default.fileExists(atPath: modern.path) { return modern }
+        return imageURL.deletingPathExtension().appendingPathExtension("rawforge.json")
     }
-    static func save(_ s: Sidecar, for url: URL) {
-        let dest = url.deletingPathExtension().appendingPathExtension("rawforge.json")
+    static func read(for imageURL: URL) throws -> Sidecar? {
+        let path = existingURL(for: imageURL)
+        guard FileManager.default.fileExists(atPath: path.path) else { return nil }
+        return try JSONDecoder().decode(Sidecar.self, from: Data(contentsOf: path))
+    }
+    static func load(for url: URL) -> Sidecar? { try? read(for: url) }
+
+    static func write(_ s: Sidecar, for imageURL: URL) throws {
+        // Never silently overwrite a damaged edit file.
+        _ = try read(for: imageURL)
+        let dest = url(for: imageURL)
         let enc = JSONEncoder(); enc.outputFormatting = [.prettyPrinted, .sortedKeys]
-        guard let d = try? enc.encode(s) else { return }
-        try? d.write(to: dest)
+        try enc.encode(s).write(to: dest, options: .atomic)
+    }
+    @discardableResult
+    static func save(_ s: Sidecar, for url: URL) -> Bool {
+        do { try write(s, for: url); return true } catch { return false }
     }
 }
 

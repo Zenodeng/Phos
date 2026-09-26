@@ -142,13 +142,21 @@ struct MainWindow: View {
                 }
                 .frame(minWidth: 520)
                 InspectorPane().frame(minWidth: 300, idealWidth: 340, maxWidth: 420)
+                    .disabled(s.source == nil)
             }
             StatusBar()
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .disabled(s.syncRunning)
         .sheet(isPresented: $s.showExport) { ExportSheet() }
         .sheet(isPresented: $s.showBatch) { BatchSheet() }
         .sheet(isPresented: $s.showMerge) { MergeSheet() }
+        .sheet(isPresented: $s.showSync) { SyncSheet() }
+        .sheet(isPresented: $s.showSnapshots) { SnapshotSheet() }
+        .alert("操作未完成", isPresented: Binding(get: { s.workflowError != nil },
+                                                set: { if !$0 { s.workflowError = nil } })) {
+            Button("好") { s.workflowError = nil }
+        } message: { Text(s.workflowError ?? "") }
     }
 }
 
@@ -163,7 +171,7 @@ struct TopBar: View {
             }
             ToolDivider()
             ToolButton(systemImage: "square.on.square", title: "前后对比（⌘B）",
-                       active: s.showBefore) { s.refreshBefore(); s.showBefore.toggle() }
+                       active: s.showBefore) { s.showBefore.toggle() }
             ToolDivider()
             PillToggle(title: "全像素", isOn: $s.fullResPreview,
                        helpText: "关：预览走 2200px 代理图（快）。开：整条管线按原图全分辨率渲染（慢但所见即所得）")
@@ -193,6 +201,12 @@ struct TopBar: View {
             .menuStyle(.borderlessButton)
             .fixedSize()
             .help("预设")
+            ToolButton(systemImage: "clock.arrow.circlepath", title: "命名快照",
+                       disabled: s.source == nil) { s.showSnapshots = true }
+            ToolButton(systemImage: "doc.on.doc", title: "复制调整",
+                       disabled: s.source == nil) { s.copyAdjustments() }
+            ToolButton(systemImage: "arrow.triangle.2.circlepath", title: "同步调整",
+                       disabled: s.source == nil) { s.showSync = true }
             ToolDivider()
             ToolButton(systemImage: "square.and.arrow.down", title: "导出当前照片（⌘E）") {
                 s.showExport = true
@@ -279,12 +293,44 @@ struct BrowserPane: View {
                     ForEach(Array(s.items.enumerated()), id: \.element.id) { idx, it in
                         if s.filterRating == 0 || it.rating >= s.filterRating {
                             ThumbCell(item: it, selected: idx == s.currentIndex)
-                                .onTapGesture { s.select(idx) }
+                                .onTapGesture {
+                                    if NSEvent.modifierFlags.contains(.command) {
+                                        if s.selectedPhotos.contains(it.id) { s.selectedPhotos.remove(it.id) }
+                                        else { s.selectedPhotos.insert(it.id) }
+                                    } else if NSEvent.modifierFlags.contains(.shift) {
+                                        let start = max(0, min(s.currentIndex, idx)), end = max(s.currentIndex, idx)
+                                        for index in start...end where s.filterRating == 0 || s.items[index].rating >= s.filterRating {
+                                            s.selectedPhotos.insert(s.items[index].id)
+                                        }
+                                    } else { s.select(idx) }
+                                }
+                                .overlay(alignment: .topLeading) {
+                                    Button {
+                                        if s.selectedPhotos.contains(it.id) { s.selectedPhotos.remove(it.id) }
+                                        else { s.selectedPhotos.insert(it.id) }
+                                    } label: {
+                                        Image(systemName: s.selectedPhotos.contains(it.id) ? "checkmark.square.fill" : "square")
+                                            .foregroundStyle(.white)
+                                            .padding(4).background(.black.opacity(0.5), in: RoundedRectangle(cornerRadius: 4))
+                                    }.buttonStyle(.plain).help("选择用于同步：\(it.url.lastPathComponent)")
+                                        .padding(3)
+                                }
                         }
                     }
                 }
                 .padding(8)
             }
+            Divider()
+            HStack {
+                Text("已选 \(s.selectedPhotos.count)").font(.caption).monospacedDigit()
+                Spacer()
+                ToolButton(systemImage: "checkmark.square", title: "选择当前筛选的所有照片") {
+                    s.selectedPhotos = Set(s.items.filter { s.filterRating == 0 || $0.rating >= s.filterRating }.map(\.id))
+                }
+                ToolButton(systemImage: "xmark", title: "清除选择") { s.selectedPhotos = [] }
+                ToolButton(systemImage: "arrow.triangle.2.circlepath", title: "同步所选照片",
+                           disabled: s.selectedPhotos.isEmpty || s.source == nil) { s.showSync = true }
+            }.padding(6)
         }
         .background(Color(nsColor: .controlBackgroundColor))
     }
@@ -369,22 +415,26 @@ struct CanvasPane: View {
                     ScrollView([.horizontal, .vertical]) {
                         Image(decorative: cg, scale: 1)
                             .frame(width: CGFloat(cg.width), height: CGFloat(cg.height))
+                            .overlay { selectionOverlay(width: CGFloat(cg.width), height: CGFloat(cg.height)) }
+                            .gesture(canvasGesture(frame: CGRect(x: 0, y: 0, width: cg.width, height: cg.height),
+                                                   pixelView: true), including: s.selectedMask != nil || s.whiteBalancePicker ? .all : .subviews)
                     }
                 } else {
                 if let cg = img {
                     Image(decorative: cg, scale: 1)
                         .resizable()
                         .frame(width: fit.width * scale, height: fit.height * scale)
-                        .offset(x: fit.midX - geo.size.width / 2 + offset.width,
-                                y: fit.midY - geo.size.height / 2 + offset.height)
+                        .overlay { selectionOverlay(width: dispRect.width, height: dispRect.height) }
                         .overlay(alignment: .topLeading) {
-                            if !s.cropMode, let id = s.selectedMask,
+                            if !s.cropMode, !s.showBefore, !s.whiteBalancePicker, s.maskTool == .position, let id = s.selectedMask,
                                let m = s.params.masks.first(where: { $0.id == id }) {
                                 // overlay 的本地原点就是图片左上角，frame 必须从 0 起
                                 MaskOverlay(mask: m, frame: CGRect(
                                     x: 0, y: 0, width: dispRect.width, height: dispRect.height))
                             }
                         }
+                        .offset(x: fit.midX - geo.size.width / 2 + offset.width,
+                                y: fit.midY - geo.size.height / 2 + offset.height)
                 } else {
                     VStack(spacing: 10) {
                         Image(systemName: "photo.on.rectangle.angled")
@@ -401,7 +451,7 @@ struct CanvasPane: View {
                 }
             }
             .contentShape(Rectangle())
-            .gesture(canvasGesture(frame: fit))
+            .gesture(canvasGesture(frame: dispRect), including: s.oneToOne ? .subviews : .all)
             .simultaneousGesture(MagnificationGesture().onChanged { v in
                 scale = min(max(scale * (1 + (v - 1) * 0.5), 0.2), 8)
             })
@@ -411,6 +461,16 @@ struct CanvasPane: View {
                 CropOverlay(frame: dispRect)
                 CropBar()
             }
+        }
+    }
+
+    @ViewBuilder
+    func selectionOverlay(width: CGFloat, height: CGFloat) -> some View {
+        if s.showMaskOverlay, !s.showBefore, !s.cropMode, let mask = s.maskPreviewImage {
+            Color.red.opacity(0.45)
+                .mask(Image(decorative: mask, scale: 1).resizable().luminanceToAlpha())
+                .frame(width: width, height: height)
+                .allowsHitTesting(false)
         }
     }
 
@@ -424,12 +484,18 @@ struct CanvasPane: View {
 
     /// 只挂一个拖拽手势，内部按当前状态分流 —— 以前挂了三个 gesture，
     /// 平移手势在最外层会把事件吞掉，画笔永远收不到点，这是画笔失效的根因。
-    func canvasGesture(frame: CGRect) -> some Gesture {
+    func canvasGesture(frame: CGRect, pixelView: Bool = false) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { v in
-                guard !s.oneToOne, !s.cropMode else { return }   // 裁剪模式交给 CropOverlay
+                guard (!s.oneToOne || pixelView), !s.cropMode, !s.showBefore else { return }
+                guard frame.contains(v.startLocation) else { return }
+                if s.whiteBalancePicker { return }
                 if let id = s.selectedMask,
                    let m = s.params.masks.first(where: { $0.id == id }) {
+                    if s.maskTool != .position {
+                        paint(v.location, frame: frame, mask: m, refining: true)
+                        return
+                    }
                     switch m.kind {
                     case .brush, .depth:
                         paint(v.location, frame: frame, mask: m)
@@ -447,7 +513,11 @@ struct CanvasPane: View {
                                     height: (panOrigin?.height ?? 0) + v.translation.height)
                 }
             }
-            .onEnded { _ in
+            .onEnded { value in
+                if s.whiteBalancePicker, !s.cropMode, !s.showBefore, frame.contains(value.location) {
+                    s.sampleWhiteBalance(at: CGPoint(x: (value.location.x - frame.minX) / frame.width,
+                                                    y: 1 - (value.location.y - frame.minY) / frame.height))
+                }
                 if painting { painting = false; s.endEdit() }
                 else if maskOrigin != nil || sampled { s.endEdit() }
                 panOrigin = nil; maskOrigin = nil; lastBrush = nil; sampled = false
@@ -455,29 +525,33 @@ struct CanvasPane: View {
     }
 
     /// 画笔：屏幕点 → 归一化坐标（y 向上，跟引擎里的笔刷位图一致）
-    func paint(_ loc: CGPoint, frame: CGRect, mask m: Mask) {
+    func paint(_ loc: CGPoint, frame: CGRect, mask m: Mask, refining: Bool = false) {
         let p = CGPoint(x: min(max((loc.x - frame.minX) / max(frame.width, 1), 0), 1),
                         y: min(max(1 - (loc.y - frame.minY) / max(frame.height, 1), 0), 1))
         var mm = m
+        var strokes = refining ? mm.refinements : mm.strokes
         if !painting {
             painting = true
-            let rad = mm.strokes.last?.radius ?? 0.05
-            mm.strokes.append(Stroke(pts: [[Double(p.x), Double(p.y)]], radius: rad, feather: mm.feather))
+            let rad = refining ? s.brushRadius : (mm.strokes.last?.radius ?? 0.05)
+            strokes.append(Stroke(pts: [[Double(p.x), Double(p.y)]], radius: rad,
+                                  feather: refining ? s.brushFeather : mm.feather, erasing: refining && s.maskTool == .erase))
+            if refining { mm.refinements = strokes } else { mm.strokes = strokes }
             lastBrush = p
             s.updateMaskLive(mm)
             return
         }
-        guard !mm.strokes.isEmpty else { return }
+        guard !strokes.isEmpty else { return }
         let from = lastBrush ?? p
         // 中间补点：手快拖过时不会画成一串断开的圆点
-        let step = max(0.003, (mm.strokes.last?.radius ?? 0.05) / 4)
+        let step = max(0.003, (strokes.last?.radius ?? 0.05) / 4)
         let dx = Double(p.x - from.x), dy = Double(p.y - from.y)
         let dist = (dx * dx + dy * dy).squareRoot()
         let n = max(1, Int(dist / step))
         for i in 1...n {
             let t = Double(i) / Double(n)
-            mm.strokes[mm.strokes.count - 1].pts.append([Double(from.x) + dx * t, Double(from.y) + dy * t])
+            strokes[strokes.count - 1].pts.append([Double(from.x) + dx * t, Double(from.y) + dy * t])
         }
+        if refining { mm.refinements = strokes } else { mm.strokes = strokes }
         lastBrush = p
         s.updateMaskLive(mm)
     }
@@ -487,7 +561,7 @@ struct CanvasPane: View {
         guard let cg = s.preview else { return }
         let nx = min(max((loc.x - frame.minX) / max(frame.width, 1), 0), 1)
         let ny = min(max(1 - (loc.y - frame.minY) / max(frame.height, 1), 0), 1)
-        let px = Int(nx * CGFloat(cg.width)), py = Int(ny * CGFloat(cg.height))
+        let px = min(cg.width - 1, Int(nx * CGFloat(cg.width))), py = min(cg.height - 1, Int(ny * CGFloat(cg.height)))
         var buf = [UInt8](repeating: 0, count: 4)
         Engine.ctx.render(CIImage(cgImage: cg), toBitmap: &buf, rowBytes: 4,
                           bounds: CGRect(x: px, y: py, width: 1, height: 1),
@@ -540,7 +614,8 @@ struct MaskOverlay: View {
                 } onEnd: { s.endEdit() }
                 Circle()
                     .stroke(Color.yellow.opacity(0.8), lineWidth: 1.5)
-                    .frame(width: frame.width * mask.radius * 2, height: frame.width * mask.radius * 2)
+                    .frame(width: min(frame.width, frame.height) * mask.radius * 2,
+                           height: min(frame.width, frame.height) * mask.radius * 2)
                     .position(x: frame.minX + frame.width * mask.x0, y: frame.minY + frame.height * (1 - mask.y0))
                     .allowsHitTesting(false)
             }

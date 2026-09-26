@@ -337,7 +337,7 @@ extension Engine {
     }
 
     // MARK: - iPhone 人像 HEIC disparity 深度
-    private static var disparityCache: [String: CIImage] = [:]
+    private static let disparityCache = BoundedCache<String, CIImage>(capacity: 8)
 
     static func hasDisparity(_ url: URL) -> Bool {
         guard let src = CGImageSourceCreateWithURL(url as CFURL, nil) else { return false }

@@ -15,14 +15,22 @@ final class CLUTLibrary: ObservableObject {
         URL(fileURLWithPath: NSString("~/Documents/RawTherapee/HaldCLUT").expandingTildeInPath)
     }
 
-    private var cache: [String: Data] = [:]          // name|strength -> cubeData
-    private var indexCache: [URL: Date]?              // 目录扫描缓存
-    private var listCache: [String] = []
+    private let cache = BoundedCache<String, Data>(capacity: 12)
+    private struct HaldPixels {
+        let side: Int
+        let dimension: Int
+        let bytes: [UInt8]
+    }
+    private let imageCache = BoundedCache<String, HaldPixels>(capacity: 2)
+    private let listLock = NSLock()
+    private var listCache: [String]?
     private let cubeDim = 64
 
     /// 列出所有可用 CLUT（相对根目录的路径，便于存进参数里）
     func list() -> [String] {
-        if !listCache.isEmpty { return listCache }
+        listLock.lock()
+        defer { listLock.unlock() }
+        if let listCache { return listCache }
         var out: [String] = []
         if let e = FileManager.default.enumerator(at: root,
             includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles]) {
@@ -38,7 +46,13 @@ final class CLUTLibrary: ObservableObject {
         return out
     }
 
-    func invalidate() { listCache = []; cache = [:] }
+    func invalidate() {
+        listLock.lock()
+        listCache = nil
+        listLock.unlock()
+        cache.removeAll()
+        imageCache.removeAll()
+    }
 
     /// 生成一个 CIColorCube 滤镜；strength 直接烘进立方体里，省一次混合
     func cubeFilter(name: String, strength: Double) -> CIFilter? {
@@ -58,7 +72,8 @@ final class CLUTLibrary: ObservableObject {
         return f
     }
 
-    private func buildCube(name: String, strength: Double) -> Data? {
+    private func pixels(name: String) -> HaldPixels? {
+        if let cached = imageCache[name] { return cached }
         let url = root.appendingPathComponent(name)
         guard let img = CIImage(contentsOf: url) else { return nil }
         let S = Int(img.extent.width)
@@ -67,10 +82,17 @@ final class CLUTLibrary: ObservableObject {
         guard N * N * N == S * S else { return nil }
 
         // 把整张 CLUT 渲染成 RGBA8
-        let ctx = CIContext(options: [.cacheIntermediates: false])
         var buf = [UInt8](repeating: 0, count: S * S * 4)
-        ctx.render(img, toBitmap: &buf, rowBytes: S * 4, bounds: img.extent, format: .RGBA8, colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
+        Engine.ctx.render(img, toBitmap: &buf, rowBytes: S * 4, bounds: img.extent,
+                          format: .RGBA8, colorSpace: Engine.srgb)
+        let pixels = HaldPixels(side: S, dimension: N, bytes: buf)
+        imageCache[name] = pixels
+        return pixels
+    }
 
+    private func buildCube(name: String, strength: Double) -> Data? {
+        guard let pixels = pixels(name: name) else { return nil }
+        let S = pixels.side, N = pixels.dimension, buf = pixels.bytes
         let D = cubeDim
         let lastD = Double(D - 1)
         let lastN = Double(N - 1)

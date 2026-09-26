@@ -1,5 +1,5 @@
 // 引擎自测：验证 CLUT / HSL / 蒙版 / 裁剪 / 出图 是否真的生效
-// 不参与 App 构建（App 用 @main），只跟 Models+CLUT+Engine 一起单独编译。
+// 用 -D RAWFORGE_TESTING Sources/RawForge/*.swift Tools/SelfTest.swift 单独编译。
 import Foundation
 import CoreImage
 
@@ -36,9 +36,19 @@ func stats(_ u: URL) -> (Double, Double) {
     return (lum, sat)
 }
 
-func main() {
+func runSelfTest() {
     try? FileManager.default.createDirectory(atPath: "/tmp/rfselftest", withIntermediateDirectories: true)
-    let src = URL(fileURLWithPath: "/Users/yangxiaoying/Pictures/微信图片_2026-01-25_094630_477.jpg")
+    // 测试底图：环境变量 RF_TEST_IMG 指定，否则取 ~/Pictures 里第一张图
+    let src: URL = {
+        if let p = ProcessInfo.processInfo.environment["RF_TEST_IMG"], !p.isEmpty {
+            return URL(fileURLWithPath: p)
+        }
+        let pics = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Pictures")
+        let exts = ["jpg", "jpeg", "png", "heic", "tif", "tiff"]
+        let files = (try? FileManager.default.contentsOfDirectory(at: pics, includingPropertiesForKeys: nil)) ?? []
+        return files.first(where: { exts.contains($0.pathExtension.lowercased()) })
+            ?? URL(fileURLWithPath: "/nonexistent")
+    }()
     guard let img = Engine.decode(src) else { print("读不到测试图"); exit(1) }
     print("源图: \(Int(img.extent.width))×\(Int(img.extent.height))")
 
@@ -114,4 +124,7 @@ func main() {
     print(abs(rot.extent.width - img.extent.height) < 2 ? "✅ 旋转正确" : "❌ 旋转不对")
 }
 
-main()
+@main
+struct SelfTestMain {
+    static func main() { runSelfTest() }
+}

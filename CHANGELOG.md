@@ -2,6 +2,63 @@
 
 本项目遵循语义化版本。日期为发布日（Asia/Shanghai）。
 
+## [2.0.0] — 2026-09-26
+
+这是 1.1.0 之后的第一个正式发布版本，合并了此前只在本地流转的 1.2 / 1.3 未发布内容
+（导出水印、固定导出目录、工作流增强与性能重做），因此跳过 1.2 / 1.3 版本号直接进 2.0.0。
+
+### 新增 / Added
+
+- 批量同步：缩略图勾选、Command/Shift 多选、按八类参数同步、复制调整；默认不复制裁剪与蒙版。
+- 批量同步前为每张目标照片保存恢复快照，保留星级、标记与已有快照；损坏的副档跳过并报告。
+- 白平衡灰点吸管：取样原始图像，支持旋转/裁剪后的坐标，过曝和极暗取样会拒绝；支持一键重置。
+- 蒙版覆盖：显示实际计算的选区；支持在任意类型蒙版上添加或擦除选区，并保留软边、撤销和保存。
+- 8/16 位 TIFF 导出，可选 sRGB、Display P3、Adobe RGB；位深与色域控件同时用于单张与批量导出。
+- 命名快照：创建、重命名、删除、恢复；随照片副档保存，恢复操作可撤销/重做。
+- **导出水印**：导出 / 批量导出可叠加水印——文字（可选白字 / 黑字，带柔和投影）或图片（PNG 透明 logo），
+  九宫格定位、大小（占长边比例）、不透明度、旋转、边距均可调。只叠在导出文件上，不进预览与副档。
+- **固定导出目录**：导出默认落到本机配置的文件夹，可在导出面板查看与更改；
+  配置存在本机 `UserDefaults`（`defaults write com.zeno.rawforge exportDirectory <路径>`），不写进源码。
+
+### 性能 / Performance
+
+- 预览改为单任务执行并合并待处理参数，连续拖动不再堆积并发渲染；切图、切换精度时丢弃过期结果。
+- 蒙版滑块拖动中只更新预览，结束时保存一次并记录一次撤销，避免连续写盘和历史栈膨胀。
+- 文件夹扫描、原图解码、前后对比和单张导出移至后台；缩略图优先使用 ImageIO 内嵌预览，并合并列表更新。
+- 原图、曲线、胶片、HSL、范围蒙版和 AI/深度蒙版缓存增加容量上限及并发保护。
+- 曲线 LUT 预先计算与单通道有关的重复运算；胶片强度调整复用已解码的 HALD，直方图复用已渲染的预览像素。
+- 保留 2200px 默认预览、全像素/1:1 模式、64³ 曲线 LUT 和原有全分辨率导出管线。
+
+### 修复 / Fixed
+
+- **颜色分级色轮整体偏色 90°**：`AngularGradient` 的 0° 默认在 3 点钟方向且顺时针递增，而拖拽取值用的是
+  「0° 朝上、顺时针」（同 LR / HSL 惯例），两者差 90°——看到的红色位置实际取到黄绿，因而几乎全部偏绿。
+  现已把渐变起点设成 -90°，并用离屏渲染取样校准。
+- **色轮中间色相最多偏 10°**：色标只有 13 个时相邻色标在 RGB 空间线性插值会把中间色相拉偏，
+  现改为每 3° 一个色标（121 个），实测平均偏差由 2.0° 降到 0.3°。
+- 全像素/1:1 开关立即触发渲染；前后对比快捷键及切图后刷新对应的原图。
+- 异步切图、导出和合成缩略图更新按照片身份核对，避免更新到其他照片；空文件夹评分/标记不再越界。
+- **长边缩放被缩两次**：`Engine.write` 先线性缩放又跑了一次 Lanczos（系数相同），实际输出长边是设定值的
+  平方倍；现在只做一次 Lanczos 高质量缩放，长边严格等于设定值。
+- **旋转 / 贴边水印撑大画布**：水印越出图边时合成会扩大输出幅面导致整图错位，现裁回原幅面（越界部分裁掉）。
+
+### 兼容与修复 / Compatibility
+
+- 新副档使用完整文件名（例如 `photo.HIF.rawforge.json`），隔离同名 RAW/JPEG；旧副档保留并兼容读取。
+- 保存失败会提示，不静默覆盖损坏的编辑记录。
+- 修正画布放大/平移后的画笔与取样坐标，以及 AI 蒙版重算时 ID 更新不到原蒙版的问题。
+
+### 验证 / Verification
+
+- 使用本机 Sony HIF、实拍 JPEG 和纸面照片副本进行测试；原照片校验未变。
+- 检查白平衡中性色校正、蒙版擦除/重绘、快照恢复、批量同步保护、旧副档迁移、损坏副档保护。
+- 三种色彩空间的 8/16 位 TIFF 位深与配置验证通过，16 位样本超过 256 级，透明通道保留。
+- 色轮以离屏渲染 + 参考色标逐点比对校准（圆点所指方位与底色一致）。
+- 原有性能回归通过；界面实测导出 4128×6192 的 16 位 TIFF。
+- 未做所有相机 RAW 格式、所有 Vision 模型场景或长时间大型图库的穷举测试。
+
+---
+
 ## [1.1.0] — 2026-09-25
 
 ### 新增 / Added
@@ -50,7 +107,12 @@
 
 ## English summary
 
-- **1.1.0 (2026-09-25)** — Vision-based multi-exposure alignment with a quality gate (translation or
+- **2.0.0 (2026-09-26)** — Grouped batch synchronisation with recovery snapshots, white-balance grey-point
+  picker, mask overlays with additive/erasing brushes, named snapshots, 8/16-bit TIFF export in three
+  colour spaces, an export watermark, and a configurable default export folder, plus a performance
+  rework (coalesced previews, bounded caches, background decoding/export). Also fixes the colour grading
+  wheels: the wheel background was rotated 90° against the drag mapping (almost every pick looked green)
+  and sparse gradient stops shifted mid-hues by up to 10°. Skips 1.2 / 1.3, which were never published.
   homography), hand-held denoise mode, multi-select compositing input, foreground cut-out and
   depth-painting masks, bokeh, a full export panel (format / long edge / quality), transparent cut-out
   export, presets, an adaptive light/dark theme, and a complete set of keyboard shortcuts.

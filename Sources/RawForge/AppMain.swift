@@ -1,6 +1,7 @@
 import SwiftUI
 import CoreImage
 import UniformTypeIdentifiers
+import ImageIO
 
 struct PhotoItem: Identifiable, Equatable {
     let id = UUID()
@@ -17,23 +18,57 @@ final class AppState: ObservableObject {
     @Published var items: [PhotoItem] = []
     @Published var currentIndex: Int = 0
     @Published var filterRating: Int = 0
+    @Published var selectedPhotos: Set<UUID> = []
+    @Published var showSync = false
+    @Published var showSnapshots = false
+    @Published var syncRunning = false
+    @Published var copiedParams: EditParams?
+    @Published var copiedName = ""
+    @Published var syncGroups = EditGroup.defaults
+    @Published var snapshots: [EditSnapshot] = []
+    @Published var workflowError: String?
+    @Published var whiteBalancePicker = false
+    @Published var whiteBalanceRunning = false
+    @Published var showMaskOverlay = false {
+        didSet { if oldValue != showMaskOverlay { previewQueue.invalidate(); render() } }
+    }
+    @Published var maskTool: MaskTool = .position
+    @Published var brushRadius: Double = 0.05
+    @Published var brushFeather: Double = 0.5
+    @Published var maskPreviewImage: CGImage?
+    private var sidecarReadFailed = false
 
     // 编辑
     @Published var params = EditParams()
     @Published var source: CIImage?
     @Published var preview: CGImage?
     @Published var previewing: Bool = false
-    @Published var showBefore: Bool = false
+    @Published var showBefore: Bool = false {
+        didSet { if showBefore { refreshBefore() } }
+    }
     @Published var beforeImage: CGImage?
     @Published var hist: (r: [Int], g: [Int], b: [Int], l: [Int]) = ([], [], [], [])
     @Published var status: String = "准备就绪"
-    @Published var selectedMask: UUID?
+    @Published var selectedMask: UUID? {
+        didSet {
+            if oldValue != selectedMask {
+                maskPreviewImage = nil
+                maskTool = .position
+                previewQueue.invalidate()
+                render()
+            }
+        }
+    }
     @Published var zoom: Double = 1
     @Published var cropMode = false   // 裁剪模式：画布显示未裁剪图 + 裁剪框
 
     // 预览精度：默认走 2200px 代理图求快；打开后走全像素
-    @Published var fullResPreview: Bool = false
-    @Published var oneToOne: Bool = false
+    @Published var fullResPreview: Bool = false {
+        didSet { if oldValue != fullResPreview { previewQueue.invalidate(); render() } }
+    }
+    @Published var oneToOne: Bool = false {
+        didSet { if oldValue != oneToOne { previewQueue.invalidate(); render() } }
+    }
     @Published var sourceSize: CGSize = .zero
     @Published var lastPreviewScale: Double = 1
 
@@ -41,6 +76,7 @@ final class AppState: ObservableObject {
     @Published var exportSettings = ExportSettings()
     @Published var showExport = false
     @Published var showBatch = false
+    @Published var exportRunning = false
     @Published var batchRunning = false
     @Published var batchProgress: Double = 0
 
@@ -58,9 +94,93 @@ final class AppState: ObservableObject {
     let history = History()
     let cluts = CLUTLibrary.shared
 
-    private var renderTask: Task<Void, Never>?
-    private var sourceCache: [URL: CIImage] = [:]
+    private var thumbnailTask: Task<Void, Never>?
+    private let sourceCache = BoundedCache<URL, CIImage>(capacity: 3)
     private let previewLongEdge: CGFloat = 2200
+    private struct PhotoLoad {
+        let url: URL
+        let cached: CIImage?
+    }
+    private struct PreviewRequest {
+        let source: CIImage
+        let params: EditParams
+        let url: URL?
+        let fullResolution: Bool
+        let cropMode: Bool
+        let longEdge: CGFloat
+        let overlayMask: UUID?
+    }
+    private struct PreviewResult {
+        let image: CGImage
+        let histogram: (r: [Int], g: [Int], b: [Int], l: [Int])
+        let scale: Double
+        let mask: CGImage?
+    }
+    private lazy var folderQueue = LatestWorkQueue<URL, [PhotoItem]?>(
+        priority: .userInitiated,
+        operation: { url in
+            guard let files = try? FileManager.default.contentsOfDirectory(
+                at: url, includingPropertiesForKeys: nil) else { return nil }
+            return files.filter { Engine.browseSet.contains($0.pathExtension.lowercased()) }
+                .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+                .map { url in
+                    var item = PhotoItem(url: url)
+                    if let sidecar = SidecarStore.load(for: url) {
+                        item.rating = sidecar.rating
+                        item.picked = sidecar.picked
+                    }
+                    return item
+                }
+        },
+        completion: { [weak self] url, result in
+            guard let self, self.folder == url else { return }
+            guard let result else { self.status = "无法读取文件夹"; return }
+            self.items = result
+            self.status = result.isEmpty ? "文件夹里没有支持的图像" : "共 \(result.count) 张"
+            if !result.isEmpty { self.select(0) }
+            self.loadThumbnails()
+        })
+    private lazy var sourceQueue = LatestWorkQueue<PhotoLoad, (CIImage?, Bool)>(
+        operation: { request in
+            (request.cached ?? Engine.decode(request.url), Engine.hasDisparity(request.url))
+        },
+        completion: { [weak self] request, result in
+            guard let self, self.current?.url == request.url else { return }
+            self.source = result.0
+            self.sourceSize = result.0?.extent.size ?? .zero
+            self.hasDisparity = result.1
+            self.sourceCache[request.url] = result.0
+            if result.0 == nil {
+                self.previewing = false
+                self.status = "无法解码 \(request.url.lastPathComponent)"
+                return
+            }
+            self.render()
+            if self.showBefore { self.refreshBefore() }
+        })
+    private lazy var previewQueue: LatestWorkQueue<PreviewRequest, PreviewResult?> = LatestWorkQueue(
+        operation: { Self.makePreview($0) },
+        completion: { [weak self] request, result in
+            guard let self, request.url == self.current?.url,
+                  request.cropMode == self.cropMode,
+                  request.fullResolution == (self.fullResPreview || self.oneToOne) else { return }
+            if let result {
+                self.preview = result.image
+                self.hist = result.histogram
+                self.lastPreviewScale = result.scale
+                if request.overlayMask == (self.showMaskOverlay ? self.selectedMask : nil) {
+                    self.maskPreviewImage = result.mask
+                }
+            }
+            self.previewing = self.previewQueue.hasPendingWork
+        })
+    private lazy var beforeQueue = LatestWorkQueue<CIImage, CGImage?>(
+        operation: { image in
+            let scale = min(1, 2200 / max(image.extent.width, image.extent.height))
+            let base = image.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+            return Engine.ctx.createCGImage(base, from: base.extent, format: .RGBA8, colorSpace: Engine.srgb)
+        },
+        completion: { [weak self] _, image in self?.beforeImage = image })
 
     var current: PhotoItem? {
         guard currentIndex >= 0, currentIndex < items.count else { return nil }
@@ -69,36 +189,70 @@ final class AppState: ObservableObject {
 
     // MARK: - 打开文件夹
     func openFolder(_ url: URL) {
+        guard !syncRunning, saveCurrent() else { return }
+        folderQueue.invalidate()
+        sourceQueue.invalidate()
+        previewQueue.invalidate()
+        beforeQueue.invalidate()
+        thumbnailTask?.cancel()
+        currentIndex = -1
+        source = nil
+        preview = nil
+        beforeImage = nil
+        sourceSize = .zero
+        hasDisparity = false
+        previewing = false
+        hist = ([], [], [], [])
+        items = []
+        selectedPhotos = []
+        snapshots = []
+        selectedMask = nil
+        whiteBalancePicker = false
+        sourceCache.removeAll()
         folder = url
-        let fm = FileManager.default
-        let exts = Engine.browseSet
-        guard let files = try? fm.contentsOfDirectory(at: url, includingPropertiesForKeys: nil) else { return }
-        let imgs = files.filter { exts.contains($0.pathExtension.lowercased()) }
-            .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
-        items = imgs.map { u in
-            var it = PhotoItem(url: u)
-            if let sc = SidecarStore.load(for: u) {
-                it.rating = sc.rating
-                it.picked = sc.picked
-            }
-            return it
-        }
-        status = "共 \(items.count) 张"
-        if !items.isEmpty { select(0) }
-        Task { await makeThumbs() }
+        status = "正在读取文件夹…"
+        folderQueue.submit(url)
     }
 
-    private func makeThumbs() async {
-        for i in items.indices {
-            let u = items[i].url
-            let img = await Task.detached { Self.thumb(for: u) }.value
-            if let cg = img, i < items.count {
-                items[i].thumb = cg
+    private func loadThumbnails() {
+        thumbnailTask?.cancel()
+        let photos = items.map { (id: $0.id, url: $0.url) }
+        thumbnailTask = Task { [weak self] in
+            var batch: [(UUID, CGImage)] = []
+            var lastUpdate = Date()
+            for (offset, photo) in photos.enumerated() {
+                guard !Task.isCancelled else { return }
+                let image = await Task.detached(priority: .utility) {
+                    autoreleasepool { Self.thumb(for: photo.url) }
+                }.value
+                guard !Task.isCancelled, let self else { return }
+                if let image { batch.append((photo.id, image)) }
+                if batch.count >= 12 || Date().timeIntervalSince(lastUpdate) >= 0.1 || offset == photos.count - 1 {
+                    let indices = Dictionary(uniqueKeysWithValues: self.items.enumerated().map { ($0.element.id, $0.offset) })
+                    var updated = self.items
+                    for (id, image) in batch {
+                        if let index = indices[id] { updated[index].thumb = image }
+                    }
+                    if !batch.isEmpty { self.items = updated }
+                    batch.removeAll(keepingCapacity: true)
+                    lastUpdate = Date()
+                }
             }
         }
     }
+
 
     nonisolated static func thumb(for url: URL) -> CGImage? {
+        if let source = CGImageSourceCreateWithURL(url as CFURL,
+                                                  [kCGImageSourceShouldCache: false] as CFDictionary),
+           let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+               kCGImageSourceCreateThumbnailFromImageIfAbsent: true,
+               kCGImageSourceCreateThumbnailWithTransform: true,
+               kCGImageSourceThumbnailMaxPixelSize: 260,
+               kCGImageSourceShouldCacheImmediately: true
+           ] as CFDictionary) {
+            return thumbnail
+        }
         guard let ci = Engine.decode(url) else { return nil }
         let e = ci.extent
         let s = min(1, 260 / max(e.width, e.height))
@@ -108,30 +262,41 @@ final class AppState: ObservableObject {
 
     // MARK: - 选图
     func select(_ i: Int) {
-        guard i >= 0, i < items.count else { return }
-        saveCurrent()
+        guard !syncRunning, i >= 0, i < items.count, saveCurrent() else { return }
+        sourceQueue.invalidate()
+        previewQueue.invalidate()
+        beforeQueue.invalidate()
         currentIndex = i
         let u = items[i].url
-        let ci: CIImage? = sourceCache[u] ?? {
-            let src = Engine.decode(u)
-            sourceCache[u] = src
-            return src
-        }()
-        source = ci
-        sourceSize = ci?.extent.size ?? .zero
-        if let sc = SidecarStore.load(for: u) {
-            params = sc.params
-        } else {
-            params = EditParams()
+        source = nil
+        preview = nil
+        beforeImage = nil
+        sourceSize = .zero
+        hist = ([], [], [], [])
+        previewing = true
+        hasDisparity = false
+        whiteBalancePicker = false
+        sidecarReadFailed = false
+        do {
+            let sc = try SidecarStore.read(for: u)
+            params = sc?.params ?? EditParams()
+            snapshots = sc?.snapshots ?? []
+        } catch {
+            sidecarReadFailed = true
+            snapshots = []
+            selectedMask = nil
+            previewing = false
+            workflowError = "无法读取 \(u.lastPathComponent) 的编辑记录，原文件未修改。\n\(error.localizedDescription)"
+            return
         }
         history.stack = [params]; history.index = 0
         selectedMask = nil
-        hasDisparity = Engine.hasDisparity(u)
-        render()
+        sourceQueue.submit(PhotoLoad(url: u, cached: sourceCache[u]))
     }
 
     // MARK: - 参数改动
     func commit(_ p: EditParams) {
+        guard !syncRunning else { return }
         params = p
         history.push(p)
         render()
@@ -139,33 +304,43 @@ final class AppState: ObservableObject {
     }
 
     func undo() {
+        guard !syncRunning else { return }
         if let p = history.undo() { params = p; render(); autoSave() }
     }
     func redo() {
+        guard !syncRunning else { return }
         if let p = history.redo() { params = p; render(); autoSave() }
     }
 
     func autoSave() { saveCurrent() }
 
-    func saveCurrent() {
-        guard let it = current else { return }
-        let sc = Sidecar(params: params, rating: items[currentIndex].rating, picked: items[currentIndex].picked)
-        SidecarStore.save(sc, for: it.url)
+    @discardableResult
+    func saveCurrent() -> Bool {
+        guard !sidecarReadFailed, let it = current else { return true }
+        let sc = Sidecar(params: params, rating: it.rating, picked: it.picked, snapshots: snapshots)
+        do {
+            try SidecarStore.write(sc, for: it.url)
+            return true
+        } catch {
+            workflowError = "编辑记录保存失败：\(it.url.lastPathComponent)\n\(error.localizedDescription)"
+            return false
+        }
     }
 
     func setRating(_ r: Int) {
-        guard currentIndex < items.count else { return }
+        guard current != nil else { return }
         items[currentIndex].rating = r
         saveCurrent()
     }
     func togglePick() {
-        guard currentIndex < items.count else { return }
+        guard current != nil else { return }
         items[currentIndex].picked.toggle()
         saveCurrent()
     }
 
     // MARK: - 裁剪模式辅助
     func toggleCropMode() {
+        previewQueue.invalidate()
         cropMode.toggle()
         if cropMode { selectedMask = nil; render() } else { endEdit(); render() }
     }
@@ -192,9 +367,11 @@ final class AppState: ObservableObject {
     /// 地平线自动校直：Vision 检测倾角 → 反向旋转 + 最大内接矩形裁切
     func autoStraighten() {
         guard let src = source else { return }
+        let photoID = current?.id
         status = "检测地平线…"
         Task {
             let angle = await Task.detached { Engine.autoStraightenAngle(from: src) }.value
+            guard current?.id == photoID else { return }
             guard var a = angle else {
                 await MainActor.run { status = "未检测到地平线" }
                 return
@@ -218,43 +395,36 @@ final class AppState: ObservableObject {
     // MARK: - 渲染
     func render() {
         guard let src = source else { return }
-        renderTask?.cancel()
         previewing = true
         // 裁剪模式下预览未裁剪的整幅（裁剪框叠加层直接在画布上改），退出后恢复
-        let p = cropMode ? params.cropNeutral : params
-        let longEdge = previewLongEdge
-        let needFull = fullResPreview || oneToOne
-        let isCropMode = cropMode
-        let currentURL = current?.url
-        renderTask = Task.detached(priority: .userInitiated) {
-            let e = src.extent
-            let s: CGFloat = needFull ? 1.0 : min(1, longEdge / max(e.width, e.height))
-            let base = s < 1 ? src.transformed(by: CGAffineTransform(scaleX: s, y: s)) : src
-            // 散景深度：用户没涂深度蒙版时，尝试 HEIC disparity（裁剪/旋转校正场景不接，避免错配）
-            var disp: CIImage? = nil
-            if !isCropMode, p.bokehAmount > 0,
-               !p.masks.contains(where: { $0.kind == .depth && $0.enabled }),
-               let u = currentURL {
-                disp = Engine.disparityBokehMask(for: u, target: base.extent)
-            }
-            let out = Engine.render(base, p, disparityMask: disp)
-            let cg = Engine.ctx.createCGImage(out, from: out.extent, format: .RGBA8, colorSpace: Engine.srgb)
-            let h = Engine.histogram(out)
-            await MainActor.run {
-                self.preview = cg
-                self.hist = h
-                self.lastPreviewScale = Double(s)
-                self.previewing = false
-            }
+        previewQueue.submit(PreviewRequest(source: src, params: cropMode ? params.cropNeutral : params,
+                                           url: current?.url, fullResolution: fullResPreview || oneToOne,
+                                           cropMode: cropMode, longEdge: previewLongEdge,
+                                           overlayMask: showMaskOverlay && !cropMode ? selectedMask : nil))
+    }
+
+    nonisolated private static func makePreview(_ request: PreviewRequest) -> PreviewResult? {
+        let src = request.source, p = request.params, e = src.extent
+        let scale: CGFloat = request.fullResolution ? 1 : min(1, request.longEdge / max(e.width, e.height))
+        let base = scale < 1 ? src.transformed(by: CGAffineTransform(scaleX: scale, y: scale)) : src
+        var disparity: CIImage?
+        if !request.cropMode, p.bokehAmount > 0,
+           !p.masks.contains(where: { $0.kind == .depth && $0.enabled }), let url = request.url {
+            disparity = Engine.disparityBokehMask(for: url, target: base.extent)
         }
+        var mask: CIImage?
+        let out = Engine.render(base, p, disparityMask: disparity, selectedMask: request.overlayMask) { mask = $0 }
+        guard let image = Engine.ctx.createCGImage(out, from: out.extent, format: .RGBA8,
+                                                   colorSpace: Engine.srgb) else { return nil }
+        // Histogram the displayed pixels without evaluating the RAW/filter graph a second time.
+        let histogram = Engine.histogram(CIImage(cgImage: image))
+        let maskCG = mask.flatMap { Engine.ctx.createCGImage($0, from: out.extent, format: .RGBA8, colorSpace: Engine.srgb) }
+        return PreviewResult(image: image, histogram: histogram, scale: Double(scale), mask: maskCG)
     }
 
     func refreshBefore() {
-        guard let src = source else { return }
-        let e = src.extent
-        let s = min(1, previewLongEdge / max(e.width, e.height))
-        let base = s < 1 ? src.transformed(by: CGAffineTransform(scaleX: s, y: s)) : src
-        beforeImage = Engine.ctx.createCGImage(base, from: base.extent, format: .RGBA8, colorSpace: Engine.srgb)
+        guard beforeImage == nil, let src = source else { return }
+        beforeQueue.submit(src)
     }
 
     // MARK: - 蒙版
@@ -340,9 +510,8 @@ final class AppState: ObservableObject {
                 dropped = outcome.dropped
             }
             guard frames.count >= 2 else { return nil }
-            await MainActor.run {
-                self.mergeProgress = "融合 \(frames.count) 帧…"
-            }
+            let frameCount = frames.count
+            await MainActor.run { self.mergeProgress = "融合 \(frameCount) 帧…" }
             guard let merged = Engine.fuse(frames, mode: mode) else { return nil }
             let first = urls[0].deletingPathExtension()
             let out = first.deletingLastPathComponent()
@@ -360,15 +529,19 @@ final class AppState: ObservableObject {
 
         // 结果若在当前文件夹里，插进列表并选中
         if let f = folder, dest.url.deletingLastPathComponent().standardizedFileURL == f.standardizedFileURL {
+            let previousID = current?.id
             var it = PhotoItem(url: dest.url)
             if let sc = SidecarStore.load(for: dest.url) { it.rating = sc.rating; it.picked = sc.picked }
             items.append(it)
             items.sort { $0.url.lastPathComponent.localizedStandardCompare($1.url.lastPathComponent) == .orderedAscending }
+            currentIndex = items.firstIndex(where: { $0.id == previousID }) ?? -1
+            sourceCache[dest.url] = nil
             if let idx = items.firstIndex(where: { $0.url == dest.url }) {
                 select(idx)
                 let u = dest.url
+                let id = items[idx].id
                 let cg = await Task.detached { Self.thumb(for: u) }.value
-                if let cg, idx < items.count { items[idx].thumb = cg }
+                if let cg, let index = items.firstIndex(where: { $0.id == id }) { items[index].thumb = cg }
             }
         }
         mergeRunning = false
@@ -392,48 +565,55 @@ final class AppState: ObservableObject {
 
     // MARK: - 导出
     func exportCurrent(to url: URL) {
-        guard let src = source else { return }
-        let out = Engine.render(src, params)
-        do {
-            try Engine.write(out, to: url, settings: exportSettings)
-            status = "已导出 \(url.lastPathComponent)"
-        } catch {
-            status = "导出失败：\(error.localizedDescription)"
-        }
+        startExport(to: url, foreground: nil)
     }
 
     /// 主体抠图导出：渲染整图 → 用「主体抠图」蒙版做 alpha → 透明背景落盘（PNG/TIFF）
     func exportCutout(to url: URL) {
-        guard let src = source,
-              let fm = params.masks.first(where: { $0.kind == .foreground && $0.enabled })
+        guard let fm = params.masks.first(where: { $0.kind == .foreground && $0.enabled })
         else {
             status = "没有可用的「主体抠图」蒙版，先在局部调整里新建一个"
             return
         }
-        let rendered = Engine.render(src, params)
-        guard let mask = Engine.maskImage(for: fm, extent: rendered.extent,
-                                          analyzed: rendered) else {
-            status = "抠图蒙版计算失败"
-            return
-        }
-        // 蒙版亮度 → alpha（RGB 原样保留）
-        let alphaMask = mask.applyingFilter("CIColorMatrix", parameters: [
-            "inputRVector": CIVector(x: 1, y: 0, z: 0, w: 0),
-            "inputGVector": CIVector(x: 0, y: 1, z: 0, w: 0),
-            "inputBVector": CIVector(x: 0, y: 0, z: 1, w: 0),
-            "inputAVector": CIVector(x: 1, y: 0, z: 0, w: 0)
-        ])
-        let transparent = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0))
-            .cropped(to: rendered.extent)
-        let cut = rendered.applyingFilter("CIBlendWithAlphaMask", parameters: [
-            kCIInputBackgroundImageKey: transparent,
-            kCIInputMaskImageKey: alphaMask
-        ])
-        do {
-            try Engine.write(cut, to: url, settings: exportSettings)
-            status = "已导出抠图 \(url.lastPathComponent)"
-        } catch {
-            status = "抠图导出失败：\(error.localizedDescription)"
+        startExport(to: url, foreground: fm)
+    }
+
+    private func startExport(to url: URL, foreground: Mask?) {
+        guard let src = source, !exportRunning else { return }
+        let parameters = params, settings = exportSettings
+        exportRunning = true
+        status = "正在导出 \(url.lastPathComponent)…"
+        Task {
+            let error: String? = await Task.detached(priority: .userInitiated) {
+                autoreleasepool {
+                    var rendered = Engine.render(src, parameters)
+                    if let foreground {
+                        guard let mask = Engine.maskImage(for: foreground, extent: rendered.extent,
+                                                          analyzed: rendered) else {
+                            return "抠图蒙版计算失败"
+                        }
+                        let alphaMask = mask.applyingFilter("CIColorMatrix", parameters: [
+                            "inputRVector": CIVector(x: 1, y: 0, z: 0, w: 0),
+                            "inputGVector": CIVector(x: 0, y: 1, z: 0, w: 0),
+                            "inputBVector": CIVector(x: 0, y: 0, z: 1, w: 0),
+                            "inputAVector": CIVector(x: 1, y: 0, z: 0, w: 0)
+                        ])
+                        let transparent = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0))
+                            .cropped(to: rendered.extent)
+                        rendered = rendered.applyingFilter("CIBlendWithAlphaMask", parameters: [
+                            kCIInputBackgroundImageKey: transparent, kCIInputMaskImageKey: alphaMask
+                        ])
+                    }
+                    do {
+                        try Engine.write(rendered, to: url, settings: settings)
+                        return nil
+                    } catch {
+                        return error.localizedDescription
+                    }
+                }
+            }.value
+            exportRunning = false
+            status = error.map { "导出失败：\($0)" } ?? "已导出 \(url.lastPathComponent)"
         }
     }
 
@@ -441,26 +621,45 @@ final class AppState: ObservableObject {
         batchRunning = true
         batchProgress = 0
         let list = items.filter { !onlyPicked || $0.picked }
+        let settings = exportSettings
+        var failed = 0
         for (i, it) in list.enumerated() {
-            autoreleasepool {
-                if let src = Engine.decode(it.url) {
-                    let sc = SidecarStore.load(for: it.url)
-                    let p = sc?.params ?? EditParams()
-                    let out = Engine.render(src, p)
-                    let ext = exportSettings.format
-                    let dest = dir.appendingPathComponent(it.url.deletingPathExtension().lastPathComponent + ".\(ext)")
-                    try? Engine.write(out, to: dest, settings: exportSettings)
-                }
+            guard !Task.isCancelled else {
+                batchRunning = false
+                status = "批量导出已取消"
+                return
             }
-            await MainActor.run { self.batchProgress = Double(i + 1) / Double(max(list.count, 1)) }
+            let ext = settings.format
+            let dest = dir.appendingPathComponent(it.url.deletingPathExtension().lastPathComponent + ".\(ext)")
+            let error = await Task.detached(priority: .userInitiated) {
+                Self.exportBatchItem(it.url, to: dest, settings: settings)
+            }.value
+            if error != nil { failed += 1 }
+            batchProgress = Double(i + 1) / Double(max(list.count, 1))
         }
-        await MainActor.run {
-            self.batchRunning = false
-            self.status = "批量导出完成：\(list.count) 张"
+        batchRunning = false
+        status = failed == 0
+            ? "批量导出完成：\(list.count) 张"
+            : "批量导出完成：成功 \(list.count - failed) 张，失败 \(failed) 张"
+    }
+
+    nonisolated private static func exportBatchItem(_ url: URL, to dest: URL,
+                                                 settings: ExportSettings) -> String? {
+        autoreleasepool {
+            guard let src = Engine.decode(url) else { return "无法解码" }
+            let params = SidecarStore.load(for: url)?.params ?? EditParams()
+            let rendered = Engine.render(src, params)
+            do {
+                try Engine.write(rendered, to: dest, settings: settings)
+                return nil
+            } catch {
+                return error.localizedDescription
+            }
         }
     }
 }
 
+#if !RAWFORGE_TESTING
 @main
 struct RawForgeApp: App {
     @StateObject private var state = AppState()
@@ -481,6 +680,9 @@ struct RawForgeApp: App {
                 Button("导出当前照片…") { state.showExport = true }.keyboardShortcut("e")
                 Button("多重曝光合成…") { state.showMerge = true }.keyboardShortcut("m", modifiers: [.command, .shift])
                 Button("前后对比") { state.showBefore.toggle() }.keyboardShortcut("b")
+                Button("复制调整") { state.copyAdjustments() }.keyboardShortcut("c", modifiers: [.command, .shift])
+                Button("同步调整…") { state.showSync = true }.keyboardShortcut("v", modifiers: [.command, .shift])
+                Button("命名快照…") { state.showSnapshots = true }.keyboardShortcut("s", modifiers: [.command, .shift])
             }
         }
     }
@@ -492,3 +694,4 @@ struct RawForgeApp: App {
         if p.runModal() == .OK, let u = p.url { s.openFolder(u) }
     }
 }
+#endif

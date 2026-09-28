@@ -12,11 +12,11 @@ struct PremiumMainWindow: View {
             PremiumTopBar()
             HSplitView {
                 PremiumBrowserPane()
-                    .frame(minWidth: 278, idealWidth: 306, maxWidth: 370)
+                    .frame(width: 320)
                 PremiumWorkspace()
-                    .frame(minWidth: 540)
+                    .frame(minWidth: 540, maxWidth: .infinity)
                 InspectorPane()
-                    .frame(minWidth: 300, idealWidth: 350, maxWidth: 430)
+                    .frame(width: 360)
                     .disabled(s.source == nil)
             }
             PremiumStatusBar()
@@ -217,7 +217,7 @@ struct PremiumToggle: View {
 
 struct PremiumBrowserPane: View {
     @EnvironmentObject var s: AppState
-    private let columns = [GridItem(.fixed(112), spacing: 12)]
+    private let columns = [GridItem(.adaptive(minimum: 116, maximum: 166), spacing: 12)]
     private var count: Int { s.items.filter { s.filterRating == 0 || $0.rating >= s.filterRating }.count }
 
     var body: some View {
@@ -294,7 +294,7 @@ struct PremiumThumbCell: View {
                     if let cg = item.thumb { Image(decorative: cg, scale: 1).resizable().scaledToFill() }
                     else { Rectangle().fill(.quaternary); ProgressView().controlSize(.small) }
                 }
-                .frame(width: 112, height: 142).clipped()
+                .frame(maxWidth: .infinity).aspectRatio(1.35, contentMode: .fit).clipped()
                 .overlay(alignment: .bottomLeading) {
                     HStack(spacing: 1) {
                         ForEach(1...5, id: \.self) { i in Image(systemName: i <= item.rating ? "star.fill" : "star").font(.system(size: 7)).foregroundStyle(i <= item.rating ? .yellow : .white.opacity(0.8)) }

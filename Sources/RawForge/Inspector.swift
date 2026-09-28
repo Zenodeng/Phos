@@ -612,10 +612,13 @@ struct ClutPicker: View {
             HStack {
                 TextField("搜索胶片…", text: $q).textFieldStyle(.roundedBorder).controlSize(.small)
                 Button("清除") { s.set(\.clutName, ""); s.endEdit() }.controlSize(.small)
+                Button("刷新") { s.cluts.invalidate(); s.endEdit() }.controlSize(.small)
+                    .help("重新扫描 HaldCLUT 目录：往 ~/Documents/RawTherapee/HaldCLUT 里放了新 LUT 后点这里")
             }
             let all = s.cluts.list()
-            let shown = q.isEmpty ? Array(all.prefix(60))
-                : Array(all.filter { $0.localizedCaseInsensitiveContains(q) }.prefix(60))
+            // 不再截断到前 60 个：LUT 超过 300 个时，新放进去的会排在后头，不搜索就永远看不到
+            let shown = q.isEmpty ? all
+                : all.filter { $0.localizedCaseInsensitiveContains(q) }
             Menu {
                 ForEach(shown, id: \.self) { name in
                     Button(name) { s.set(\.clutName, name); s.endEdit() }
@@ -631,7 +634,7 @@ struct ClutPicker: View {
                 .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 4))
             }
             .buttonStyle(.plain)
-            Text("共 \(all.count) 个可用").font(.system(size: 9.5)).foregroundStyle(.secondary)
+            Text("共 \(all.count) 个可用 · 新放的 LUT 点「刷新」").font(.system(size: 9.5)).foregroundStyle(.secondary)
         }
     }
 }

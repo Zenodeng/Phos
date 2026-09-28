@@ -37,6 +37,7 @@ struct SliderRow: View {
     @State private var draft = ""
     @FocusState private var fieldFocused: Bool
     @State private var valueHover = false
+    @State private var didCommitInput = false
 
     var body: some View {
         HStack(spacing: 7) {
@@ -101,6 +102,7 @@ struct SliderRow: View {
 
     private func startInput() {
         draft = format(value)
+        didCommitInput = false
         editing = true
     }
 
@@ -111,6 +113,8 @@ struct SliderRow: View {
 
     private func commitInput() {
         guard editing else { return }
+        guard !didCommitInput else { return }
+        didCommitInput = true
         var raw = draft.trimmingCharacters(in: .whitespaces)
         // 兼容中文输入法里的逗号小数点，如 1,5
         if raw.contains("."), !raw.contains(",") { } else if raw.contains(",") {
@@ -140,6 +144,8 @@ struct MainWindow: View {
                     CanvasPane()
                     HistogramBar()
                 }
+                .overlay(alignment: .leading) { Rectangle().fill(Color(nsColor: .rfDivider)).frame(width: 1) }
+                .overlay(alignment: .trailing) { Rectangle().fill(Color(nsColor: .rfDivider)).frame(width: 1) }
                 .frame(minWidth: 520)
                 InspectorPane().frame(minWidth: 300, idealWidth: 340, maxWidth: 420)
                     .disabled(s.source == nil)
@@ -147,6 +153,7 @@ struct MainWindow: View {
             StatusBar()
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .overlay(alignment: .top) { Rectangle().fill(Color.accentColor.opacity(0.65)).frame(height: 2) }
         .disabled(s.syncRunning)
         .sheet(isPresented: $s.showExport) { ExportSheet() }
         .sheet(isPresented: $s.showBatch) { BatchSheet() }
@@ -409,7 +416,7 @@ struct CanvasPane: View {
                 y: (geo.size.height - fit.height * scale) / 2 + offset.height,
                 width: fit.width * scale, height: fit.height * scale)
             ZStack {
-                Color(white: 0.08)
+                Color(nsColor: .rfCanvas)
                 if s.oneToOne, let cg = img {
                     // 1:1：按屏幕像素原样摆，外面套滚动视图，检查锐度用
                     ScrollView([.horizontal, .vertical]) {

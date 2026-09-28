@@ -21,6 +21,12 @@ extension NSColor {
     /// 工具条悬停底色
     static let rfHover = rfDynamic(light: NSColor(white: 0, alpha: 0.06),
                                    dark: NSColor(white: 1, alpha: 0.08))
+    /// 编辑画布底色，避免画布和窗口背景融在一起
+    static let rfCanvas = rfDynamic(light: NSColor(white: 0.18, alpha: 1),
+                                   dark: NSColor(white: 0.055, alpha: 1))
+    /// 分栏边界色
+    static let rfDivider = rfDynamic(light: NSColor(white: 0, alpha: 0.12),
+                                     dark: NSColor(white: 1, alpha: 0.12))
 }
 
 enum RF {

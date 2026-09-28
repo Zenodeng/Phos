@@ -624,6 +624,7 @@ final class History: ObservableObject {
     @Published var index: Int = -1
 
     func push(_ p: EditParams) {
+        guard stack.last != p else { return }
         if index < stack.count - 1 { stack.removeSubrange((index + 1)...) }
         stack.append(p)
         if stack.count > 200 { stack.removeFirst() }

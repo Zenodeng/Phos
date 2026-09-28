@@ -214,9 +214,14 @@ enum Engine {
         }
 
         // 8) 胶片 CLUT
+        //    LUT（HALD/.cube）是感知域数据（sRGB/Rec709 编码），而管线里流动的是线性值。
+        //    进 LUT 前先编码到 sRGB 感知域、出来再解回线性（同 CurveCube 的处理），
+        //    否则索引和输出两头都错域：黑场被抬到 ~18% 灰，整段灰阶压扁——观感就是「灰片」。
         if let f = CLUTLibrary.shared.cubeFilter(name: p.clutName, strength: p.clutStrength) {
-            f.setValue(img, forKey: kCIInputImageKey)
-            if let o = f.outputImage { img = o }
+            f.setValue(img.applyingFilter("CILinearToSRGBToneCurve"), forKey: kCIInputImageKey)
+            if let o = f.outputImage {
+                img = o.applyingFilter("CISRGBToneCurveToLinear")
+            }
         }
 
         // 9) 清晰度（大半径中频，做立体感）

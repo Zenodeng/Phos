@@ -666,7 +666,7 @@ struct RawForgeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            MainWindow()
+            PremiumMainWindow()
                 .environmentObject(state)
                 .frame(minWidth: 1280, minHeight: 820)
         }

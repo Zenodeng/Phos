@@ -176,6 +176,54 @@ struct PerformanceTest {
         precondition(pixels(exported) == pixels(Engine.decode(expectedURL)!))
         print("PASS: asynchronous export retains the source and settings captured at submission.")
 
+        await waitUntil("workflow preview") { state.source != nil && !state.previewing }
+        state.filterRating = 2
+        state.filterPicked = true
+        precondition(state.visiblePhotoIndices == [2] && state.nextVisiblePhotoIndex == 2)
+        state.select(state.nextVisiblePhotoIndex!)
+        await waitUntil("filtered navigation") { state.source != nil && !state.previewing }
+        precondition(state.currentIndex == 2 && state.visiblePhotoPosition == 1 && state.nextVisiblePhotoIndex == nil)
+        state.filterRating = 0
+        state.filterPicked = false
+        print("PASS: filtered navigation selects only visible photos.")
+
+        let savedParams = state.params
+        state.createSnapshot(name: "Studio regression")
+        let snapshot = state.snapshots.last!
+        state.set(\.exposure, -0.7); state.endEdit()
+        state.restoreSnapshot(snapshot.id)
+        precondition(state.params == savedParams)
+        state.undo()
+        precondition(state.params.exposure == -0.7)
+        state.redo()
+        precondition(state.params == savedParams)
+        state.renameSnapshot(snapshot.id, name: "Studio renamed")
+        precondition(SidecarStore.load(for: state.current!.url)!.snapshots.last!.name == "Studio renamed")
+        var syncParams = savedParams
+        syncParams.exposure = 0.6
+        let targetURL = state.items[1].url
+        let targetBefore = SidecarStore.load(for: targetURL)!
+        await state.synchronize(syncParams, to: [targetURL], groups: [.tone])
+        let targetAfter = SidecarStore.load(for: targetURL)!
+        precondition(targetAfter.params.exposure == 0.6 && targetAfter.rating == targetBefore.rating)
+        precondition(targetAfter.params.cropW == targetBefore.params.cropW && targetAfter.params.masks == targetBefore.params.masks)
+        precondition(targetAfter.snapshots.last?.params == targetBefore.params)
+        print("PASS: snapshots restore, undo/redo and rename; sync preserves untouched groups and creates a recovery snapshot.")
+
+        let batchDir = root.appendingPathComponent("batch")
+        try FileManager.default.createDirectory(at: batchDir, withIntermediateDirectories: true)
+        state.set(\.exposure, 0.45)
+        await state.batchExport(to: batchDir, onlyPicked: true)
+        precondition(!state.batchRunning && state.batchProgress == 1)
+        let batchFiles = try FileManager.default.contentsOfDirectory(atPath: batchDir.path)
+        precondition(batchFiles == ["2.png"])
+        precondition(SidecarStore.load(for: state.current!.url)!.params.exposure == 0.45)
+        let batchImage = Engine.decode(batchDir.appendingPathComponent("2.png"))!
+        let batchExpected = root.appendingPathComponent("batch-expected.png")
+        try Engine.write(Engine.render(state.source!, state.params), to: batchExpected, settings: settings)
+        precondition(pixels(batchImage) == pixels(Engine.decode(batchExpected)!))
+        print("PASS: batch export saves pending current edits and exports only marked photos with matching pixels.")
+
         state.openFolder(photos)
         state.openFolder(empty)
         await waitUntil("empty folder") { state.status == "文件夹里没有支持的图像" }

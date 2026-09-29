@@ -6,12 +6,45 @@ func bind(_ kp: WritableKeyPath<EditParams, Double>, _ s: AppState) -> Binding<D
     Binding(get: { s.params[keyPath: kp] }, set: { s.set(kp, $0) })
 }
 
+enum InspectorCategory: String, CaseIterable {
+    case light = "明暗", color = "色彩", detail = "细节", geometry = "变换", masks = "蒙版"
+    var symbol: String {
+        switch self {
+        case .light: return "sun.max"
+        case .color: return "slider.horizontal.3"
+        case .detail: return "circle.lefthalf.filled"
+        case .geometry: return "crop"
+        case .masks: return "circle.dashed"
+        }
+    }
+    static func category(for title: String) -> Self {
+        switch title {
+        case "白平衡", "基本", "质感与饱和度": return .light
+        case "曲线", "颜色分级", "HSL · 混色", "黑白", "校准", "胶片 CLUT": return .color
+        case "细节", "效果", "焦外散景", "镜头校正": return .detail
+        case "变换与裁剪": return .geometry
+        default: return .masks
+        }
+    }
+}
+private struct InspectorCategoryKey: EnvironmentKey {
+    static let defaultValue: InspectorCategory? = nil
+}
+extension EnvironmentValues {
+    var inspectorCategory: InspectorCategory? {
+        get { self[InspectorCategoryKey.self] }
+        set { self[InspectorCategoryKey.self] = newValue }
+    }
+}
+
 // MARK: - 分组容器
 struct GroupBox<Content: View>: View {
     let title: String
     @ViewBuilder var content: Content
     @State private var open = true
+    @Environment(\.inspectorCategory) private var category
     var body: some View {
+        if category == nil || category == InspectorCategory.category(for: title) {
         VStack(spacing: 0) {
             Button {
                 withAnimation(.easeOut(duration: 0.18)) { open.toggle() }
@@ -29,26 +62,52 @@ struct GroupBox<Content: View>: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .padding(.horizontal, 10).padding(.vertical, 8)
+            .padding(.horizontal, 16).frame(height: 38)
             if open {
-                VStack(spacing: 4) { content }
-                    .padding(.horizontal, 10).padding(.bottom, 10)
+                VStack(spacing: 5) { content }
+                    .padding(.horizontal, 16).padding(.bottom, 16)
             }
         }
-        .rfCard()
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
+        .frame(maxWidth: .infinity)
+        .overlay(alignment: .bottom) { Divider().padding(.horizontal, 16) }
+        }
     }
 }
 
 // MARK: - 检视器
 struct InspectorPane: View {
     @EnvironmentObject var s: AppState
+    @State private var category: InspectorCategory = .light
+    @State private var confirmReset = false
+
+    init(initialCategory: InspectorCategory = .light) {
+        _category = State(initialValue: initialCategory)
+    }
 
     var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("调整").font(.system(size: 13, weight: .semibold))
+                Spacer()
+                ToolButton(systemImage: "arrow.counterclockwise", title: "恢复所有默认参数", disabled: s.source == nil) { confirmReset = true }
+            }.padding(.horizontal, 16).frame(height: 42)
+            HStack(spacing: 0) {
+                ForEach(InspectorCategory.allCases, id: \.self) { tab in
+                    Button { category = tab } label: {
+                        VStack(spacing: 5) {
+                            Image(systemName: tab.symbol).font(.system(size: 13))
+                            Text(tab.rawValue).font(.system(size: 10, weight: .medium))
+                        }.frame(maxWidth: .infinity).frame(height: 48)
+                        .foregroundStyle(category == tab ? StudioStyle.accent : Color.secondary)
+                        .background(category == tab ? StudioStyle.accent.opacity(0.08) : .clear)
+                        .overlay(alignment: .bottom) { if category == tab { Rectangle().fill(StudioStyle.accent).frame(height: 2) } }
+                    }.buttonStyle(.plain).help(tab.rawValue)
+                }
+            }
+            Divider()
         ScrollView {
             VStack(spacing: 0) {
-                GroupBox(title: "基本") {
+                GroupBox(title: "白平衡") {
                     HStack {
                         Text("白平衡").font(.system(size: 11)).foregroundStyle(.secondary)
                         Spacer()
@@ -66,14 +125,16 @@ struct InspectorPane: View {
                     }
                     SliderRow(label: "色温", value: bind(\.temperature, s)) { s.endEdit() }
                     SliderRow(label: "色调", value: bind(\.tint, s)) { s.endEdit() }
-                    Divider().padding(.vertical, 2)
+                }
+                GroupBox(title: "基本") {
                     SliderRow(label: "曝光", value: bind(\.exposure, s), range: -5...5) { s.endEdit() }
                     SliderRow(label: "对比", value: bind(\.contrast, s)) { s.endEdit() }
                     SliderRow(label: "高光", value: bind(\.highlights, s)) { s.endEdit() }
                     SliderRow(label: "阴影", value: bind(\.shadows, s)) { s.endEdit() }
                     SliderRow(label: "白色", value: bind(\.whites, s)) { s.endEdit() }
                     SliderRow(label: "黑色", value: bind(\.blacks, s)) { s.endEdit() }
-                    Divider().padding(.vertical, 2)
+                }
+                GroupBox(title: "质感与饱和度") {
                     SliderRow(label: "纹理", value: bind(\.texture, s), range: -100...100) { s.endEdit() }
                     SliderRow(label: "清晰度", value: bind(\.clarity, s), range: 0...100) { s.endEdit() }
                     SliderRow(label: "去朦胧", value: bind(\.dehaze, s), range: -100...100) { s.endEdit() }
@@ -220,8 +281,19 @@ struct InspectorPane: View {
                     MaskPane()
                 }
             }
+            .environment(\.inspectorCategory, category)
+            .disabled(s.source == nil)
+            .padding(.bottom, 16)
         }
-        .background(Color(nsColor: .controlBackgroundColor))
+        .id(category)
+        }
+        .background(StudioStyle.panel)
+        .onChange(of: s.cropMode) { _, active in if active { category = .geometry } }
+        .onChange(of: s.selectedMask) { _, id in if id != nil { category = .masks } }
+        .alert("恢复所有默认参数？", isPresented: $confirmReset) {
+            Button("取消", role: .cancel) {}
+            Button("恢复默认", role: .destructive) { s.selectedMask = nil; s.commit(EditParams()) }
+        } message: { Text("此操作可撤销，原始照片不会改变。") }
     }
 }
 
@@ -983,12 +1055,14 @@ struct ExportSheet: View {
                     .font(.system(size: 15, weight: .bold))
             }
 
+            ScrollView {
             VStack(alignment: .leading, spacing: 8) {
                 ExportDirRow()
                 Divider()
                 Picker("格式", selection: $s.exportSettings.format) {
-                    Text("JPEG").tag("jpg"); Text("PNG").tag("png")
-                    Text("TIFF").tag("tiff"); Text("HEIC").tag("heic")
+                    if !cutoutMode { Text("JPEG").tag("jpg") }
+                    Text("PNG").tag("png"); Text("TIFF").tag("tiff")
+                    if !cutoutMode { Text("HEIC").tag("heic") }
                 }.pickerStyle(.segmented)
                 OutputPrecisionControls(settings: $s.exportSettings)
                 SliderRow(label: "质量", value: $s.exportSettings.quality, range: 0.3...1)
@@ -1017,27 +1091,26 @@ struct ExportSheet: View {
                 }
             }
             .padding(12)
-            .rfCard()
             .onChange(of: cutoutMode) { on in
                 if on, s.exportSettings.format != "png" && s.exportSettings.format != "tiff" {
                     s.exportSettings.format = "png"
                 }
             }
+            }.frame(maxHeight: 480)
 
             HStack {
                 Button("取消", role: .cancel) { dismiss() }
                     .keyboardShortcut(.cancelAction)
                 Button {
-                    let ext = cutoutMode ? s.exportSettings.format
-                                         : s.exportSettings.format
+                    let ext = s.exportSettings.format
                     let p = NSSavePanel()
                     p.directoryURL = ExportPaths.defaultDir
                     p.nameFieldStringValue = (s.current?.url.deletingPathExtension()
                         .lastPathComponent ?? "out") + "." + ext
                     if p.runModal() == .OK, let u = p.url {
                         if cutoutMode { s.exportCutout(to: u) } else { s.exportCurrent(to: u) }
+                        dismiss()
                     }
-                    dismiss()
                 } label: {
                     Label(cutoutMode ? "导出抠图…" : "导出…",
                           systemImage: "square.and.arrow.down")
@@ -1048,7 +1121,7 @@ struct ExportSheet: View {
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .padding(20).frame(width: 430)
+        .padding(20).frame(width: 430).background(StudioStyle.panel)
     }
 }
 
@@ -1069,6 +1142,7 @@ struct BatchSheet: View {
                     .font(.system(size: 15, weight: .bold))
             }
 
+            ScrollView {
             VStack(alignment: .leading, spacing: 8) {
                 Label("会套用每张照片各自的调整（读它的 .rawforge.json）",
                       systemImage: "info.circle")
@@ -1099,7 +1173,7 @@ struct BatchSheet: View {
                 }
             }
             .padding(12)
-            .rfCard()
+            }.frame(maxHeight: 480)
 
             HStack {
                 Button("取消", role: .cancel) { dismiss() }
@@ -1109,9 +1183,10 @@ struct BatchSheet: View {
                     p.directoryURL = ExportPaths.defaultDir
                     if p.runModal() == .OK, let u = p.url {
                         Task { await s.batchExport(to: u, onlyPicked: onlyPicked) }
+                        dismiss()
                     }
-                    dismiss()
                 }
+                .disabled(s.batchRunning || !s.items.contains { !onlyPicked || $0.picked })
                 Button {
                     let dest = ExportPaths.defaultDir
                     Task { await s.batchExport(to: dest, onlyPicked: onlyPicked) }
@@ -1121,9 +1196,10 @@ struct BatchSheet: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
+                .disabled(s.batchRunning || !s.items.contains { !onlyPicked || $0.picked })
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .padding(20).frame(width: 430)
+        .padding(20).frame(width: 430).background(StudioStyle.panel)
     }
 }

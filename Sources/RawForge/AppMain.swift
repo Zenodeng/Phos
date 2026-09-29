@@ -18,6 +18,22 @@ final class AppState: ObservableObject {
     @Published var items: [PhotoItem] = []
     @Published var currentIndex: Int = 0
     @Published var filterRating: Int = 0
+    @Published var filterPicked = false
+    var visiblePhotoIndices: [Int] {
+        items.indices.filter {
+            (filterRating == 0 || items[$0].rating >= filterRating) &&
+            (!filterPicked || items[$0].picked)
+        }
+    }
+    var previousVisiblePhotoIndex: Int? {
+        visiblePhotoIndices.last { $0 < currentIndex }
+    }
+    var nextVisiblePhotoIndex: Int? {
+        visiblePhotoIndices.first { $0 > currentIndex }
+    }
+    var visiblePhotoPosition: Int? {
+        visiblePhotoIndices.firstIndex(of: currentIndex).map { $0 + 1 }
+    }
     @Published var selectedPhotos: Set<UUID> = []
     @Published var showSync = false
     @Published var showSnapshots = false
@@ -60,6 +76,7 @@ final class AppState: ObservableObject {
         }
     }
     @Published var zoom: Double = 1
+    @Published var canvasResetID = UUID()
     @Published var cropMode = false   // 裁剪模式：画布显示未裁剪图 + 裁剪框
 
     // 预览精度：默认走 2200px 代理图求快；打开后走全像素
@@ -340,6 +357,8 @@ final class AppState: ObservableObject {
 
     // MARK: - 裁剪模式辅助
     func toggleCropMode() {
+        guard source != nil else { return }
+        if !cropMode { oneToOne = false; showBefore = false; whiteBalancePicker = false }
         previewQueue.invalidate()
         cropMode.toggle()
         if cropMode { selectedMask = nil; render() } else { endEdit(); render() }
@@ -618,9 +637,15 @@ final class AppState: ObservableObject {
     }
 
     func batchExport(to dir: URL, onlyPicked: Bool) async {
+        guard !batchRunning else { return }
+        let list = items.filter { !onlyPicked || $0.picked }
+        guard !list.isEmpty else {
+            status = "没有符合条件的照片可导出"
+            return
+        }
+        guard saveCurrent() else { return }
         batchRunning = true
         batchProgress = 0
-        let list = items.filter { !onlyPicked || $0.picked }
         let settings = exportSettings
         var failed = 0
         for (i, it) in list.enumerated() {
@@ -666,9 +691,9 @@ struct RawForgeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            PremiumMainWindow()
+            StudioMainWindow()
                 .environmentObject(state)
-                .frame(minWidth: 1280, minHeight: 820)
+                .frame(minWidth: 1100, minHeight: 700)
         }
         .commands {
             CommandGroup(replacing: .undoRedo) {
@@ -678,6 +703,8 @@ struct RawForgeApp: App {
             CommandGroup(after: .newItem) {
                 Button("打开文件夹…") { openPanel(state) }.keyboardShortcut("o")
                 Button("导出当前照片…") { state.showExport = true }.keyboardShortcut("e")
+                Button("裁剪") { state.toggleCropMode() }.keyboardShortcut("r")
+                Button("批量导出…") { state.showBatch = true }
                 Button("多重曝光合成…") { state.showMerge = true }.keyboardShortcut("m", modifiers: [.command, .shift])
                 Button("前后对比") { state.showBefore.toggle() }.keyboardShortcut("b")
                 Button("复制调整") { state.copyAdjustments() }.keyboardShortcut("c", modifiers: [.command, .shift])

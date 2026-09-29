@@ -40,9 +40,9 @@ struct SliderRow: View {
     @State private var didCommitInput = false
 
     var body: some View {
-        HStack(spacing: 7) {
+        HStack(spacing: 10) {
             Text(label)
-                .frame(width: 52, alignment: .leading)
+                .frame(width: 58, alignment: .leading)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.secondary)
             ZStack {
@@ -56,8 +56,9 @@ struct SliderRow: View {
                 }
             }
             valueField
-                .frame(width: 44, alignment: .trailing)
+                .frame(width: 52, alignment: .trailing)
         }
+        .frame(minHeight: 28)
     }
 
     @ViewBuilder
@@ -79,7 +80,7 @@ struct SliderRow: View {
         } else {
             Text(text)
                 .font(.system(size: 10, weight: .medium, design: .monospaced))
-                .foregroundStyle(valueHover ? Color.primary : .secondary)
+                .foregroundStyle(valueHover ? Color.primary : StudioStyle.accent)
                 .padding(.horizontal, 4).padding(.vertical, 1)
                 .background(
                     RoundedRectangle(cornerRadius: 4)
@@ -95,7 +96,8 @@ struct SliderRow: View {
     private func format(_ v: Double) -> String {
         var s = String(format: "%.2f", v)
         if s.contains(".") {
-            s = s.trimmingCharacters(in: ["0"]).trimmingCharacters(in: ["."])
+            while s.last == "0" { s.removeLast() }
+            if s.last == "." { s.removeLast() }
         }
         return s
     }
@@ -120,7 +122,7 @@ struct SliderRow: View {
         if raw.contains("."), !raw.contains(",") { } else if raw.contains(",") {
             raw = raw.replacingOccurrences(of: ",", with: ".")
         }
-        if let v = Double(raw) {
+        if let v = Double(raw), v.isFinite {
             // 最多两位小数 + 夹到合法范围
             let rounded = (v * 100).rounded() / 100
             let clamped = min(max(rounded, range.lowerBound), range.upperBound)
@@ -397,6 +399,7 @@ struct ThumbCell: View {
 struct CanvasPane: View {
     @EnvironmentObject var s: AppState
     @State private var scale: CGFloat = 1
+    @State private var gestureScale: CGFloat?
     @State private var offset: CGSize = .zero
     @State private var panOrigin: CGSize?
     @State private var maskOrigin: [Double]?
@@ -416,7 +419,7 @@ struct CanvasPane: View {
                 y: (geo.size.height - fit.height * scale) / 2 + offset.height,
                 width: fit.width * scale, height: fit.height * scale)
             ZStack {
-                Color(nsColor: .rfCanvas)
+                StudioStyle.canvas
                 if s.oneToOne, let cg = img {
                     // 1:1：按屏幕像素原样摆，外面套滚动视图，检查锐度用
                     ScrollView([.horizontal, .vertical]) {
@@ -460,9 +463,11 @@ struct CanvasPane: View {
             .contentShape(Rectangle())
             .gesture(canvasGesture(frame: dispRect), including: s.oneToOne ? .subviews : .all)
             .simultaneousGesture(MagnificationGesture().onChanged { v in
-                scale = min(max(scale * (1 + (v - 1) * 0.5), 0.2), 8)
-            })
+                if gestureScale == nil { gestureScale = scale }
+                scale = min(max((gestureScale ?? 1) * v, 0.2), 8)
+            }.onEnded { _ in gestureScale = nil })
             .onChange(of: s.currentIndex) { scale = 1; offset = .zero }
+            .onChange(of: s.canvasResetID) { _, _ in scale = 1; offset = .zero; gestureScale = nil }
             // 裁剪模式：叠加裁剪框（作为画布兄弟视图，需要真实显示矩形）
             if s.cropMode, img != nil, !s.oneToOne {
                 CropOverlay(frame: dispRect)

@@ -3,26 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RawForge — macOS 原生 RAW 照片编辑器 · 界面设计 | RAW 修图软件</title>
-<meta name="description" content="RawForge 是一款 macOS 原生 RAW 照片编辑器（Swift + Core Image + AppKit），非破坏性 sidecar 编辑、胶片 CLUT 模拟、蒙版与批量工作流。本页展示 RawForge Studio 界面设计：石墨 × 香槟金设计语言、深浅双主题、五分类检视器。">
-<meta name="keywords" content="RawForge, RAW 修图软件, macOS RAW 编辑器, RAW 照片编辑器, RAW editor macOS, 胶片模拟 LUT, photo editing app, 界面设计, UI design, Swift AppKit">
-<link rel="canonical" href="https://zenodeng.github.io/RawForge/">
+<title>Phos — macOS 原生 RAW 照片编辑器 · 界面设计 | RAW 修图软件</title>
+<meta name="description" content="Phos 是一款 macOS 原生 RAW 照片编辑器（Swift + Core Image + AppKit），非破坏性 sidecar 编辑、胶片 CLUT 模拟、蒙版与批量工作流。本页展示 Phos Studio 界面设计：石墨 × 香槟金设计语言、深浅双主题、五分类检视器。">
+<meta name="keywords" content="Phos, RAW 修图软件, macOS RAW 编辑器, RAW 照片编辑器, RAW editor macOS, 胶片模拟 LUT, photo editing app, 界面设计, UI design, Swift AppKit">
+<link rel="canonical" href="https://zenodeng.github.io/Phos/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="RawForge — macOS 原生 RAW 照片编辑器 · 界面设计">
+<meta property="og:title" content="Phos — macOS 原生 RAW 照片编辑器 · 界面设计">
 <meta property="og:description" content="非破坏性 RAW 修图、胶片 CLUT 模拟、蒙版与批量工作流。石墨 × 香槟金界面设计，深浅双主题。">
-<meta property="og:url" content="https://zenodeng.github.io/RawForge/">
-<meta property="og:image" content="https://zenodeng.github.io/RawForge/images/01-workspace-dark.jpg">
+<meta property="og:url" content="https://zenodeng.github.io/Phos/">
+<meta property="og:image" content="https://zenodeng.github.io/Phos/images/01-workspace-dark.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  "name": "RawForge",
+  "name": "Phos",
   "operatingSystem": "macOS 15+",
   "applicationCategory": "PhotoApplication",
   "offers": {"@type": "Offer", "price": "0"},
   "description": "macOS 原生非破坏性 RAW 照片编辑器：RAW 解码、完整影调与色彩调整、胶片 CLUT 模拟、局部蒙版、批量同步与导出水印。",
-  "url": "https://github.com/Zenodeng/RawForge"
+  "url": "https://github.com/Zenodeng/Phos"
 }
 </script>
 <style>
@@ -90,12 +90,12 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:18px;justify-content:space-between;
 <body>
 <nav>
   <div class="wrap">
-    <div class="brand"><span class="ap">◈</span>RAWFORGE</div>
+    <div class="brand"><span class="ap">◈</span>PHOS</div>
     <div class="links">
       <a href="#design">设计语言</a>
       <a href="#gallery">界面演示</a>
       <a href="#features">功能</a>
-      <a href="https://github.com/Zenodeng/RawForge">GitHub ↗</a>
+      <a href="https://github.com/Zenodeng/Phos">GitHub ↗</a>
     </div>
   </div>
 </nav>
@@ -103,11 +103,11 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:18px;justify-content:space-between;
 <header class="hero">
   <div class="wrap">
     <span class="tag">macOS · Swift · Core Image</span>
-    <h1>RawForge —<br>把 RAW 修图做成一件<span class="gold">工整</span>的事</h1>
-    <p class="sub">macOS 原生非破坏性 RAW 照片编辑器。全部像素处理跑在 GPU 上，编辑写入原图旁的副档，原始文件一个字节都不会被修改。本页展示 RawForge Studio 的界面设计：石墨 × 香槟金。</p>
+    <h1>Phos —<br>把 RAW 修图做成一件<span class="gold">工整</span>的事</h1>
+    <p class="sub">macOS 原生非破坏性 RAW 照片编辑器。全部像素处理跑在 GPU 上，编辑写入原图旁的副档，原始文件一个字节都不会被修改。本页展示 Phos Studio 的界面设计：石墨 × 香槟金。</p>
     <div class="cta">
-      <a class="btn solid" href="https://github.com/Zenodeng/RawForge/releases">下载 macOS 版</a>
-      <a class="btn ghost" href="https://github.com/Zenodeng/RawForge">查看源码 ↗</a>
+      <a class="btn solid" href="https://github.com/Zenodeng/Phos/releases">下载 macOS 版</a>
+      <a class="btn ghost" href="https://github.com/Zenodeng/Phos">查看源码 ↗</a>
     </div>
     <div class="stats">
       <div class="stat"><b>100%</b><span>本机运行</span></div>
@@ -135,22 +135,22 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:18px;justify-content:space-between;
   <div class="wrap">
     <div class="k">Interface Gallery</div>
     <h2>界面演示</h2>
-    <p class="lead">四张高清界面演示图：深色工作台、浅色主题、检视器细节与导出面板。全部对应 RawForge 现有功能，无虚构能力。</p>
+    <p class="lead">四张高清界面演示图：深色工作台、浅色主题、检视器细节与导出面板。全部对应 Phos 现有功能，无虚构能力。</p>
     <div class="gal">
       <figure>
-        <img src="images/01-workspace-dark.jpg" alt="RawForge 深色工作台界面：左侧素材浏览器缩略图网格、中间照片画布与直方图浮卡、右侧五分类调整检视器、顶部工具栏与底部状态栏" loading="lazy" width="2200" height="1375">
+        <img src="images/01-workspace-dark.jpg" alt="Phos 深色工作台界面：左侧素材浏览器缩略图网格、中间照片画布与直方图浮卡、右侧五分类调整检视器、顶部工具栏与底部状态栏" loading="lazy" width="2200" height="1375">
         <figcaption><span class="no">01</span><div><div class="t">深色工作台</div><div class="d">三栏 HSplitView：素材浏览 / 画布 + 直方图 / 检视器。顶栏分组——打开、对比、裁剪、历史、预设、快照、同步、导出。</div></div></figcaption>
       </figure>
       <figure>
-        <img src="images/02-workspace-light.jpg" alt="RawForge 浅色主题工作台界面，同一三栏布局的明色自适应版本" loading="lazy" width="2200" height="1375">
+        <img src="images/02-workspace-light.jpg" alt="Phos 浅色主题工作台界面，同一三栏布局的明色自适应版本" loading="lazy" width="2200" height="1375">
         <figcaption><span class="no">02</span><div><div class="t">浅色主题</div><div class="d">同一布局的浅色自适应版本：纸白面板、墨黑主按钮、深金点缀，明暗双主题跟随系统。</div></div></figcaption>
       </figure>
       <figure>
-        <img src="images/03-inspector-detail.jpg" alt="RawForge 检视器面板细节：白平衡与曝光滑杆、胶片 CLUT 查找表卡片、色调曲线编辑器、HSL 分类面板" loading="lazy" width="2200" height="1375">
+        <img src="images/03-inspector-detail.jpg" alt="Phos 检视器面板细节：白平衡与曝光滑杆、胶片 CLUT 查找表卡片、色调曲线编辑器、HSL 分类面板" loading="lazy" width="2200" height="1375">
         <figcaption><span class="no">03</span><div><div class="t">检视器细节</div><div class="d">五分类检视器（明暗 / 色彩 / 细节 / 变换 / 蒙版）；胶片 LUT 卡带齿孔母题，色温、色调滑杆用渐变轨道。</div></div></figcaption>
       </figure>
       <figure>
-        <img src="images/04-export-dialog.jpg" alt="RawForge 导出面板：TIFF 格式、16 位位深、Adobe RGB 色彩空间、水印开关与固定导出文件夹设置" loading="lazy" width="2200" height="1375">
+        <img src="images/04-export-dialog.jpg" alt="Phos 导出面板：TIFF 格式、16 位位深、Adobe RGB 色彩空间、水印开关与固定导出文件夹设置" loading="lazy" width="2200" height="1375">
         <figcaption><span class="no">04</span><div><div class="t">导出面板</div><div class="d">8 / 16 位 TIFF、sRGB / Display P3 / Adobe RGB、水印九宫格叠加、固定导出目录——导出管线一次讲清。</div></div></figcaption>
       </figure>
     </div>
@@ -175,8 +175,8 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:18px;justify-content:space-between;
 
 <footer>
   <div class="wrap">
-    <div>RawForge — 用 Swift 编写，基于 Core Image、Vision 与 AppKit。不联网、无账号、无订阅。</div>
-    <div><a href="https://github.com/Zenodeng/RawForge">GitHub</a> · <a href="https://github.com/Zenodeng/RawForge/releases">Releases</a> · MIT License</div>
+    <div>Phos — 用 Swift 编写，基于 Core Image、Vision 与 AppKit。不联网、无账号、无订阅。项目曾用名 RawForge。</div>
+    <div><a href="https://github.com/Zenodeng/Phos">GitHub</a> · <a href="https://github.com/Zenodeng/Phos/releases">Releases</a> · MIT License</div>
   </div>
 </footer>
 </body>

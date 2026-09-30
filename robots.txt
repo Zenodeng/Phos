@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://zenodeng.github.io/RawForge/sitemap.xml
+Sitemap: https://zenodeng.github.io/Phos/sitemap.xml

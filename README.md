@@ -1,9 +1,11 @@
-# RawForge
+# Phos
 
 **A native RAW photo editor for macOS, built for a personal, professional-grade workflow.**  
 **为个人摄影流程打造的原生 macOS RAW 修图软件。**
 
-![Build & Release](https://github.com/Zenodeng/RawForge/actions/workflows/release.yml/badge.svg)
+_Formerly known as RawForge. 项目曾用名 RawForge。_
+
+![Build & Release](https://github.com/Zenodeng/Phos/actions/workflows/release.yml/badge.svg)
 
 ![Release](https://img.shields.io/github/v/release/Zenodeng/RawForge)
 
@@ -11,7 +13,7 @@
 
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-🌐 **Showcase & UI design:** [zenodeng.github.io/RawForge](https://zenodeng.github.io/RawForge/) · **界面设计展示页**
+🌐 **Showcase & UI design:** [zenodeng.github.io/Phos](https://zenodeng.github.io/Phos/) · **界面设计展示页**
 
 ---
 
@@ -19,7 +21,7 @@
 
 ### Overview
 
-RawForge is a non-destructive RAW photo editor written in Swift on top of Core Image, Vision and AppKit. It runs entirely on the local machine: no cloud services, no accounts, no subscription. Every pixel operation is executed on the GPU, and no third-party dependencies are used.
+Phos is a non-destructive RAW photo editor written in Swift on top of Core Image, Vision and AppKit. It runs entirely on the local machine: no cloud services, no accounts, no subscription. Every pixel operation is executed on the GPU, and no third-party dependencies are used.
 
 The project deliberately favours a small, complete set of high-frequency editing capabilities over breadth of features. All edits are stored in a sidecar file next to the original image, and the original file is never modified.
 
@@ -34,7 +36,7 @@ The project deliberately favours a small, complete set of high-frequency editing
 
 ### Installation
 
-1. Download `RawForge-macOS-apple-silicon.zip` from [Releases](https://github.com/Zenodeng/RawForge/releases).
+1. Download `RawForge-macOS-apple-silicon.zip` from [Releases](https://github.com/Zenodeng/Phos/releases).
 2. Verify integrity against `SHA256.txt`:
    ```sh
    shasum -a 256 RawForge-macOS-apple-silicon.zip
@@ -53,8 +55,8 @@ The project deliberately favours a small, complete set of high-frequency editing
 ### Building from source
 
 ```sh
-git clone https://github.com/Zenodeng/RawForge.git
-cd RawForge
+git clone https://github.com/Zenodeng/Phos.git
+cd Phos
 ./Scripts/package_app.sh      # builds RawForge.app in the repository root
 ./build.sh                    # compiles and installs to /Applications
 ```
@@ -150,7 +152,7 @@ Released under the [MIT License](LICENSE).
 
 ### 概述
 
-RawForge 是一款用 Swift 编写、基于 Core Image、Vision 与 AppKit 的**非破坏性 RAW 修图软件**。它完全在本机运行：不联网、无账号、无订阅。全部像素处理在 GPU 上完成，不依赖任何第三方库。
+Phos 是一款用 Swift 编写、基于 Core Image、Vision 与 AppKit 的**非破坏性 RAW 修图软件**。它完全在本机运行：不联网、无账号、无订阅。全部像素处理在 GPU 上完成，不依赖任何第三方库。
 
 项目刻意选择「把高频能力做全做透」而非堆砌功能。所有调整写入原图旁边的副档，**原始文件一个字节都不会被修改**。
 
@@ -165,7 +167,7 @@ RawForge 是一款用 Swift 编写、基于 Core Image、Vision 与 AppKit 的**
 
 ### 安装
 
-1. 从 [Releases](https://github.com/Zenodeng/RawForge/releases) 下载 `RawForge-macOS-apple-silicon.zip`。
+1. 从 [Releases](https://github.com/Zenodeng/Phos/releases) 下载 `RawForge-macOS-apple-silicon.zip`。
 2. 校验完整性：
    ```sh
    shasum -a 256 RawForge-macOS-apple-silicon.zip
@@ -185,8 +187,8 @@ RawForge 是一款用 Swift 编写、基于 Core Image、Vision 与 AppKit 的**
 ### 从源码构建
 
 ```sh
-git clone https://github.com/Zenodeng/RawForge.git
-cd RawForge
+git clone https://github.com/Zenodeng/Phos.git
+cd Phos
 ./Scripts/package_app.sh      # 在仓库根目录打出 RawForge.app
 ./build.sh                    # 编译并安装到 /Applications
 ```

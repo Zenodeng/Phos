@@ -2,6 +2,33 @@
 
 本项目遵循语义化版本。日期为发布日（Asia/Shanghai）。
 
+## [3.0.1] — 2026-09-30
+
+v3.0.0 收尾版本：测试体系修复与实拍压力测试，渲染与应用行为无变化。
+Wrap-up release for 3.0.0: test infrastructure fixes and real-photo stress testing. No rendering or behavioural changes.
+
+### English
+
+- **Fixed `Scripts/test_studio.sh`**: the fixture image was mistakenly passed as the render baseline directory; now takes an optional baseline-directory argument with path validation.
+- **Fixed `Tools/RenderRegression.swift`**: strictly separates output vs baseline directories, validates the case set, and compares `.rgba` / `.cube` byte-exact.
+- **Added `Tools/RealPhotoTest.swift` and `Scripts/test_real_photos.sh`**: real-photo decode / orientation / export / Vision-mask checks, original-file SHA256 integrity, plus a 1000-image proxy-library soak (120 s: 734 switch/edit/undo/redo cycles, ~172 MiB peak RSS).
+- README documents the Studio regression and real-photo stress-test usage.
+
+### 中文
+
+- **修复 `Scripts/test_studio.sh`**：不再把 fixture 图片误传为渲染基准目录，新增可选基准目录参数与路径校验。
+- **修复 `Tools/RenderRegression.swift`**：严格区分输出目录与基准目录，校验用例集合，`.rgba` / `.cube` 逐字节比较。
+- **新增 `Tools/RealPhotoTest.swift` 与 `Scripts/test_real_photos.sh`**：真实照片解码 / 方向 / 导出 / Vision 蒙版检查、原片 SHA256 完整性校验，外加 1000 张代理图库 120 秒压测（734 次切图 / 编辑 / 撤销 / 重做，峰值常驻内存约 172 MiB）。
+- README 补充 Studio 回归与实拍压测用法。
+
+### 验证 / Verification
+
+- Studio 布局、性能回归全部通过；14 组渲染用例与 v3.0.0 基准**逐字节一致**。
+- 实拍验证：Sony HIF、同场景 JPEG；原片 SHA256 校验通过；1000 张代理图全部扫描加载。
+- 已知限制：未穷举所有相机 RAW 格式；Vision 蒙版只验证了调用与输出有效性，待人物 / 主体照片做目视确认。
+
+---
+
 ## [3.0.0] — 2026-09-29
 
 全新 Studio 界面：参照内部界面设计稿重做主窗口外壳与检视器结构，界面语言全面升级（大版本号变更）。

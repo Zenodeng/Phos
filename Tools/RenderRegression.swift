@@ -4,8 +4,29 @@ import CoreImage
 @main
 struct RenderRegression {
     static func main() throws {
+        func invalid(_ message: String) -> NSError {
+            NSError(domain: "RenderRegression", code: 2,
+                    userInfo: [NSLocalizedDescriptionKey: message])
+        }
+        guard (2...3).contains(CommandLine.arguments.count) else {
+            throw invalid("Usage: render <output-directory> [baseline-directory]")
+        }
         let directory = URL(fileURLWithPath: CommandLine.arguments[1])
+        let baseline = CommandLine.arguments.count == 3
+            ? URL(fileURLWithPath: CommandLine.arguments[2]) : nil
+        if let baseline {
+            var isDirectory: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: baseline.path, isDirectory: &isDirectory),
+                  isDirectory.boolValue else {
+                throw invalid("Baseline must be an existing directory")
+            }
+            guard baseline.resolvingSymlinksInPath().standardizedFileURL !=
+                    directory.resolvingSymlinksInPath().standardizedFileURL else {
+                throw invalid("Output must not overwrite the baseline")
+            }
+        }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        var generated = Set<String>()
         let extent = CGRect(x: 0, y: 0, width: 640, height: 480)
         let gradient = CIFilter(name: "CILinearGradient", parameters: [
             "inputPoint0": CIVector(x: 0, y: 0),
@@ -73,9 +94,13 @@ struct RenderRegression {
             Engine.ctx.render(image, toBitmap: &bytes, rowBytes: width * 4, bounds: bounds,
                               format: .RGBA8, colorSpace: Engine.srgb)
             precondition(Set(bytes).count > 32, "Empty/invalid render: \(name). Run with access to macOS graphics services.")
-            try Data(bytes).write(to: directory.appendingPathComponent("\(name)-\(width)x\(height).rgba"))
+            let filename = "\(name)-\(width)x\(height).rgba"
+            generated.insert(filename)
+            try Data(bytes).write(to: directory.appendingPathComponent(filename))
             if let cube = CurveCube.filter(params)?.value(forKey: "inputCubeData") as? Data {
-                try cube.write(to: directory.appendingPathComponent("\(name).cube"))
+                let filename = "\(name).cube"
+                generated.insert(filename)
+                try cube.write(to: directory.appendingPathComponent(filename))
             }
             print(String(format: "%@ %.1f ms", name, Date().timeIntervalSince(start) * 1000))
         }
@@ -85,15 +110,18 @@ struct RenderRegression {
             _ = RangeCube.luminanceMask(low: 0.2, high: 0.7, soft: 0.1)
         }
         print(String(format: "Repeated range LUTs (100 pairs): %.1f ms", Date().timeIntervalSince(start) * 1000))
-        if CommandLine.arguments.count > 2 {
-            let baseline = URL(fileURLWithPath: CommandLine.arguments[2])
-            for file in try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
-                where file.pathExtension == "rgba" || file.pathExtension == "cube" {
-                let before = try Data(contentsOf: baseline.appendingPathComponent(file.lastPathComponent))
-                let after = try Data(contentsOf: file)
-                precondition(before == after, "Pixel mismatch: \(file.lastPathComponent)")
+        if let baseline {
+            let expected = Set(try FileManager.default.contentsOfDirectory(at: baseline, includingPropertiesForKeys: nil)
+                .filter { $0.pathExtension == "rgba" || $0.pathExtension == "cube" }.map(\.lastPathComponent))
+            guard expected == generated else { throw invalid("Baseline case set differs from current render cases") }
+            for filename in generated.sorted() {
+                let before = try Data(contentsOf: baseline.appendingPathComponent(filename))
+                let after = try Data(contentsOf: directory.appendingPathComponent(filename))
+                guard before == after else { throw invalid("Pixel mismatch: \(filename)") }
             }
             print("PASS: all \(cases.count) render cases are byte-identical to baseline.")
+        } else {
+            print("PASS: \(cases.count) nonblank render cases. Baseline comparison NOT performed.")
         }
     }
 }

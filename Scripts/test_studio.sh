@@ -1,8 +1,14 @@
 #!/bin/bash
 set -euo pipefail
-if [[ $# -ne 2 ]]; then
-    printf 'Usage: bash Scripts/test_studio.sh <fixture-image> <output-directory>\n' >&2
+if [[ $# -lt 2 || $# -gt 3 ]]; then
+    printf 'Usage: bash Scripts/test_studio.sh <fixture-image> <output-directory> [render-baseline-directory]\n' >&2
     exit 2
+fi
+[[ -f "$1" ]] || { printf 'Fixture image not found: %s\n' "$1" >&2; exit 2; }
+BASELINE=()
+if [[ $# -eq 3 ]]; then
+    [[ -d "$3" ]] || { printf 'Render baseline must be a directory: %s\n' "$3" >&2; exit 2; }
+    BASELINE=("$(cd "$3" && pwd)")
 fi
 IMAGE="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 mkdir -p "$2"
@@ -19,5 +25,5 @@ swiftc "${FLAGS[@]}" Sources/RawForge/*.swift Tools/StudioLayoutTest.swift -o "$
 swiftc "${FLAGS[@]}" Sources/RawForge/*.swift Tools/PerformanceTest.swift -o "$BUILD/performance"
 "$BUILD/performance" | tee "$OUTPUT/performance.log"
 swiftc "${FLAGS[@]}" Sources/RawForge/*.swift Tools/RenderRegression.swift -o "$BUILD/render"
-"$BUILD/render" "$OUTPUT/render" "$IMAGE" | tee "$OUTPUT/render.log"
+"$BUILD/render" "$OUTPUT/render" "${BASELINE[@]}" | tee "$OUTPUT/render.log"
 printf 'PASS: Studio verification complete. Artifacts: %s\n' "$OUTPUT"

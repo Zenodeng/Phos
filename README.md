@@ -200,6 +200,29 @@ cd RawForge
 撤销重做、精度切换和后台导出。可将基准像素目录作为第一个参数，逐字节比较渲染结果及曲线 LUT。
 测试会拒绝空白渲染结果；真实相机 RAW 和 Vision 主体/人物识别还需要单独用实拍照片验证。
 
+### Studio 完整回归
+
+运行：
+
+```sh
+bash Scripts/test_studio.sh <fixture-image> <output-directory> [render-baseline-directory]
+```
+
+脚本覆盖 Studio 深浅色布局、1100/1680 窗口尺寸、五个检视器分类、导出弹窗、性能回归和
+14 组渲染用例。传入基准目录时会逐字节比较 `.rgba` / `.cube` 输出；图片路径不是基准目录。
+
+### 实拍照片与图库压力测试
+
+运行：
+
+```sh
+bash Scripts/test_real_photos.sh <output-directory> <soak-seconds> <photo> [more-photos...]
+```
+
+测试真实照片解码、方向、导出、Vision 蒙版、原片 SHA256 完整性，并将代理图扩展为 1000 张
+图库执行切图、编辑、撤销和重做压力测试。Vision 返回结果需要结合实际照片目视判断，代理图库
+压力测试不等同于全尺寸 RAW 图库的长时间 endurance 测试。
+
 ### 功能
 
 **2.0 工作流增强** — 缩略图勾选、Command/Shift 多选、分组同步与复制调整（默认不复制裁剪/蒙版）；

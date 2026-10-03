@@ -17,6 +17,17 @@ Older releases may still use the former application and archive names.
 
 🌐 **Showcase & UI design:** [zenodeng.github.io/Phos](https://zenodeng.github.io/Phos/) · **界面设计展示页**
 
+![Phos — 工作台（深色外观）· Workspace, dark](https://zenodeng.github.io/Phos/images/01-workspace-dark.jpg)
+
+<p align="center">
+  <img src="https://zenodeng.github.io/Phos/images/02-workspace-light.jpg" width="32%" alt="Phos — 工作台（浅色外观）· Workspace, light">
+  <img src="https://zenodeng.github.io/Phos/images/03-inspector-detail.jpg" width="32%" alt="Phos — 检视器：影调、白平衡、胶片 CLUT、曲线 · Inspector">
+  <img src="https://zenodeng.github.io/Phos/images/04-export-dialog.jpg" width="32%" alt="Phos — 导出：格式、位深、色彩空间、水印 · Export">
+</p>
+
+> 工作台（深色 / 浅色）· 检视器五分类 · 导出与批量。更多界面见[设计展示页](https://zenodeng.github.io/Phos/)。
+> Workspace (dark / light) · five-tab inspector · export & batch. See the [showcase page](https://zenodeng.github.io/Phos/) for more.
+
 ---
 
 ## English

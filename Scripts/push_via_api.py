@@ -35,7 +35,10 @@ base_tree = api("GET", f"/repos/{OWNER}/{REPO}/git/commits/{parent}").get("tree"
 print("远端 HEAD:", parent[:10], "base_tree:", (base_tree or "?")[:10])
 
 # 2) 逐个文件建 blob
-files = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True).stdout.split()
+# core.quotepath=false：否则中文等路径会被 git 转义成 "\347\272\205..." 的形式，后面 open() 会失败
+files = subprocess.run(["git", "-c", "core.quotepath=false", "ls-files"],
+                       cwd=ROOT, capture_output=True, text=True).stdout.split("\n")
+files = [f for f in files if f]
 print(f"上传 {len(files)} 个文件")
 tree = []
 for rel in files:
@@ -66,3 +69,20 @@ print("commit:", c["sha"][:10])
 r = api("PATCH", f"/repos/{OWNER}/{REPO}/git/refs/heads/main", {"sha": c["sha"]})
 print("更新 main:", "OK" if r.get("object") else str(r)[:200])
 print("NEW_SHA=" + c["sha"])
+
+# 6) 可选：打附注标签（GH_TAG=v3.1.0）。标签已存在时强制更新 —— 这是触发 Release 构建的关键，
+#    只更新 main 不会触发 .github/workflows/release.yml（它监听 push 的 tags: v*）。
+TAG = os.environ.get("GH_TAG")
+if TAG:
+    t = api("POST", f"/repos/{OWNER}/{REPO}/git/tags",
+            {"tag": TAG, "message": os.environ.get("GH_TAG_MSG", TAG),
+             "object": c["sha"], "type": "commit"})
+    if "sha" not in t:
+        print("建标签对象失败:", str(t)[:220]); sys.exit(1)
+    ref = api("POST", f"/repos/{OWNER}/{REPO}/git/refs",
+              {"ref": f"refs/tags/{TAG}", "sha": t["sha"]})
+    if not ref.get("object"):
+        # 标签已存在：走强制更新（普通 POST 会 422 Reference already exists）
+        ref = api("PATCH", f"/repos/{OWNER}/{REPO}/git/refs/tags/{TAG}",
+                  {"sha": t["sha"], "force": True})
+    print("标签", TAG, "->", c["sha"], "OK" if ref.get("object") else str(ref)[:200])

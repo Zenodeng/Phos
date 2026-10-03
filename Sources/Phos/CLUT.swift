@@ -12,7 +12,11 @@ final class CLUTLibrary: ObservableObject {
     static let shared = CLUTLibrary()
 
     var root: URL {
-        URL(fileURLWithPath: NSString("~/Documents/RawTherapee/HaldCLUT").expandingTildeInPath)
+        let configured = UserDefaults.standard.string(forKey: "clutDirectory") ?? ""
+        if !configured.isEmpty {
+            return URL(fileURLWithPath: (configured as NSString).expandingTildeInPath)
+        }
+        return URL(fileURLWithPath: NSString("~/Documents/RawTherapee/HaldCLUT").expandingTildeInPath)
     }
 
     private let cache = BoundedCache<String, Data>(capacity: 12)
@@ -66,7 +70,7 @@ final class CLUTLibrary: ObservableObject {
             cache[key] = d
             data = d
         }
-        let f = CIFilter(name: "CIColorCube")!
+        guard let f = CIFilter(name: "CIColorCube") else { return nil }
         f.setValue(cubeDim, forKey: "inputCubeDimension")
         f.setValue(data, forKey: "inputCubeData")
         return f

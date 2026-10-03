@@ -121,7 +121,7 @@ extension Engine {
                 func perspectiveFilter(_ src: CIImage, _ q: (tl: CGPoint, tr: CGPoint,
                                                               bl: CGPoint, br: CGPoint))
                     -> CIImage? {
-                    let f = CIFilter(name: "CIPerspectiveTransform")!
+                    guard let f = CIFilter(name: "CIPerspectiveTransform") else { return nil }
                     f.setValue(src, forKey: kCIInputImageKey)
                     f.setValue(CIVector(cgPoint: q.tl), forKey: "inputTopLeft")
                     f.setValue(CIVector(cgPoint: q.tr), forKey: "inputTopRight")
@@ -328,7 +328,7 @@ extension Engine {
         guard let mask = depth?.cropped(to: e) else { return img }
 
         let radius = max(e.width, e.height) * CGFloat(p.bokehAmount / 100) * 0.03
-        let f = CIFilter(name: "CIMaskedVariableBlur")!
+        guard let f = CIFilter(name: "CIMaskedVariableBlur") else { return img }
         f.setValue(img, forKey: kCIInputImageKey)
         f.setValue(mask, forKey: "inputMask")
         f.setValue(radius, forKey: kCIInputRadiusKey)

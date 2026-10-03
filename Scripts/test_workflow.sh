@@ -8,7 +8,7 @@ fi
 SDK="${RF_SDK:-/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk}"
 [[ -d "$SDK" ]] || SDK="$(xcrun --show-sdk-path)"
 OUT="$(mktemp -d "${TMPDIR:-/tmp}/rawforge-workflow.XXXXXX")"
-swiftc -O -D RAWFORGE_TESTING -sdk "$SDK" -target arm64-apple-macosx15.0 \
-    -module-cache-path "$OUT/module-cache" Sources/RawForge/*.swift \
+swiftc -O -D PHOS_TESTING -sdk "$SDK" -target arm64-apple-macosx15.0 \
+    -module-cache-path "$OUT/module-cache" Sources/Phos/*.swift \
     Tools/WorkflowTest.swift -o "$OUT/test"
 "$OUT/test" "$@"

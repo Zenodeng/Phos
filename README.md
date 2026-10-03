@@ -3,11 +3,13 @@
 **A native RAW photo editor for macOS, built for a personal, professional-grade workflow.**  
 **为个人摄影流程打造的原生 macOS RAW 修图软件。**
 
-_Formerly known as RawForge. 项目曾用名 RawForge。_
+Phos uses the `com.zeno.phos` application identifier. Existing `.rawforge.json` sidecars and the legacy
+`Application Support/RawForge/presets.json` directory remain readable so existing edits are preserved.
+Older releases may still use the former application and archive names.
 
 ![Build & Release](https://github.com/Zenodeng/Phos/actions/workflows/release.yml/badge.svg)
 
-![Release](https://img.shields.io/github/v/release/Zenodeng/RawForge)
+![Release](https://img.shields.io/github/v/release/Zenodeng/Phos)
 
 ![Platform](https://img.shields.io/badge/platform-macOS%2015%2B-blue)
 
@@ -36,17 +38,17 @@ The project deliberately favours a small, complete set of high-frequency editing
 
 ### Installation
 
-1. Download `RawForge-macOS-apple-silicon.zip` from [Releases](https://github.com/Zenodeng/Phos/releases).
+1. Download `Phos-macOS-apple-silicon.zip` from [Releases](https://github.com/Zenodeng/Phos/releases).
 2. Verify integrity against `SHA256.txt`:
    ```sh
-   shasum -a 256 RawForge-macOS-apple-silicon.zip
+   shasum -a 256 Phos-macOS-apple-silicon.zip
    ```
-3. Unzip and move `RawForge.app` to `/Applications`.
+3. Unzip and move `Phos.app` to `/Applications`.
 4. **The first launch is blocked by macOS — this is expected** (the app is not notarised).
    - Either open it once, then go to *System Settings → Privacy & Security*, scroll to the bottom and choose **Open Anyway**;
    - or remove the quarantine attribute:
      ```sh
-     xattr -dr com.apple.quarantine /Applications/RawForge.app
+     xattr -dr com.apple.quarantine /Applications/Phos.app
      ```
 
 > [!IMPORTANT]  
@@ -57,8 +59,8 @@ The project deliberately favours a small, complete set of high-frequency editing
 ```sh
 git clone https://github.com/Zenodeng/Phos.git
 cd Phos
-./Scripts/package_app.sh      # builds RawForge.app in the repository root
-./build.sh                    # compiles and installs to /Applications
+./Scripts/package_app.sh      # builds Phos.app in the repository root
+./build.sh                    # compiles and creates Phos.app in the repository root
 ```
 
 `Scripts/package_app.sh` compiles the sources with `swiftc` directly, and retries with an older SDK if the default SDK is newer than the installed compiler. A `Package.swift` is provided for use with SwiftPM-aware editors; the release pipeline does not depend on it.
@@ -122,17 +124,17 @@ New sidecars include the original file extension; legacy sidecars remain readabl
 
 | File                               | Responsibility                                                                            |
 | ---------------------------------- | ----------------------------------------------------------------------------------------- |
-| `Sources/RawForge/Engine.swift`    | Decoding, the full adjustment pipeline, LUT construction, masking, Vision-backed analysis |
-| `Sources/RawForge/Alignment.swift` | Frame registration, quality gating, canvas normalisation for compositing                  |
-| `Sources/RawForge/Models.swift`    | Parameter model and tolerant decoding for forward compatibility                           |
-| `Sources/RawForge/AppMain.swift`   | Application state, render scheduling, undo stack, export and batch processing             |
-| `Sources/RawForge/Performance.swift` | Bounded thread-safe caches and latest-request background scheduling                    |
-| `Sources/RawForge/Workflow.swift`    | Batch synchronisation, snapshots, grey-point sampling, sidecar migration               |
-| `Sources/RawForge/WorkflowViews.swift` | Workflow panels: sync targets, snapshots, bit-depth and colour-space controls        |
-| `Sources/RawForge/Views.swift`     | Browser, canvas, crop overlay, toolbars                                                   |
-| `Sources/RawForge/Inspector.swift` | Adjustment panels, curve editor, colour wheels                                            |
-| `Sources/RawForge/Theme.swift`     | Adaptive colour palette                                                                   |
-| `Sources/RawForge/CLUT.swift`      | Film LUT loading and baking                                                               |
+| `Sources/Phos/Engine.swift`    | Decoding, the full adjustment pipeline, LUT construction, masking, Vision-backed analysis |
+| `Sources/Phos/Alignment.swift` | Frame registration, quality gating, canvas normalisation for compositing                  |
+| `Sources/Phos/Models.swift`    | Parameter model and tolerant decoding for forward compatibility                           |
+| `Sources/Phos/AppMain.swift`   | Application state, render scheduling, undo stack, export and batch processing             |
+| `Sources/Phos/Performance.swift` | Bounded thread-safe caches and latest-request background scheduling                    |
+| `Sources/Phos/Workflow.swift`    | Batch synchronisation, snapshots, grey-point sampling, sidecar migration               |
+| `Sources/Phos/WorkflowViews.swift` | Workflow panels: sync targets, snapshots, bit-depth and colour-space controls        |
+| `Sources/Phos/Views.swift`     | Browser, canvas, crop overlay, toolbars                                                   |
+| `Sources/Phos/Inspector.swift` | Adjustment panels, curve editor, colour wheels                                            |
+| `Sources/Phos/Theme.swift`     | Adaptive colour palette                                                                   |
+| `Sources/Phos/CLUT.swift`      | Film LUT loading and baking                                                               |
 
 The application is non-destructive by design: all parameters are serialised to a sidecar file, and rendering is a pure function of (source image, parameters).
 
@@ -167,18 +169,18 @@ Phos 是一款用 Swift 编写、基于 Core Image、Vision 与 AppKit 的**非�
 
 ### 安装
 
-1. 从 [Releases](https://github.com/Zenodeng/Phos/releases) 下载 `RawForge-macOS-apple-silicon.zip`。
+1. 从 [Releases](https://github.com/Zenodeng/Phos/releases) 下载 `Phos-macOS-apple-silicon.zip`。
 2. 校验完整性：
    ```sh
-   shasum -a 256 RawForge-macOS-apple-silicon.zip
+   shasum -a 256 Phos-macOS-apple-silicon.zip
    ```
    与 Release 中的 `SHA256.txt` 比对。
-3. 解压后把 `RawForge.app` 拖进 `/Applications`。
+3. 解压后把 `Phos.app` 拖进 `/Applications`。
 4. **首次打开会被 macOS 拦截，这是正常现象**（应用未公证）：
    - 双击打开一次 → 系统设置 → 隐私与安全性 → 滚到底 → 点「仍要打开」；
    - 或直接去除隔离标记：
      ```sh
-     xattr -dr com.apple.quarantine /Applications/RawForge.app
+     xattr -dr com.apple.quarantine /Applications/Phos.app
      ```
 
 > [!IMPORTANT]  
@@ -189,8 +191,8 @@ Phos 是一款用 Swift 编写、基于 Core Image、Vision 与 AppKit 的**非�
 ```sh
 git clone https://github.com/Zenodeng/Phos.git
 cd Phos
-./Scripts/package_app.sh      # 在仓库根目录打出 RawForge.app
-./build.sh                    # 编译并安装到 /Applications
+./Scripts/package_app.sh      # 在仓库根目录打出 Phos.app
+./build.sh                    # 编译并在仓库根目录生成 Phos.app
 ```
 
 `Scripts/package_app.sh` 直接用 `swiftc` 编译，并在默认 SDK 比编译器新时自动回退到较旧 SDK。仓库同时提供 `Package.swift` 供支持 SwiftPM 的编辑器使用，但发布流程不依赖它。
@@ -268,17 +270,17 @@ sRGB / Display P3 / Adobe RGB 输出。批量同步自动保存目标照片的�
 
 | 文件                                 | 职责                       |
 | ---------------------------------- | ------------------------ |
-| `Sources/RawForge/Engine.swift`    | 解码、完整调整管线、LUT 构建、蒙版、视觉分析 |
-| `Sources/RawForge/Alignment.swift` | 帧配准、质量门、合成画幅归一化          |
-| `Sources/RawForge/Models.swift`    | 参数模型与宽容解码（向前兼容旧副档）       |
-| `Sources/RawForge/AppMain.swift`   | 应用状态、渲染调度、撤销栈、导出与批处理     |
-| `Sources/RawForge/Performance.swift` | 有界线程安全缓存、最新请求后台调度       |
-| `Sources/RawForge/Workflow.swift`    | 批量同步、快照、灰点取样、副档迁移          |
-| `Sources/RawForge/WorkflowViews.swift` | 工作流面板：同步目标、快照、位深与色彩空间控件  |
-| `Sources/RawForge/Views.swift`     | 浏览器、画布、裁剪叠加层、工具条         |
-| `Sources/RawForge/Inspector.swift` | 调整面板、曲线编辑器、色轮            |
-| `Sources/RawForge/Theme.swift`     | 自适应调色板                   |
-| `Sources/RawForge/CLUT.swift`      | 胶片 LUT 读取与烘焙             |
+| `Sources/Phos/Engine.swift`    | 解码、完整调整管线、LUT 构建、蒙版、视觉分析 |
+| `Sources/Phos/Alignment.swift` | 帧配准、质量门、合成画幅归一化          |
+| `Sources/Phos/Models.swift`    | 参数模型与宽容解码（向前兼容旧副档）       |
+| `Sources/Phos/AppMain.swift`   | 应用状态、渲染调度、撤销栈、导出与批处理     |
+| `Sources/Phos/Performance.swift` | 有界线程安全缓存、最新请求后台调度       |
+| `Sources/Phos/Workflow.swift`    | 批量同步、快照、灰点取样、副档迁移          |
+| `Sources/Phos/WorkflowViews.swift` | 工作流面板：同步目标、快照、位深与色彩空间控件  |
+| `Sources/Phos/Views.swift`     | 浏览器、画布、裁剪叠加层、工具条         |
+| `Sources/Phos/Inspector.swift` | 调整面板、曲线编辑器、色轮            |
+| `Sources/Phos/Theme.swift`     | 自适应调色板                   |
+| `Sources/Phos/CLUT.swift`      | 胶片 LUT 读取与烘焙             |
 
 设计上不可变：所有参数序列化到副档，渲染是关于「源图 + 参数」的纯函数。
 

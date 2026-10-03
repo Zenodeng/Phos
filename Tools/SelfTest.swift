@@ -1,5 +1,5 @@
 // 引擎自测：验证 CLUT / HSL / 蒙版 / 裁剪 / 出图 是否真的生效
-// 用 -D RAWFORGE_TESTING Sources/RawForge/*.swift Tools/SelfTest.swift 单独编译。
+// 用 -D PHOS_TESTING Sources/Phos/*.swift Tools/SelfTest.swift 单独编译。
 import Foundation
 import CoreImage
 

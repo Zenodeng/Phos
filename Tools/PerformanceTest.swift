@@ -5,6 +5,31 @@ import UniformTypeIdentifiers
 
 @main
 struct PerformanceTest {
+    static func brandCompatibilityTests() throws {
+        precondition(ExportSettings().watermarkText == "Phos")
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("phos-compatibility-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let photo = root.appendingPathComponent("photo.HIF")
+        let legacyURL = photo.deletingPathExtension().appendingPathExtension("rawforge.json")
+        let legacy = Data(#"{"version":1,"app":"RawForge","params":{"exposure":0.4},"rating":4,"picked":true}"#.utf8)
+        try legacy.write(to: legacyURL)
+        let decoded = try SidecarStore.read(for: photo)!
+        precondition(decoded.app == "RawForge" && decoded.params.exposure == 0.4
+                     && decoded.rating == 4 && decoded.picked)
+        let renamed = Sidecar(params: decoded.params, rating: decoded.rating, picked: decoded.picked)
+        try SidecarStore.write(renamed, for: photo)
+        precondition(SidecarStore.url(for: photo).lastPathComponent == "photo.HIF.rawforge.json")
+        let saved = try SidecarStore.read(for: photo)!
+        precondition(saved.app == "Phos" && saved.params == decoded.params
+                     && saved.rating == 4 && saved.picked)
+        let untouched = try Data(contentsOf: legacyURL)
+        precondition(untouched == legacy)
+        let encoded = try JSONEncoder().encode(saved)
+        let roundTrip = try JSONDecoder().decode(Sidecar.self, from: encoded)
+        precondition(roundTrip.app == "Phos")
+        print("PASS: Phos branding, RawForge sidecars, unchanged legacy files and edit metadata.")
+    }
+
     @MainActor
     static func waitUntil(_ label: String, _ condition: () -> Bool) async {
         let deadline = Date().addingTimeInterval(60)
@@ -128,6 +153,20 @@ struct PerformanceTest {
 
         state.addMask(.radial)
         let steps = state.history.stack.count
+        var legacyMask = state.params.masks[0]
+        legacyMask.adjust.exposure = 0.4
+        let legacyJSON = try JSONEncoder().encode(legacyMask)
+        let decodedLegacy = try JSONDecoder().decode(Mask.self, from: legacyJSON)
+        precondition(decodedLegacy.gradientVersion == nil && decodedLegacy.radiusX == nil && decodedLegacy.adjust.exposure == 0.4)
+        var ellipse = Mask(); ellipse.kind = .radial; ellipse.gradientVersion = 1
+        ellipse.radiusX = 0.42; ellipse.radiusY = 0.18; ellipse.radialAngle = 30
+        ellipse.adjust.highlights = -20; ellipse.adjust.shadows = 25
+        let ellipseJSON = try JSONEncoder().encode(ellipse)
+        let ellipseRoundTrip = try JSONDecoder().decode(Mask.self, from: ellipseJSON)
+        precondition(ellipseRoundTrip.gradientVersion == 1 && ellipseRoundTrip.radiusX == 0.42
+                     && ellipseRoundTrip.radiusY == 0.18 && ellipseRoundTrip.radialAngle == 30
+                     && ellipseRoundTrip.adjust.highlights == -20)
+        print("PASS: legacy mask decoding and ellipse mask round trip.")
         var mask = state.params.masks[0]
         for i in 0..<100 {
             mask.adjust.exposure = Double(i) / 100
@@ -238,6 +277,7 @@ struct PerformanceTest {
 
     @MainActor
     static func main() async throws {
+        try brandCompatibilityTests()
         cacheTests()
         await queueTests()
         try await appTests()

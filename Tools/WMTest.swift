@@ -1,7 +1,7 @@
 // 水印自测：验证 ①长边缩放正确（旧代码会缩两次）②文字水印落在预期区域
 // ③图片水印 + 旋转 + 居中 ④不透明度生效。不参与 App 构建，单独编译。
 //   swiftc -O -sdk <SDK> -target arm64-apple-macosx15.0 \
-//     -D RAWFORGE_TESTING Sources/RawForge/*.swift \
+//     -D PHOS_TESTING Sources/Phos/*.swift \
 //     Tools/WMTest.swift -o /tmp/rfwmtest_bin
 import Foundation
 import CoreImage

@@ -1,6 +1,7 @@
 import Foundation
 import CoreImage
 
+#if PHOS_TESTING
 @main
 struct RenderRegression {
     static func main() throws {
@@ -82,6 +83,28 @@ struct RenderRegression {
                 if kind == .depth { p.bokehAmount = 25 }
             }
         }
+        add("mask-radial-ellipse") { p in
+            var mask = Mask()
+            mask.kind = .radial
+            mask.gradientVersion = 1
+            mask.x0 = 0.52; mask.y0 = 0.48
+            mask.radiusX = 0.42; mask.radiusY = 0.19
+            mask.radialAngle = 27
+            mask.feather = 0.35
+            mask.adjust.exposure = 0.8
+            p.masks = [mask]
+        }
+        add("mask-linear-drawn") { p in
+            var mask = Mask()
+            mask.kind = .linear
+            mask.gradientVersion = 1
+            mask.x0 = 0.12; mask.y0 = 0.78
+            mask.x1 = 0.86; mask.y1 = 0.32
+            mask.adjust.shadows = 35
+            mask.adjust.highlights = -25
+            mask.adjust.dehaze = 20
+            p.masks = [mask]
+        }
         if let name = CLUTLibrary.shared.list().first {
             add("film") { p in p.clutName = name; p.clutStrength = 0.73 }
         }
@@ -113,15 +136,19 @@ struct RenderRegression {
         if let baseline {
             let expected = Set(try FileManager.default.contentsOfDirectory(at: baseline, includingPropertiesForKeys: nil)
                 .filter { $0.pathExtension == "rgba" || $0.pathExtension == "cube" }.map(\.lastPathComponent))
-            guard expected == generated else { throw invalid("Baseline case set differs from current render cases") }
-            for filename in generated.sorted() {
+            guard expected.isSubset(of: generated) else {
+                throw invalid("Current render cases are missing one or more baseline cases")
+            }
+            for filename in expected.sorted() {
                 let before = try Data(contentsOf: baseline.appendingPathComponent(filename))
                 let after = try Data(contentsOf: directory.appendingPathComponent(filename))
                 guard before == after else { throw invalid("Pixel mismatch: \(filename)") }
             }
-            print("PASS: all \(cases.count) render cases are byte-identical to baseline.")
+            let added = generated.subtracting(expected)
+            print("PASS: all \(expected.count) baseline cases are byte-identical; \(added.count) new cases rendered.")
         } else {
             print("PASS: \(cases.count) nonblank render cases. Baseline comparison NOT performed.")
         }
     }
 }
+#endif

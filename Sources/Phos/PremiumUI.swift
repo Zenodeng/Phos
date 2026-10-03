@@ -50,7 +50,7 @@ struct PremiumTopBar: View {
                             .foregroundStyle(.white)
                     }
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("RAWFORGE")
+                        Text("PHOS")
                             .font(.system(size: 12, weight: .bold, design: .rounded))
                             .tracking(1.4)
                         Text(s.folder?.lastPathComponent ?? "编辑工作区")

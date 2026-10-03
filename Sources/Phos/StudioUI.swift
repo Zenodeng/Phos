@@ -31,6 +31,7 @@ struct StudioMainWindow: View {
         .sheet(isPresented: $s.showMerge) { MergeSheet().tint(StudioStyle.accent) }
         .sheet(isPresented: $s.showSync) { SyncSheet().tint(StudioStyle.accent) }
         .sheet(isPresented: $s.showSnapshots) { SnapshotSheet().tint(StudioStyle.accent) }
+        .onExitCommand { s.cancelMaskDrawing() }
         .alert("操作未完成", isPresented: Binding(get: { s.workflowError != nil }, set: { if !$0 { s.workflowError = nil } })) {
             Button("好") { s.workflowError = nil }
         } message: { Text(s.workflowError ?? "") }
@@ -51,7 +52,7 @@ struct StudioToolbar: View {
     @AppStorage("rf.appearance") private var appearance = "system"
     var body: some View {
         HStack(spacing: 8) {
-            Label("RawForge", systemImage: "camera.aperture").font(.system(size: 13, weight: .semibold)).foregroundStyle(StudioStyle.accent)
+            Label("Phos", systemImage: "camera.aperture").font(.system(size: 13, weight: .semibold)).foregroundStyle(StudioStyle.accent)
             ToolDivider()
             ToolButton(systemImage: "folder", title: "打开文件夹") {
                 let p = NSOpenPanel(); p.canChooseDirectories = true; p.canChooseFiles = false
@@ -59,7 +60,7 @@ struct StudioToolbar: View {
             }
             ToolButton(systemImage: "crop", title: "裁剪", active: s.cropMode, disabled: s.source == nil) { s.toggleCropMode() }
             StudioHistoryButtons(history: s.history)
-            Text(s.current?.url.lastPathComponent ?? "RawForge Studio").font(.system(size: 12, weight: .medium))
+            Text(s.current?.url.lastPathComponent ?? "Phos Studio").font(.system(size: 12, weight: .medium))
                 .lineLimit(1).truncationMode(.middle).frame(minWidth: 60, maxWidth: .infinity)
             Picker("前后对比", selection: $s.showBefore) {
                 Text("原图").tag(true); Text("调整").tag(false)

@@ -402,7 +402,11 @@ struct CanvasPane: View {
     @State private var gestureScale: CGFloat?
     @State private var offset: CGSize = .zero
     @State private var panOrigin: CGSize?
-    @State private var maskOrigin: [Double]?
+    @State private var maskOrigin: Mask?
+    @State private var maskGestureStart: CGPoint?
+    @State private var drawingStart: CGPoint?
+    @State private var drawingOriginal: Mask?
+    @State private var maskOriginSize: CGSize = .zero
     @State private var lastBrush: CGPoint?
     @State private var painting = false
     @State private var sampled = false
@@ -436,8 +440,8 @@ struct CanvasPane: View {
                         .frame(width: fit.width * scale, height: fit.height * scale)
                         .overlay { selectionOverlay(width: dispRect.width, height: dispRect.height) }
                         .overlay(alignment: .topLeading) {
-                            if !s.cropMode, !s.showBefore, !s.whiteBalancePicker, s.maskTool == .position, let id = s.selectedMask,
-                               let m = s.params.masks.first(where: { $0.id == id }) {
+                            if !s.cropMode, !s.showBefore, !s.whiteBalancePicker, s.maskTool == .position,
+                               let m = s.maskDraft ?? s.selectedMask.flatMap({ id in s.params.masks.first(where: { $0.id == id }) }) {
                                 // overlay 的本地原点就是图片左上角，frame 必须从 0 起
                                 MaskOverlay(mask: m, frame: CGRect(
                                     x: 0, y: 0, width: dispRect.width, height: dispRect.height))
@@ -502,6 +506,10 @@ struct CanvasPane: View {
                 guard (!s.oneToOne || pixelView), !s.cropMode, !s.showBefore else { return }
                 guard frame.contains(v.startLocation) else { return }
                 if s.whiteBalancePicker { return }
+                if let drawingKind = s.maskDrawingKind {
+                    drawGradient(v.location, start: v.startLocation, frame: frame, kind: drawingKind)
+                    return
+                }
                 if let id = s.selectedMask,
                    let m = s.params.masks.first(where: { $0.id == id }) {
                     if s.maskTool != .position {
@@ -512,7 +520,18 @@ struct CanvasPane: View {
                     case .brush, .depth:
                         paint(v.location, frame: frame, mask: m)
                     case .linear, .radial:
-                        moveMask(v.translation, frame: frame, mask: m)
+                        if maskGestureStart == nil {
+                            maskGestureStart = v.startLocation
+                            maskOrigin = m
+                            maskOriginSize = CGSize(width: frame.width, height: frame.height)
+                        }
+                        let start = maskGestureStart ?? v.startLocation
+                        let origin = maskOrigin ?? m
+                        let updated = MaskGeometry.dragging(origin, control: .move,
+                                                            from: start, to: v.location,
+                                                            size: maskOriginSize,
+                                                            constrained: NSEvent.modifierFlags.contains(.shift))
+                        s.updateMaskLive(updated)
                     case .colorRange, .luminanceRange:
                         // 取样类蒙版：在画布上拖到哪儿就取哪儿的颜色/亮度
                         sample(v.location, frame: frame, mask: m)
@@ -530,9 +549,13 @@ struct CanvasPane: View {
                     s.sampleWhiteBalance(at: CGPoint(x: (value.location.x - frame.minX) / frame.width,
                                                     y: 1 - (value.location.y - frame.minY) / frame.height))
                 }
-                if painting { painting = false; s.endEdit() }
+                if s.maskDrawingKind != nil {
+                    s.finishMaskDrawing()
+                } else if painting { painting = false; s.endEdit() }
                 else if maskOrigin != nil || sampled { s.endEdit() }
-                panOrigin = nil; maskOrigin = nil; lastBrush = nil; sampled = false
+                panOrigin = nil; maskOrigin = nil; maskGestureStart = nil
+                drawingStart = nil; drawingOriginal = nil; maskOriginSize = .zero
+                lastBrush = nil; sampled = false
             }
     }
 
@@ -592,17 +615,37 @@ struct CanvasPane: View {
         s.updateMaskLive(mm)
     }
 
-    /// 线性 / 径向蒙版：在画布上直接拖，整体位移
+    /// 线性 / 径向蒙版：在画布上直接拖，整体位移（旧手势兼容入口）
     func moveMask(_ t: CGSize, frame: CGRect, mask m: Mask) {
-        if maskOrigin == nil { maskOrigin = [m.x0, m.y0, m.x1, m.y1] }
-        guard let o = maskOrigin, frame.width > 1, frame.height > 1 else { return }
-        var mm = m
-        let dx = Double(t.width / frame.width)
-        let dy = -Double(t.height / frame.height)
-        func clamp01(_ v: Double) -> Double { min(max(v, 0), 1) }
-        mm.x0 = clamp01(o[0] + dx); mm.y0 = clamp01(o[1] + dy)
-        mm.x1 = clamp01(o[2] + dx); mm.y1 = clamp01(o[3] + dy)
-        s.updateMaskLive(mm)
+        let start = CGPoint(x: frame.midX, y: frame.midY)
+        let end = CGPoint(x: start.x + t.width, y: start.y + t.height)
+        let updated = MaskGeometry.dragging(m, control: .move, from: start, to: end,
+                                            size: frame.size)
+        s.updateMaskLive(updated)
+    }
+
+    func drawGradient(_ loc: CGPoint, start: CGPoint, frame: CGRect, kind: MaskKind) {
+        guard frame.width > 1, frame.height > 1 else { return }
+        let localStart = CGPoint(x: start.x - frame.minX, y: start.y - frame.minY)
+        let localEnd = CGPoint(x: loc.x - frame.minX, y: loc.y - frame.minY)
+        let size = frame.size
+        var original = drawingOriginal
+        if original == nil {
+            var mask = s.maskDrawingTarget.flatMap { id in
+                s.params.masks.first(where: { $0.id == id })
+            } ?? Mask()
+            mask.kind = kind
+            mask.name = mask.name == "蒙版" ? kind.label : mask.name
+            mask.id = s.maskDrawingTarget ?? mask.id
+            original = mask
+            drawingOriginal = mask
+            drawingStart = localStart
+        }
+        guard let original, let drawingStart else { return }
+        let draft = MaskGeometry.drawing(original, from: drawingStart, to: localEnd,
+                                         size: size,
+                                         constrained: NSEvent.modifierFlags.contains(.shift))
+        s.updateMaskDraft(draft)
     }
 }
 
@@ -611,46 +654,127 @@ struct MaskOverlay: View {
     @EnvironmentObject var s: AppState
     let mask: Mask
     let frame: CGRect
+
+    private var size: CGSize { frame.size }
+    private var center: CGPoint {
+        let p = MaskGeometry.center(mask, size: size)
+        return CGPoint(x: p.x, y: frame.height - p.y)
+    }
+    private var angle: Double { -MaskGeometry.angle(mask, size: size) }
+    private var radii: CGSize { MaskGeometry.radii(mask, size: size) }
+
     var body: some View {
         ZStack {
             if mask.kind == .linear {
-                Handle(pos: CGPoint(x: mask.x0, y: 1 - mask.y0), frame: frame) { p in
-                    var m = mask; m.x0 = p.x; m.y0 = 1 - p.y; s.updateMaskLive(m)
-                } onEnd: { s.endEdit() }
-                Handle(pos: CGPoint(x: mask.x1, y: 1 - mask.y1), frame: frame) { p in
-                    var m = mask; m.x1 = p.x; m.y1 = 1 - p.y; s.updateMaskLive(m)
-                } onEnd: { s.endEdit() }
+                linearGuides
             } else if mask.kind == .radial {
-                Handle(pos: CGPoint(x: mask.x0, y: 1 - mask.y0), frame: frame, color: .yellow) { p in
-                    var m = mask; m.x0 = p.x; m.y0 = 1 - p.y; s.updateMaskLive(m)
-                } onEnd: { s.endEdit() }
-                Circle()
-                    .stroke(Color.yellow.opacity(0.8), lineWidth: 1.5)
-                    .frame(width: min(frame.width, frame.height) * mask.radius * 2,
-                           height: min(frame.width, frame.height) * mask.radius * 2)
-                    .position(x: frame.minX + frame.width * mask.x0, y: frame.minY + frame.height * (1 - mask.y0))
-                    .allowsHitTesting(false)
+                radialGuides
             }
         }
         .frame(width: frame.width, height: frame.height)
         .offset(x: frame.minX, y: frame.minY)
     }
+
+    private var linearGuides: some View {
+        let p0 = CGPoint(x: frame.width * mask.x0, y: frame.height * (1 - mask.y0))
+        let p1 = CGPoint(x: frame.width * mask.x1, y: frame.height * (1 - mask.y1))
+        let c = CGPoint(x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2)
+        let dx = p1.x - p0.x, dy = p1.y - p0.y
+        let len = max(hypot(dx, dy), 1)
+        let nx = -dy / len, ny = dx / len
+        return ZStack {
+            Path { path in
+                path.move(to: CGPoint(x: p0.x - nx * frame.height, y: p0.y - ny * frame.height))
+                path.addLine(to: CGPoint(x: p0.x + nx * frame.height, y: p0.y + ny * frame.height))
+                path.move(to: CGPoint(x: c.x - nx * frame.height, y: c.y - ny * frame.height))
+                path.addLine(to: CGPoint(x: c.x + nx * frame.height, y: c.y + ny * frame.height))
+                path.move(to: CGPoint(x: p1.x - nx * frame.height, y: p1.y - ny * frame.height))
+                path.addLine(to: CGPoint(x: p1.x + nx * frame.height, y: p1.y + ny * frame.height))
+            }
+            .stroke(Color.white.opacity(0.78), style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
+            Handle(position: p0, color: .cyan, onMove: { start, end in
+                edit(.linearStart, from: start, to: end)
+            }, onEnd: { endDrag() })
+            Handle(position: p1, color: .cyan, onMove: { start, end in
+                edit(.linearEnd, from: start, to: end)
+            }, onEnd: { endDrag() })
+            Handle(position: c, color: .white, size: 12, onMove: { start, end in
+                edit(.move, from: start, to: end)
+            }, onEnd: { endDrag() })
+            Handle(position: CGPoint(x: c.x + nx * 26, y: c.y + ny * 26), color: .orange, size: 12,
+                   onMove: { start, end in edit(.rotate, from: start, to: end) },
+                   onEnd: { endDrag() })
+        }
+    }
+
+    private var radialGuides: some View {
+            let c = center
+        let rx = radii.width, ry = radii.height
+        return ZStack {
+            Ellipse()
+                .stroke(Color.yellow.opacity(0.9), lineWidth: 1.5)
+                .frame(width: rx * 2, height: ry * 2)
+                .rotationEffect(.degrees(-angle))
+                .position(c)
+                .allowsHitTesting(false)
+            Ellipse()
+                .stroke(Color.yellow.opacity(0.4), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                .frame(width: rx * 2 * MaskGeometry.innerRatio(mask), height: ry * 2 * MaskGeometry.innerRatio(mask))
+                .rotationEffect(.degrees(-angle))
+                .position(c)
+                .allowsHitTesting(false)
+            Handle(position: c, color: .yellow, size: 14, onMove: { start, end in
+                edit(.move, from: start, to: end)
+            }, onEnd: { endDrag() })
+            let a = angle * .pi / 180
+            let xHandle = CGPoint(x: c.x + rx * cos(a), y: c.y - ry * sin(a))
+            let yHandle = CGPoint(x: c.x + rx * sin(a), y: c.y + ry * cos(a))
+            Handle(position: xHandle, color: .yellow, size: 12,
+                   onMove: { start, end in edit(.radialX, from: start, to: end) }, onEnd: { endDrag() })
+            Handle(position: yHandle, color: .yellow, size: 12,
+                   onMove: { start, end in edit(.radialY, from: start, to: end) }, onEnd: { endDrag() })
+            Handle(position: CGPoint(x: c.x + (rx + 24) * cos(a), y: c.y - (ry + 24) * sin(a)), color: .orange, size: 12,
+                   onMove: { start, end in edit(.rotate, from: start, to: end) },
+                   onEnd: { endDrag() })
+        }
+    }
+
+    /// 当前这次拖动的会话：记住按下点和按下那一刻的蒙版。
+    /// 不能拿「当前蒙版」去叠加 DragGesture 的累计位移，否则控制点越拖越远。
+    @State private var drag: MaskDragSession?
+
+    private func edit(_ control: MaskGeometry.Control, from start: CGPoint, to end: CGPoint) {
+        // 按下点变了说明是新的拖动：重建会话，避免上一次拖动没收到 onEnded 时残留
+        if drag == nil || drag?.start != start {
+            drag = MaskDragSession(start: start, base: mask)
+        }
+        guard let session = drag else { return }
+        let updated = session.updated(control, to: end, size: frame.size,
+                                      constrained: NSEvent.modifierFlags.contains(.shift))
+        s.updateMaskLive(updated)
+    }
+
+    private func endDrag() {
+        drag = nil
+        s.endEdit()
+    }
 }
 
 struct Handle: View {
-    let pos: CGPoint
-    let frame: CGRect
+    let position: CGPoint
     var color: Color = .cyan
-    let onMove: (CGPoint) -> Void
+    var size: CGFloat = 14
+    /// 回调给出「按下点」和「当前点」，都在叠加层本地坐标里。
+    /// 不要在这里算 position + v.translation：translation 是从按下那一刻算起的累计值，
+    /// 而叠加层每一帧都会按新蒙版重算 position，两者相加会让控制点越拖越远（参考线飘走）。
+    var onMove: (CGPoint, CGPoint) -> Void
     var onEnd: () -> Void = {}
     var body: some View {
-        Circle().fill(color).frame(width: 14, height: 14)
+        Circle().fill(color).frame(width: size, height: size)
             .overlay(Circle().stroke(.white, lineWidth: 1.5))
-            .position(x: frame.width * pos.x, y: frame.height * pos.y)
+            .position(position)
             .gesture(DragGesture().onChanged { v in
-                let p = CGPoint(x: (v.location.x + frame.width * pos.x) / max(frame.width, 1),
-                                y: (v.location.y + frame.height * pos.y) / max(frame.height, 1))
-                onMove(CGPoint(x: min(max(p.x, 0), 1), y: min(max(p.y, 0), 1)))
+                onMove(v.startLocation, v.location)
             }.onEnded { _ in onEnd() })
     }
 }

@@ -17,7 +17,7 @@ enum Engine {
         return CIContext(options: opts)
     }()
 
-    static let srgb = CGColorSpace(name: CGColorSpace.sRGB)!
+    static let srgb: CGColorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
 
     // MARK: - 解码
     static let rawSet: Set<String> = ["arw", "cr2", "cr3", "nef", "raf", "orf", "rw2",
@@ -348,7 +348,9 @@ enum Engine {
     // MARK: - 颗粒
     private static func addGrain(_ img: CIImage, amount: Double, size: Double) -> CIImage {
         let e = img.extent
-        var noise = CIFilter(name: "CIRandomGenerator")!.outputImage!.cropped(to: e)
+        guard let generator = CIFilter(name: "CIRandomGenerator"),
+              let generated = generator.outputImage else { return img }
+        var noise = generated.cropped(to: e)
         noise = noise.applyingFilter("CIColorControls", parameters: [
             kCIInputSaturationKey: NSNumber(value: 0),
             kCIInputContrastKey: NSNumber(value: 0.5 + size * 2)
@@ -384,16 +386,60 @@ enum Engine {
                     kCIInputSaturationKey: NSNumber(value: 1 + a.saturation / 200)
                 ])
             }
-            if a.temperature != 0 {
+            if a.temperature != 0 || a.tint != 0 {
                 adj = adj.applyingFilter("CITemperatureAndTint", parameters: [
                     "inputNeutral": CIVector(x: 6500, y: 0),
-                    "inputTargetNeutral": CIVector(x: CGFloat(6500 - a.temperature * 25), y: 0)
+                    "inputTargetNeutral": CIVector(x: CGFloat(6500 - a.temperature * 25), y: CGFloat(a.tint))
+                ])
+            }
+            if a.dehaze != 0 {
+                let amount = a.dehaze / 100
+                let scale = 1 + amount * 0.22
+                let bias = -amount * 0.018
+                adj = adj.applyingFilter("CIColorMatrix", parameters: [
+                    "inputRVector": CIVector(x: scale, y: 0, z: 0, w: 0),
+                    "inputGVector": CIVector(x: 0, y: scale, z: 0, w: 0),
+                    "inputBVector": CIVector(x: 0, y: 0, z: scale, w: 0),
+                    "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+                    "inputBiasVector": CIVector(x: bias, y: bias, z: bias, w: 0)
+                ])
+                adj = adj.applyingFilter("CIColorControls", parameters: [
+                    kCIInputContrastKey: NSNumber(value: 1 + amount * 0.16),
+                    kCIInputSaturationKey: NSNumber(value: 1 + max(amount, 0) * 0.30)
+                ])
+            }
+            if a.blacks != 0 || a.shadows != 0 || a.highlights != 0 || a.whites != 0 {
+                let xs: [CGFloat] = [0.0, 0.25, 0.5, 0.75, 1.0]
+                var ys: [CGFloat] = [0.0, 0.25, 0.5, 0.75, 1.0]
+                ys[0] += CGFloat(a.blacks / 100) * 0.10
+                ys[1] += CGFloat(a.shadows / 100) * 0.10
+                ys[3] += CGFloat(a.highlights / 100) * 0.10
+                ys[4] += CGFloat(a.whites / 100) * 0.10
+                for i in 0..<5 { ys[i] = min(max(ys[i], 0), 1) }
+                adj = adj.applyingFilter("CIToneCurve", parameters: [
+                    "inputPoint0": CIVector(x: xs[0], y: ys[0]),
+                    "inputPoint1": CIVector(x: xs[1], y: ys[1]),
+                    "inputPoint2": CIVector(x: xs[2], y: ys[2]),
+                    "inputPoint3": CIVector(x: xs[3], y: ys[3]),
+                    "inputPoint4": CIVector(x: xs[4], y: ys[4])
                 ])
             }
             if a.clarity != 0 {
                 adj = adj.applyingFilter("CIUnsharpMask", parameters: [
                     kCIInputRadiusKey: NSNumber(value: 22),
                     kCIInputIntensityKey: NSNumber(value: a.clarity / 100)
+                ])
+            }
+            if a.texture != 0 {
+                adj = adj.applyingFilter("CIUnsharpMask", parameters: [
+                    kCIInputRadiusKey: NSNumber(value: 3.5),
+                    kCIInputIntensityKey: NSNumber(value: a.texture / 100)
+                ])
+            }
+            if a.denoise > 0 {
+                adj = adj.applyingFilter("CINoiseReduction", parameters: [
+                    "inputNoiseLevel": NSNumber(value: a.denoise / 100 * 0.1),
+                    "inputSharpness": NSNumber(value: 0.4)
                 ])
             }
             if a.sharpen != 0 {
@@ -413,7 +459,7 @@ enum Engine {
     /// 用颜色立方体给画面每个像素算权重 → 蒙版。
     /// 权重同时写进 RGB 和 alpha，省得纠结混合模式到底看哪个通道。
     private static func cubeWeight(_ data: Data, appliedTo src: CIImage, extent: CGRect) -> CIImage {
-        let f = CIFilter(name: "CIColorCube")!
+        guard let f = CIFilter(name: "CIColorCube") else { return CIImage(color: .black).cropped(to: extent) }
         f.setValue(RangeCube.dim, forKey: "inputCubeDimension")
         f.setValue(data, forKey: "inputCubeData")
         f.setValue(src, forKey: kCIInputImageKey)
@@ -434,21 +480,58 @@ enum Engine {
         case .linear:
             let p0 = CIVector(x: extent.minX + w * m.x0, y: extent.minY + h * m.y0)
             let p1 = CIVector(x: extent.minX + w * m.x1, y: extent.minY + h * m.y1)
-            img = CIFilter(name: "CISmoothLinearGradient", parameters: [
+            guard let gradient = CIFilter(name: "CISmoothLinearGradient", parameters: [
                 "inputPoint0": p0, "inputPoint1": p1,
                 "inputColor0": CIColor.white, "inputColor1": CIColor.black
-            ])!.outputImage!.cropped(to: extent)
+            ]), let output = gradient.outputImage else { return nil }
+            img = output.cropped(to: extent)
         case .radial:
-            let c = CIVector(x: extent.minX + w * m.x0, y: extent.minY + h * m.y0)
-            let radiusBase = min(w, h)
-            let r0 = max(0, radiusBase * m.radius * (1 - m.feather))
-            let r1 = max(r0 + 1, radiusBase * m.radius * (1 + m.feather * 0.5))
-            img = CIFilter(name: "CIRadialGradient", parameters: [
-                "inputCenter": c,
-                "inputRadius0": NSNumber(value: r0),
-                "inputRadius1": NSNumber(value: r1),
-                "inputColor0": CIColor.white, "inputColor1": CIColor.black
-            ])!.outputImage!.cropped(to: extent)
+            if m.gradientVersion == 1 {
+                guard !extent.isNull, !extent.isInfinite,
+                      extent.minX.isFinite, extent.minY.isFinite,
+                      extent.maxX.isFinite, extent.maxY.isFinite,
+                      w.isFinite, h.isFinite, w > 0, h > 0,
+                      m.x0.isFinite, m.y0.isFinite else { return nil }
+                let cx = extent.minX + w * m.x0
+                let cy = extent.minY + h * m.y0
+                let radiusBase = min(w, h)
+                let fallbackRadius = m.radius.isFinite ? min(max(m.radius, 0.003), 4) : 0.3
+                let radiusX = m.radiusX ?? fallbackRadius
+                let radiusY = m.radiusY ?? fallbackRadius
+                let rx = radiusX.isFinite ? min(max(radiusX, 0.003), 4) : fallbackRadius
+                let ry = radiusY.isFinite ? min(max(radiusY, 0.003), 4) : fallbackRadius
+                guard cx.isFinite, cy.isFinite,
+                      (radiusBase * rx).isFinite, (radiusBase * ry).isFinite else { return nil }
+                let feather = m.feather.isFinite ? min(max(m.feather, 0), 1) : 0.6
+                let angle = m.radialAngle.isFinite ? m.radialAngle.truncatingRemainder(dividingBy: 360) : 0
+                // 局部圆的外边界固定，羽化只向内延伸；再缩放为椭圆并按图像坐标旋转。
+                guard let gradient = CIFilter(name: "CIRadialGradient", parameters: [
+                    "inputCenter": CIVector(x: 0, y: 0),
+                    "inputRadius0": NSNumber(value: feather == 0 ? 0 : radiusBase * (1 - feather)),
+                    "inputRadius1": NSNumber(value: feather == 0 ? radiusBase * 2 : radiusBase),
+                    "inputColor0": CIColor.white, "inputColor1": CIColor.black
+                ]), let output = gradient.outputImage else { return nil }
+                // 零羽化用阈值构造硬边，避免两个渐变半径相等时的退化计算。
+                let local = feather == 0
+                    ? output.applyingFilter("CIColorThreshold", parameters: ["inputThreshold": NSNumber(value: 0.5)])
+                    : output
+                let transform = CGAffineTransform(translationX: cx, y: cy)
+                    .rotated(by: CGFloat(angle * .pi / 180))
+                    .scaledBy(x: CGFloat(rx), y: CGFloat(ry))
+                img = local.transformed(by: transform).cropped(to: extent)
+            } else {
+                let c = CIVector(x: extent.minX + w * m.x0, y: extent.minY + h * m.y0)
+                let radiusBase = min(w, h)
+                let r0 = max(0, radiusBase * m.radius * (1 - m.feather))
+                let r1 = max(r0 + 1, radiusBase * m.radius * (1 + m.feather * 0.5))
+                guard let gradient = CIFilter(name: "CIRadialGradient", parameters: [
+                    "inputCenter": c,
+                    "inputRadius0": NSNumber(value: r0),
+                    "inputRadius1": NSNumber(value: r1),
+                    "inputColor0": CIColor.white, "inputColor1": CIColor.black
+                ]), let output = gradient.outputImage else { return nil }
+                img = output.cropped(to: extent)
+            }
         case .brush, .depth:
             // depth 复用笔刷位图：用户涂白的区域 = 散景里被虚化的区域（不进局部调整，只喂给散景）
             guard let b = brushImage(m, extent: extent) else { return nil }
@@ -596,11 +679,11 @@ enum Engine {
     /// 16 位 TIFF：合成结果先用 16 位存住，后续还能继续调
     static func write16(_ cg: CGImage, to url: URL) throws {
         guard let dest = CGImageDestinationCreateWithURL(url as CFURL, UTType.tiff.identifier as CFString, 1, nil) else {
-            throw NSError(domain: "RawForge", code: 21, userInfo: [NSLocalizedDescriptionKey: "无法创建输出文件"])
+            throw NSError(domain: "Phos", code: 21, userInfo: [NSLocalizedDescriptionKey: "无法创建输出文件"])
         }
         CGImageDestinationAddImage(dest, cg, nil)
         if !CGImageDestinationFinalize(dest) {
-            throw NSError(domain: "RawForge", code: 22, userInfo: [NSLocalizedDescriptionKey: "写出失败"])
+            throw NSError(domain: "Phos", code: 22, userInfo: [NSLocalizedDescriptionKey: "写出失败"])
         }
     }
 
@@ -693,7 +776,7 @@ enum Engine {
     typealias Quad = (tl: CGPoint, tr: CGPoint, br: CGPoint, bl: CGPoint)
 
     static func applyPerspective(_ img: CIImage, _ quad: Quad) -> CIImage {
-        let f = CIFilter(name: "CIPerspectiveCorrection")!
+        guard let f = CIFilter(name: "CIPerspectiveCorrection") else { return img }
         f.setValue(img, forKey: kCIInputImageKey)
         f.setValue(CIVector(cgPoint: quad.tl), forKey: "inputTopLeft")
         f.setValue(CIVector(cgPoint: quad.tr), forKey: "inputTopRight")
@@ -765,7 +848,6 @@ enum Engine {
         -> (x: Double, y: Double, w: Double, h: Double) {
         let theta = abs(angleDeg) * .pi / 180
         let sinA = abs(sin(theta)), cosA = abs(cos(theta))
-        let sideLong = max(canvasW, canvasH), sideShort = min(canvasW, canvasH)
         // 原始内容矩形（旋转前）的宽高；旋转画幅 = 内容绕中心旋转后的外接框
         // 由画幅与角度反推内容尺寸：W = cw·cos + ch·sin, H = cw·sin + ch·cos（正交两解取一致者）
         // 这里直接解联立：内容 w0,h0 满足
@@ -828,7 +910,7 @@ enum Engine {
         let key = Int(strength.rounded())
         let data: Data
         if let d = purpleCubeCache[key] { data = d } else { data = buildPurpleCube(strength: key); purpleCubeCache[key] = data }
-        let f = CIFilter(name: "CIColorCube")!
+        guard let f = CIFilter(name: "CIColorCube") else { return img }
         f.setValue(RangeCube.dim, forKey: "inputCubeDimension")
         f.setValue(data, forKey: "inputCubeData")
         f.setValue(img, forKey: kCIInputImageKey)
@@ -874,7 +956,7 @@ enum Engine {
         let data: Data
         if let d = highlightCubeCache[tKey] { data = d } else { data = buildHighlightCube(threshold: tKey); highlightCubeCache[tKey] = data }
         // 1) 高光提取（亮度超过阈值的软掩膜）
-        let hf = CIFilter(name: "CIColorCube")!
+        guard let hf = CIFilter(name: "CIColorCube") else { return img }
         hf.setValue(RangeCube.dim, forKey: "inputCubeDimension")
         hf.setValue(data, forKey: "inputCubeData")
         hf.setValue(img, forKey: kCIInputImageKey)
@@ -977,7 +1059,7 @@ enum Engine {
         let format: CIFormat = settings.format == "tiff" && settings.tiffBitDepth == 16 ? .RGBA16 : .RGBA8
         guard let cg = ctx.createCGImage(out, from: out.extent, format: format,
                                         colorSpace: settings.colorSpace.cgColorSpace) else {
-            throw NSError(domain: "RawForge", code: 12, userInfo: [NSLocalizedDescriptionKey: "无法生成导出图像"])
+            throw NSError(domain: "Phos", code: 12, userInfo: [NSLocalizedDescriptionKey: "无法生成导出图像"])
         }
         let ut: UTType
         switch settings.format {
@@ -987,7 +1069,7 @@ enum Engine {
         default: ut = .jpeg
         }
         guard let dest = CGImageDestinationCreateWithURL(url as CFURL, ut.identifier as CFString, 1, nil) else {
-            throw NSError(domain: "RawForge", code: 10, userInfo: [NSLocalizedDescriptionKey: "无法创建输出文件"])
+            throw NSError(domain: "Phos", code: 10, userInfo: [NSLocalizedDescriptionKey: "无法创建输出文件"])
         }
         var opts: [CFString: Any] = [:]
         if ut == .jpeg || ut == .heic {
@@ -995,7 +1077,7 @@ enum Engine {
         }
         CGImageDestinationAddImage(dest, cg, opts as CFDictionary)
         if !CGImageDestinationFinalize(dest) {
-            throw NSError(domain: "RawForge", code: 11, userInfo: [NSLocalizedDescriptionKey: "写出失败"])
+            throw NSError(domain: "Phos", code: 11, userInfo: [NSLocalizedDescriptionKey: "写出失败"])
         }
     }
 
@@ -1014,7 +1096,7 @@ enum Engine {
         }
         if layer == nil {
             let txt = s.watermarkText.trimmingCharacters(in: .whitespacesAndNewlines)
-            layer = textWatermark(txt.isEmpty ? "RawForge" : txt,
+            layer = textWatermark(txt.isEmpty ? "Phos" : txt,
                                   fontPx: CGFloat(longEdge * s.watermarkScale),
                                   dark: s.watermarkDarkText)
         }
@@ -1109,7 +1191,7 @@ enum HSLCube {
             data = build(mix)
             cache[key] = data
         }
-        let f = CIFilter(name: "CIColorCube")!
+        guard let f = CIFilter(name: "CIColorCube") else { return nil }
         f.setValue(dim, forKey: "inputCubeDimension")
         f.setValue(data, forKey: "inputCubeData")
         return f
@@ -1138,7 +1220,7 @@ enum HSLCube {
         for bi in 0..<D {
             for gi in 0..<D {
                 for ri in 0..<D {
-                    var r = Double(ri) / last, g = Double(gi) / last, b = Double(bi) / last
+                    let r = Double(ri) / last, g = Double(gi) / last, b = Double(bi) / last
                     let (h0, s0, l0) = rgbToHSL(r, g, b)
                     var dh: Double = 0, ds: Double = 1, dl: Double = 1
                     if s0 > 0.02 {
@@ -1163,8 +1245,8 @@ enum HSLCube {
                     var hN = h0 + dh
                     while hN < 0 { hN += 360 }
                     while hN >= 360 { hN -= 360 }
-                    var sN = min(max(s0 * ds, 0), 1)
-                    var lN = min(max(l0 * dl, 0), 1)
+                    let sN = min(max(s0 * ds, 0), 1)
+                    let lN = min(max(l0 * dl, 0), 1)
                     let (rN, gN, bN) = hslToRGB(hN, sN, lN)
                     let o = (bi * D * D + gi * D + ri) * 4
                     out[o] = Float(rN); out[o + 1] = Float(gN); out[o + 2] = Float(bN); out[o + 3] = 1
@@ -1223,7 +1305,7 @@ enum CurveCube {
         let key = hash(p)
         let data: Data
         if let d = cache[key] { data = d } else { data = build(p); cache[key] = data }
-        let f = CIFilter(name: "CIColorCube")!
+        guard let f = CIFilter(name: "CIColorCube") else { return nil }
         f.setValue(dim, forKey: "inputCubeDimension")
         f.setValue(data, forKey: "inputCubeData")
         return f
@@ -1381,7 +1463,7 @@ enum CurveCube {
             func tint(_ c: (Double, Double, Double)?, _ w: Double, _ sat: Double) -> (Double, Double, Double) {
                 guard let c = c else { return (0, 0, 0) }
                 let k = w * (sat / 100) * 0.42 * blendK
-                var dr = (c.0 - 0.5) * k, dg = (c.1 - 0.5) * k, db = (c.2 - 0.5) * k
+                let dr = (c.0 - 0.5) * k, dg = (c.1 - 0.5) * k, db = (c.2 - 0.5) * k
                 let ly = 0.2126 * dr + 0.7152 * dg + 0.0722 * db
                 return (dr - ly, dg - ly, db - ly)
             }

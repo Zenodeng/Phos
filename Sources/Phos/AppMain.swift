@@ -52,6 +52,10 @@ final class AppState: ObservableObject {
     @Published var brushRadius: Double = 0.05
     @Published var brushFeather: Double = 0.5
     @Published var maskPreviewImage: CGImage?
+    // A gradient is a transient draft until mouse-up: no sidecar writes or undo steps while drawing.
+    @Published var maskDrawingKind: MaskKind?
+    @Published var maskDrawingTarget: UUID?
+    @Published var maskDraft: Mask?
     private var sidecarReadFailed = false
 
     // 编辑
@@ -60,7 +64,7 @@ final class AppState: ObservableObject {
     @Published var preview: CGImage?
     @Published var previewing: Bool = false
     @Published var showBefore: Bool = false {
-        didSet { if showBefore { refreshBefore() } }
+        didSet { if showBefore { cancelMaskDrawing(); refreshBefore() } }
     }
     @Published var beforeImage: CGImage?
     @Published var hist: (r: [Int], g: [Int], b: [Int], l: [Int]) = ([], [], [], [])
@@ -68,6 +72,7 @@ final class AppState: ObservableObject {
     @Published var selectedMask: UUID? {
         didSet {
             if oldValue != selectedMask {
+                cancelMaskDrawing()
                 maskPreviewImage = nil
                 maskTool = .position
                 previewQueue.invalidate()
@@ -185,7 +190,8 @@ final class AppState: ObservableObject {
                 self.preview = result.image
                 self.hist = result.histogram
                 self.lastPreviewScale = result.scale
-                if request.overlayMask == (self.showMaskOverlay ? self.selectedMask : nil) {
+                let visibleMask = self.showMaskOverlay ? (self.maskDraft?.id ?? self.selectedMask) : nil
+                if request.overlayMask == visibleMask {
                     self.maskPreviewImage = result.mask
                 }
             }
@@ -207,6 +213,7 @@ final class AppState: ObservableObject {
     // MARK: - 打开文件夹
     func openFolder(_ url: URL) {
         guard !syncRunning, saveCurrent() else { return }
+        cancelMaskDrawing()
         folderQueue.invalidate()
         sourceQueue.invalidate()
         previewQueue.invalidate()
@@ -280,6 +287,7 @@ final class AppState: ObservableObject {
     // MARK: - 选图
     func select(_ i: Int) {
         guard !syncRunning, i >= 0, i < items.count, saveCurrent() else { return }
+        cancelMaskDrawing()
         sourceQueue.invalidate()
         previewQueue.invalidate()
         beforeQueue.invalidate()
@@ -322,6 +330,7 @@ final class AppState: ObservableObject {
 
     func undo() {
         guard !syncRunning else { return }
+        if maskDrawingKind != nil { cancelMaskDrawing(); return }
         if let p = history.undo() { params = p; render(); autoSave() }
     }
     func redo() {
@@ -358,6 +367,7 @@ final class AppState: ObservableObject {
     // MARK: - 裁剪模式辅助
     func toggleCropMode() {
         guard source != nil else { return }
+        cancelMaskDrawing()
         if !cropMode { oneToOne = false; showBefore = false; whiteBalancePicker = false }
         previewQueue.invalidate()
         cropMode.toggle()
@@ -447,6 +457,74 @@ final class AppState: ObservableObject {
     }
 
     // MARK: - 蒙版
+    func startMaskDrawing(_ kind: MaskKind, replacing id: UUID? = nil) {
+        guard source != nil, !syncRunning, kind == .linear || kind == .radial else { return }
+        selectedMask = id
+        cropMode = false
+        showBefore = false
+        whiteBalancePicker = false
+        maskTool = .position
+        maskDrawingTarget = id
+        maskDrawingKind = kind
+        maskDraft = nil
+        showMaskOverlay = true
+        status = "在画布上拖动绘制\(kind.label)，松手确认；Esc 取消"
+    }
+
+    func cancelMaskDrawing() {
+        maskDrawingKind = nil
+        maskDrawingTarget = nil
+        maskDraft = nil
+    }
+
+    func updateMaskDraft(_ draft: Mask) {
+        guard maskDrawingKind != nil else { return }
+        maskDraft = draft
+        renderDraft(draft)
+    }
+
+    private func renderDraft(_ draft: Mask) {
+        guard let source else { return }
+        var draftParams = params
+        if let index = draftParams.masks.firstIndex(where: { $0.id == draft.id }) {
+            draftParams.masks[index] = draft
+        } else {
+            draftParams.masks.append(draft)
+        }
+        previewing = true
+        previewQueue.submit(PreviewRequest(source: source, params: draftParams, url: current?.url,
+                                           fullResolution: fullResPreview || oneToOne,
+                                           cropMode: cropMode, longEdge: previewLongEdge,
+                                           overlayMask: showMaskOverlay ? draft.id : nil))
+    }
+
+    func finishMaskDrawing() {
+        guard let draft = maskDraft, maskDrawingKind != nil else { cancelMaskDrawing(); return }
+        var next = params
+        if let id = maskDrawingTarget, let index = next.masks.firstIndex(where: { $0.id == id }) {
+            next.masks[index] = draft
+        } else {
+            next.masks.append(draft)
+        }
+        cancelMaskDrawing()
+        commit(next)
+        selectedMask = draft.id
+        maskTool = .position
+        status = "已绘制\(draft.kind.label)；拖中心移动，拖边界缩放，拖旋转柄改变方向"
+    }
+
+    func duplicateMask(_ id: UUID) {
+        guard let original = params.masks.first(where: { $0.id == id }) else { return }
+        var copy = original
+        copy.id = UUID()
+        copy.name += " 副本"
+        var next = params
+        next.masks.append(copy)
+        commit(next)
+        selectedMask = copy.id
+        maskTool = .position
+    }
+
     func addMask(_ kind: MaskKind) {
         var m = Mask()
         m.kind = kind
@@ -454,6 +532,7 @@ final class AppState: ObservableObject {
         var p = params
         p.masks.append(m)
         selectedMask = m.id
+        maskTool = .position
         commit(p)
     }
     func updateMask(_ m: Mask) {
@@ -477,19 +556,41 @@ final class AppState: ObservableObject {
 
     // MARK: - 预设
     var presetsURL: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        return base.appendingPathComponent("RawForge/presets.json")
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support")
+        return base.appendingPathComponent("Phos/presets.json")
     }
+
+    /// 读取新目录；首次改名时兼容旧版预设目录。
+    private var legacyPresetsURL: URL {
+        presetsURL.deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("RawForge/presets.json")
+    }
+
     func loadPresets() -> [Preset] {
-        guard let d = try? Data(contentsOf: presetsURL),
-              let ps = try? JSONDecoder().decode([Preset].self, from: d) else { return defaultPresets }
-        return ps
+        let urls = [presetsURL, legacyPresetsURL]
+        for url in urls {
+            guard let d = try? Data(contentsOf: url),
+                  let ps = try? JSONDecoder().decode([Preset].self, from: d) else { continue }
+            return ps
+        }
+        return defaultPresets
     }
-    func savePresets(_ ps: [Preset]) {
+
+    @discardableResult
+    func savePresets(_ ps: [Preset]) -> Bool {
+        let fm = FileManager.default
         let dir = presetsURL.deletingLastPathComponent()
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let enc = JSONEncoder(); enc.outputFormatting = [.prettyPrinted]
-        if let d = try? enc.encode(ps) { try? d.write(to: presetsURL) }
+        do {
+            try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+            let enc = JSONEncoder(); enc.outputFormatting = [.prettyPrinted, .sortedKeys]
+            let data = try enc.encode(ps)
+            try data.write(to: presetsURL, options: .atomic)
+            return true
+        } catch {
+            workflowError = "预设保存失败：\n\(error.localizedDescription)"
+            return false
+        }
     }
     let defaultPresets: [Preset] = {
         var a = EditParams(); a.contrast = 12; a.clarity = 15; a.vibrance = 12
@@ -684,9 +785,9 @@ final class AppState: ObservableObject {
     }
 }
 
-#if !RAWFORGE_TESTING
+#if !PHOS_TESTING
 @main
-struct RawForgeApp: App {
+struct PhosApp: App {
     @StateObject private var state = AppState()
 
     var body: some Scene {

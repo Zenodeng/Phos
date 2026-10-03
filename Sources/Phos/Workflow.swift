@@ -20,9 +20,170 @@ enum ExportColorSpace: String, Codable, CaseIterable {
     var cgColorSpace: CGColorSpace {
         switch self {
         case .sRGB: return Engine.srgb
-        case .displayP3: return CGColorSpace(name: CGColorSpace.displayP3)!
-        case .adobeRGB: return CGColorSpace(name: CGColorSpace.adobeRGB1998)!
+        case .displayP3: return CGColorSpace(name: CGColorSpace.displayP3) ?? Engine.srgb
+        case .adobeRGB: return CGColorSpace(name: CGColorSpace.adobeRGB1998) ?? Engine.srgb
         }
+    }
+}
+
+/// 一次控制点拖动的会话。
+///
+/// 拖动过程中蒙版会被不断改写，而 `DragGesture` 给的是「从按下那一刻算起的累计位移」。
+/// 如果每次都拿「当前蒙版」去叠加这个累计位移，位移会被反复累加 ——
+/// 鼠标拖 120px，控制点能跑 240px 甚至上千 px，参考线看上去就是飘走了。
+/// 所以这里固定住「按下点 + 按下那一刻的蒙版」，每次都用绝对坐标重新算。
+struct MaskDragSession {
+    let start: CGPoint
+    let base: Mask
+
+    init(start: CGPoint, base: Mask) {
+        self.start = start
+        self.base = base
+    }
+
+    func updated(_ control: MaskGeometry.Control, to end: CGPoint, size: CGSize,
+                 constrained: Bool = false) -> Mask {
+        MaskGeometry.dragging(base, control: control, from: start, to: end,
+                              size: size, constrained: constrained)
+    }
+}
+
+/// Geometry is computed in oriented image pixels (y up), not in a square normalized space.
+/// The canvas, numeric controls and gesture tests use the same conversions.
+enum MaskGeometry {
+    enum Control { case move, linearStart, linearEnd, rotate, radialX, radialY, feather }
+
+    static func point(_ x: Double, _ y: Double, size: CGSize) -> CGPoint {
+        CGPoint(x: x * size.width, y: y * size.height)
+    }
+    static func center(_ mask: Mask, size: CGSize) -> CGPoint {
+        mask.kind == .linear
+            ? point((mask.x0 + mask.x1) / 2, (mask.y0 + mask.y1) / 2, size: size)
+            : point(mask.x0, mask.y0, size: size)
+    }
+    static func angle(_ mask: Mask, size: CGSize) -> Double {
+        if mask.kind == .radial { return mask.radialAngle }
+        return atan2((mask.y1 - mask.y0) * size.height, (mask.x1 - mask.x0) * size.width) * 180 / .pi
+    }
+    static func width(_ mask: Mask, size: CGSize) -> Double {
+        hypot((mask.x1 - mask.x0) * size.width, (mask.y1 - mask.y0) * size.height)
+            / max(min(size.width, size.height), 1)
+    }
+    static func radii(_ mask: Mask, size: CGSize) -> CGSize {
+        let base = max(min(size.width, size.height), 1)
+        let outer = mask.gradientVersion == 1 ? 1 : 1 + mask.feather * 0.5
+        return CGSize(width: base * (mask.radiusX ?? mask.radius) * outer,
+                      height: base * (mask.radiusY ?? mask.radius) * outer)
+    }
+    static func innerRatio(_ mask: Mask) -> Double {
+        mask.gradientVersion == 1 ? 1 - mask.feather : (1 - mask.feather) / (1 + mask.feather * 0.5)
+    }
+    /// Convert a legacy circle only on explicit geometry editing, preserving its inner/outer edges.
+    static func ellipse(_ mask: Mask) -> Mask {
+        guard mask.gradientVersion != 1 else { return mask }
+        var result = mask
+        let outer = 1 + mask.feather * 0.5
+        result.radiusX = mask.radius * outer
+        result.radiusY = mask.radius * outer
+        result.feather = 1 - (1 - mask.feather) / outer
+        result.gradientVersion = 1
+        return result
+    }
+    static func rotatedPoint(center: CGPoint, x: Double, y: Double, angle: Double) -> CGPoint {
+        let a = angle * .pi / 180
+        return CGPoint(x: center.x + x * cos(a) - y * sin(a),
+                       y: center.y + x * sin(a) + y * cos(a))
+    }
+    static func settingLinear(_ mask: Mask, width: Double? = nil, angle: Double? = nil,
+                              size: CGSize) -> Mask {
+        var result = mask
+        let c = center(mask, size: size)
+        let a = (angle ?? Self.angle(mask, size: size)) * .pi / 180
+        let half = max(0.003, width ?? Self.width(mask, size: size)) * min(size.width, size.height) / 2
+        result.x0 = (c.x - half * cos(a)) / size.width
+        result.y0 = (c.y - half * sin(a)) / size.height
+        result.x1 = (c.x + half * cos(a)) / size.width
+        result.y1 = (c.y + half * sin(a)) / size.height
+        return result
+    }
+    private static func imagePoint(_ p: CGPoint, size: CGSize) -> CGPoint {
+        CGPoint(x: p.x, y: size.height - p.y)
+    }
+
+    static func drawing(_ original: Mask, from start: CGPoint, to end: CGPoint,
+                        size: CGSize, constrained: Bool = false) -> Mask {
+        let start = imagePoint(start, size: size)
+        let end = imagePoint(end, size: size)
+        var result = original
+        result.gradientVersion = 1
+        if original.kind == .linear {
+            var dx = end.x - start.x, dy = end.y - start.y
+            if constrained {
+                let length = hypot(dx, dy)
+                let angle = (atan2(dy, dx) / (.pi / 4)).rounded() * (.pi / 4)
+                dx = cos(angle) * length; dy = sin(angle) * length
+            }
+            result.x0 = start.x / size.width; result.y0 = start.y / size.height
+            result.x1 = (start.x + dx) / size.width; result.y1 = (start.y + dy) / size.height
+        } else {
+            result.x0 = start.x / size.width; result.y0 = start.y / size.height
+            let base = min(size.width, size.height)
+            var rx = abs(end.x - start.x) / base, ry = abs(end.y - start.y) / base
+            if constrained { rx = max(rx, ry); ry = rx }
+            result.radiusX = min(max(rx, 0.003), 4)
+            result.radiusY = min(max(ry, 0.003), 4)
+            result.radialAngle = 0
+        }
+        return result
+    }
+    static func dragging(_ original: Mask, control: Control, from start: CGPoint, to end: CGPoint,
+                         size: CGSize, constrained: Bool = false) -> Mask {
+        let start = imagePoint(start, size: size)
+        let end = imagePoint(end, size: size)
+        var result = original
+        let dx = end.x - start.x, dy = end.y - start.y
+        let c = center(original, size: size)
+        switch control {
+        case .move:
+            // Keep the shape intact at image edges; bounded off-canvas centers are useful for vignettes.
+            let tx = min(max(dx / size.width, -2 - original.x0), 3 - original.x0)
+            let ty = min(max(dy / size.height, -2 - original.y0), 3 - original.y0)
+            result.x0 += tx; result.y0 += ty
+            if original.kind == .linear { result.x1 += tx; result.y1 += ty }
+        case .linearStart, .linearEnd:
+            let a = angle(original, size: size) * .pi / 180
+            let projection = dx * cos(a) + dy * sin(a)
+            let shiftX = projection * cos(a) / size.width
+            let shiftY = projection * sin(a) / size.height
+            if control == .linearStart { result.x0 += shiftX; result.y0 += shiftY }
+            else { result.x1 += shiftX; result.y1 += shiftY }
+            if width(result, size: size) < 0.003 { return original }
+        case .rotate:
+            let initial = atan2(start.y - c.y, start.x - c.x)
+            let current = atan2(end.y - c.y, end.x - c.x)
+            var degrees = angle(original, size: size) + (current - initial) * 180 / .pi
+            if constrained { degrees = (degrees / 15).rounded() * 15 }
+            if original.kind == .linear { result = settingLinear(original, angle: degrees, size: size) }
+            else { result = ellipse(original); result.radialAngle = degrees }
+        case .radialX, .radialY, .feather:
+            result = ellipse(original)
+            let a = result.radialAngle * .pi / 180
+            let lx = (end.x - c.x) * cos(a) + (end.y - c.y) * sin(a)
+            let ly = -(end.x - c.x) * sin(a) + (end.y - c.y) * cos(a)
+            let base = min(size.width, size.height)
+            if control == .radialX { result.radiusX = min(max(abs(lx) / base, 0.003), 4) }
+            if control == .radialY { result.radiusY = min(max(abs(ly) / base, 0.003), 4) }
+            if constrained, control != .feather {
+                let radius = control == .radialX ? result.radiusX : result.radiusY
+                result.radiusX = radius; result.radiusY = radius
+            }
+            if control == .feather {
+                let rx = max((result.radiusX ?? result.radius) * base, 1)
+                let ry = max((result.radiusY ?? result.radius) * base, 1)
+                result.feather = min(max(1 - hypot(lx / rx, ly / ry), 0), 1)
+            }
+        }
+        return result
     }
 }
 
@@ -151,7 +312,7 @@ extension Engine {
         let average = image.applyingFilter("CIAreaAverage", parameters: [kCIInputExtentKey: CIVector(cgRect: region)])
         var rgba = [Float](repeating: 0, count: 4)
         ctx.render(average, toBitmap: &rgba, rowBytes: 16, bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
-                   format: .RGBAf, colorSpace: CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!)
+                   format: .RGBAf, colorSpace: CGColorSpace(name: CGColorSpace.extendedLinearSRGB) ?? Engine.srgb)
         let rgb = rgba.prefix(3).map(Double.init)
         guard rgb.allSatisfy({ $0.isFinite && $0 > 0.005 && $0 < 0.98 }) else { return nil }
         let luminance = rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722
@@ -161,6 +322,7 @@ extension Engine {
     }
 }
 
+#if !PHOS_TESTING
 @MainActor
 extension AppState {
     func recomputeMask(_ id: UUID) {
@@ -248,3 +410,4 @@ extension AppState {
         }
     }
 }
+#endif

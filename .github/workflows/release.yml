@@ -1,4 +1,4 @@
-name: Build & Release RawForge
+name: Build & Release Phos
 
 on:
   workflow_dispatch:
@@ -23,19 +23,19 @@ jobs:
         run: |
           chmod +x Scripts/package_app.sh
           ./Scripts/package_app.sh
-          ls -R RawForge.app/Contents | head -30
+          ls -R Phos.app/Contents | head -30
 
       - name: Zip + checksum
         run: |
-          zip -qyr RawForge-macOS-apple-silicon.zip RawForge.app
-          shasum -a 256 RawForge-macOS-apple-silicon.zip > SHA256.txt
+          zip -qyr Phos-macOS-apple-silicon.zip Phos.app
+          shasum -a 256 Phos-macOS-apple-silicon.zip > SHA256.txt
           cat SHA256.txt
 
       - uses: actions/upload-artifact@v4
         with:
-          name: RawForge-macOS-apple-silicon
+          name: Phos-macOS-apple-silicon
           path: |
-            RawForge-macOS-apple-silicon.zip
+            Phos-macOS-apple-silicon.zip
             SHA256.txt
 
       - name: Release
@@ -43,5 +43,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            RawForge-macOS-apple-silicon.zip
+            Phos-macOS-apple-silicon.zip
             SHA256.txt

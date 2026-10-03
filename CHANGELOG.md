@@ -2,6 +2,46 @@
 
 本项目遵循语义化版本。日期为发布日（Asia/Shanghai）。
 
+## [3.1.0] — 2026-10-03
+
+品牌改名后的首个发布版本：RawForge 正式以 **Phos** 之名发布，并修复蒙版控制点拖动时参考线漂移的问题。
+First release under the new name: RawForge ships as **Phos**, plus a fix for mask guide drift while dragging handles.
+
+### 2026-10-03 蒙版控制点拖动修复 / Mask Handle Drag Fix
+
+- **修复拖动蒙版控制点时三条参考线「飘走」**：控制点原先上报 `position + v.translation`，
+  但 `translation` 是**从按下那一刻算起的累计位移**，而 `position` 又会随蒙版更新每帧重算，
+  于是同一个位移被反复叠加。实测拖 120px 时控制点跑出 240px，且鼠标事件越密偏得越多
+  （细粒度下可达 30 倍），参考线因此整体漂移。
+- 改为以「按下点 + 按下那一刻的蒙版」为基准（新增 `MaskDragSession`），每次移动都用绝对坐标
+  重新计算，结果不再随鼠标事件密度变化。线性起/终点、中心移动、旋转柄、径向三手柄一并受益。
+- 新增 `Tools/MaskDragTest.swift` 与 `Scripts/test_mask_drag.sh`：纯几何回归测试，不需要照片素材。
+
+### 2026-10-03 蒙版交互完善 / Mask Interaction Refinements
+
+- **蒙版参考线显示逻辑优化**：选中线性或径向渐变蒙版时自动切换到位置调整模式（`.position`），确保控制点、参考线和旋转柄立即可见。
+  - 应用于选择已有蒙版、创建新蒙版、复制蒙版和完成渐变绘制四个交互入口。
+  - 用户仍可手动切换到画笔或擦除工具，但重新选中蒙版时会自动回到位置模式。
+- 清理蒙版叠加层的调试输出，发布版本不再向 stdout 打印诊断信息。
+
+### 2026-10-01 品牌改名 / Rebrand
+
+- RawForge 更名为 **Phos**，更新界面、应用元数据、默认水印、构建产物和发布文件名。
+- Phos 使用新的 `com.zeno.phos` 应用标识；仍兼容读取旧 `com.zeno.rawforge` 设置、`.rawforge.json` 旁档和旧预设目录。
+- 新建旁档的 `app` 字段为 `Phos`，旧旁档中的 `RawForge` 标记仅作为兼容数据保留。
+- 历史标签与 v3.0.1 及更早的发布记录保持不变；从 **v3.1.0** 起使用 Phos 名称发布。
+
+### 验证 / Verification
+
+- `./build.sh` 0 error；`codesign --verify --deep --strict Phos.app` 通过。
+- `bash Scripts/test_mask_drag.sh` 6 项全通过，关键判据「结果不随鼠标事件数漂移」（5 / 61 / 1200 次事件结果一致）。
+
+### 已知限制 / Known limitations
+
+- 1:1 像素视图（`s.oneToOne`）未挂载 `MaskOverlay`，该模式下看不到渐变参考线。
+- 线性蒙版参考线沿法线只延伸画面高度，极宽幅照片下可能画不到边缘。
+- 既有 `-D PHOS_TESTING` 全量测试脚本在本机会卡在 `Inspector.swift:845` 的类型检查，新回归脚本已绕开。
+
 ## [3.0.1] — 2026-09-30
 
 v3.0.0 收尾版本：测试体系修复与实拍压力测试，渲染与应用行为无变化。
@@ -159,7 +199,7 @@ Wrap-up release for 3.0.0: test infrastructure fixes and real-photo stress testi
 - **导出水印**：导出 / 批量导出可叠加水印——文字（可选白字 / 黑字，带柔和投影）或图片（PNG 透明 logo），
   九宫格定位、大小（占长边比例）、不透明度、旋转、边距均可调。只叠在导出文件上，不进预览与副档。
 - **固定导出目录**：导出默认落到本机配置的文件夹，可在导出面板查看与更改；
-  配置存在本机 `UserDefaults`（`defaults write com.zeno.rawforge exportDirectory <路径>`），不写进源码。
+  配置存在本机 `UserDefaults`（`defaults write com.zeno.phos exportDirectory <路径>`），首次改名时兼容读取旧 `com.zeno.rawforge` 设置。
 
 ### 性能 / Performance
 

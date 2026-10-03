@@ -5,7 +5,7 @@
 import base64, json, os, subprocess, sys, tempfile
 
 TOKEN = os.environ["GH_TOKEN"]
-OWNER, REPO = os.environ.get("GH_OWNER", "Zenodeng"), os.environ.get("GH_REPO", "RawForge")
+OWNER, REPO = os.environ.get("GH_OWNER", "Zenodeng"), os.environ.get("GH_REPO", "Phos")
 MSG = os.environ["GH_MSG"]
 API = "https://api.github.com"
 ROOT = os.path.dirname(os.path.abspath(__file__)) + "/.."

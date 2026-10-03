@@ -500,7 +500,6 @@ struct ColorGradePane: View {
             // 三个圆点按钮（同 LR 的「调整」排），选中档描白边
             HStack(spacing: 14) {
                 ForEach(0..<3, id: \.self) { i in
-                    let g = s.params[keyPath: keyPath(i)]
                     Circle()
                         .fill(dotColor(i))
                         .frame(width: 22, height: 22)
@@ -760,8 +759,8 @@ struct MaskPane: View {
         }
         switch m.kind {
         case .brush: return "已在画笔模式：直接在画布上按住拖动涂抹（一次拖动算一笔）；调「笔刷」改大小、「羽化」改边缘软硬"
-        case .linear: return "直接拖画布或拖动蓝色圆点，整条渐变一起走"
-        case .radial: return "拖动黄色圆点移动圆心，拖画布整体位移"
+        case .linear: return "点「拖画线性」后在画布上拖出三线渐变；拖中心移动，拖端点改宽度，拖旋转柄改变方向"
+        case .radial: return "点「拖画径向」后拖出椭圆；拖中心移动，拖横/竖边缩放，拖旋转柄改变角度，羽化控制内外过渡"
         case .colorRange: return "在画布上按住拖动，取哪点算哪点的颜色；「容差」控制收进来的颜色范围"
         case .luminanceRange: return "在画布上按住拖动取样亮度；也可用下面的上下界滑块手动框定"
         case .subject: return "系统视觉模型算显著性主体（本地跑，不联网），第一次算要等一两秒，结果会缓存"
@@ -778,6 +777,19 @@ struct MaskPane: View {
                     MaskAddButton(kind: k)
                 }
             }
+            if s.source != nil {
+                HStack(spacing: 6) {
+                    Button { s.startMaskDrawing(.linear) } label: {
+                        Label("拖画线性", systemImage: "line.diagonal")
+                    }
+                    Button { s.startMaskDrawing(.radial) } label: {
+                        Label("拖画径向", systemImage: "oval")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .help("像 Lightroom 一样在画布上拖动创建渐变蒙版")
+            }
             Label(maskHint, systemImage: "text.bubble")
                 .font(.system(size: 9.5))
                 .foregroundStyle(.secondary)
@@ -785,16 +797,24 @@ struct MaskPane: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             ForEach(s.params.masks) { m in
                 let isSel = s.selectedMask == m.id
+                let maskName = m.name
                 VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 5) {
                         Image(systemName: isSel ? "circle.inset.filled" : "circle")
                             .font(.system(size: 9))
                             .foregroundStyle(isSel ? Color.accentColor : .secondary)
-                            .onTapGesture { s.selectedMask = (isSel ? nil : m.id) }
+                            .onTapGesture {
+                                if isSel {
+                                    s.selectedMask = nil
+                                } else {
+                                    s.selectedMask = m.id
+                                    s.maskTool = .position
+                                }
+                            }
                         Image(systemName: m.kind.icon)
                             .font(.system(size: 9))
                             .foregroundStyle(.secondary)
-                        Text(m.name)
+                        Text(maskName)
                             .font(.system(size: 11, weight: .medium))
                             .lineLimit(1)
                         Spacer()
@@ -809,6 +829,16 @@ struct MaskPane: View {
                         .buttonStyle(.borderless)
                         .controlSize(.mini)
                         .help(m.inverted ? "取消反转" : "反转蒙版")
+                        Button {
+                            s.duplicateMask(m.id)
+                        } label: {
+                            Image(systemName: "plus.square.on.square")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.borderless)
+                        .controlSize(.mini)
+                        .help("复制蒙版")
                         Button {
                             s.removeMask(m.id)
                         } label: {
@@ -863,9 +893,15 @@ struct MaskPane: View {
                                 range: 0.005...0.3) { s.endEdit() }
                         }
                         if m.kind == .radial {
-                            SliderRow(label: "半径", value: Binding(
-                                get: { m.radius },
-                                set: { var x = m; x.radius = $0; s.updateMaskLive(x) }), range: 0.05...1) { s.endEdit() }
+                            SliderRow(label: "横半径", value: Binding(
+                                get: { m.radiusX ?? m.radius },
+                                set: { var x = MaskGeometry.ellipse(m); x.radiusX = $0; s.updateMaskLive(x) }), range: 0.05...1.5) { s.endEdit() }
+                            SliderRow(label: "纵半径", value: Binding(
+                                get: { m.radiusY ?? m.radius },
+                                set: { var x = MaskGeometry.ellipse(m); x.radiusY = $0; s.updateMaskLive(x) }), range: 0.05...1.5) { s.endEdit() }
+                            SliderRow(label: "旋转", value: Binding(
+                                get: { m.radialAngle },
+                                set: { var x = MaskGeometry.ellipse(m); x.radialAngle = $0; s.updateMaskLive(x) }), range: -180...180) { s.endEdit() }
                         }
                         SliderRow(label: "羽化", value: Binding(
                             get: { m.feather },
@@ -890,6 +926,21 @@ struct MaskPane: View {
                             SliderRow(label: "锐化", value: Binding(
                                 get: { m.adjust.sharpen },
                                 set: { var x = m; x.adjust.sharpen = $0; s.updateMaskLive(x) }), range: 0...100) { s.endEdit() }
+                            SliderRow(label: "高光", value: Binding(
+                                get: { m.adjust.highlights },
+                                set: { var x = m; x.adjust.highlights = $0; s.updateMaskLive(x) })) { s.endEdit() }
+                            SliderRow(label: "阴影", value: Binding(
+                                get: { m.adjust.shadows },
+                                set: { var x = m; x.adjust.shadows = $0; s.updateMaskLive(x) })) { s.endEdit() }
+                            SliderRow(label: "纹理", value: Binding(
+                                get: { m.adjust.texture },
+                                set: { var x = m; x.adjust.texture = $0; s.updateMaskLive(x) }), range: -100...100) { s.endEdit() }
+                            SliderRow(label: "去朦胧", value: Binding(
+                                get: { m.adjust.dehaze },
+                                set: { var x = m; x.adjust.dehaze = $0; s.updateMaskLive(x) }), range: -100...100) { s.endEdit() }
+                            SliderRow(label: "降噪", value: Binding(
+                                get: { m.adjust.denoise },
+                                set: { var x = m; x.adjust.denoise = $0; s.updateMaskLive(x) }), range: 0...100) { s.endEdit() }
                         }
                     }
                 }

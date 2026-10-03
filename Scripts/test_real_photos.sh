@@ -17,7 +17,7 @@ cd "$(dirname "$0")/.."
 SDK="${RF_SDK:-/Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk}"
 [[ -d "$SDK" ]] || SDK="$(xcrun --show-sdk-path)"
 BUILD="$(mktemp -d "${TMPDIR:-/tmp}/rawforge-real.XXXXXX")"
-swiftc -O -suppress-warnings -D RAWFORGE_TESTING -sdk "$SDK" \
+swiftc -O -suppress-warnings -D PHOS_TESTING -sdk "$SDK" \
     -target arm64-apple-macosx15.0 -module-cache-path "$BUILD/cache" \
-    Sources/RawForge/*.swift Tools/RealPhotoTest.swift -o "$BUILD/real-photo"
+    Sources/Phos/*.swift Tools/RealPhotoTest.swift -o "$BUILD/real-photo"
 "$BUILD/real-photo" "$OUTPUT" "$SECONDS_TO_RUN" "${PHOTOS[@]}" | tee "$OUTPUT/real-photo.log"

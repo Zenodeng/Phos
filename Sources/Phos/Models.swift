@@ -13,7 +13,7 @@ struct ToneCurve: Codable, Equatable {
 
     /// 排序 + 夹到 [0,1] + 合并过近的点，保证曲线始终是一条函数
     static func sanitize(_ raw: [[Double]]) -> [[Double]] {
-        var p = raw.compactMap { pair -> [Double]? in
+        let p = raw.compactMap { pair -> [Double]? in
             guard pair.count >= 2, pair[0].isFinite, pair[1].isFinite else { return nil }
             return [min(max(pair[0], 0), 1), min(max(pair[1], 0), 1)]
         }.sorted { $0[0] < $1[0] }
@@ -181,8 +181,44 @@ struct LocalAdjust: Codable, Equatable {
     var temperature: Double = 0
     var clarity: Double = 0
     var sharpen: Double = 0
+    var highlights: Double = 0
+    var shadows: Double = 0
+    var whites: Double = 0
+    var blacks: Double = 0
+    var tint: Double = 0
+    var texture: Double = 0
+    var dehaze: Double = 0
+    var denoise: Double = 0
+
+    init() {}
+
+    enum CodingKeys: String, CodingKey {
+        case exposure, contrast, saturation, temperature, clarity, sharpen
+        case highlights, shadows, whites, blacks, tint, texture, dehaze, denoise
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        exposure = try c.decodeIfPresent(Double.self, forKey: .exposure) ?? 0
+        contrast = try c.decodeIfPresent(Double.self, forKey: .contrast) ?? 0
+        saturation = try c.decodeIfPresent(Double.self, forKey: .saturation) ?? 0
+        temperature = try c.decodeIfPresent(Double.self, forKey: .temperature) ?? 0
+        clarity = try c.decodeIfPresent(Double.self, forKey: .clarity) ?? 0
+        sharpen = try c.decodeIfPresent(Double.self, forKey: .sharpen) ?? 0
+        highlights = try c.decodeIfPresent(Double.self, forKey: .highlights) ?? 0
+        shadows = try c.decodeIfPresent(Double.self, forKey: .shadows) ?? 0
+        whites = try c.decodeIfPresent(Double.self, forKey: .whites) ?? 0
+        blacks = try c.decodeIfPresent(Double.self, forKey: .blacks) ?? 0
+        tint = try c.decodeIfPresent(Double.self, forKey: .tint) ?? 0
+        texture = try c.decodeIfPresent(Double.self, forKey: .texture) ?? 0
+        dehaze = try c.decodeIfPresent(Double.self, forKey: .dehaze) ?? 0
+        denoise = try c.decodeIfPresent(Double.self, forKey: .denoise) ?? 0
+    }
+
     var isNeutral: Bool {
         exposure == 0 && contrast == 0 && saturation == 0 && temperature == 0 && clarity == 0 && sharpen == 0
+            && highlights == 0 && shadows == 0 && whites == 0 && blacks == 0
+            && tint == 0 && texture == 0 && dehaze == 0 && denoise == 0
     }
 }
 
@@ -234,10 +270,14 @@ struct Mask: Codable, Equatable, Identifiable {
     var inverted: Bool = false
 
     init() {}
-    // 线性：起点终点；径向：圆心 + 半径；都用归一化坐标
+    // 线性：起点终点；径向：圆心归一化，半径为图像短边的比例
     var x0: Double = 0.3, y0: Double = 0.2
     var x1: Double = 0.7, y1: Double = 0.8
     var radius: Double = 0.3
+    var gradientVersion: Int? = nil
+    var radiusX: Double? = nil
+    var radiusY: Double? = nil
+    var radialAngle: Double = 0    // 度，图像 y 向上，逆时针为正
     var feather: Double = 0.6
     var strokes: [Stroke] = []
     var refinements: [Stroke] = []
@@ -253,6 +293,7 @@ struct Mask: Codable, Equatable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case id, kind, enabled, inverted, x0, y0, x1, y1, radius, feather, strokes, adjust, name
+        case gradientVersion, radiusX, radiusY, radialAngle
         case sampleRGB, tolerance, lumLow, lumHigh, lumSoft
         case refinements
     }
@@ -270,6 +311,10 @@ struct Mask: Codable, Equatable, Identifiable {
         x1         = try c.decodeIfPresent(Double.self, forKey: .x1)       ?? base.x1
         y1         = try c.decodeIfPresent(Double.self, forKey: .y1)       ?? base.y1
         radius     = try c.decodeIfPresent(Double.self, forKey: .radius)   ?? base.radius
+        gradientVersion = try c.decodeIfPresent(Int.self, forKey: .gradientVersion)
+        radiusX    = try c.decodeIfPresent(Double.self, forKey: .radiusX)
+        radiusY    = try c.decodeIfPresent(Double.self, forKey: .radiusY)
+        radialAngle = try c.decodeIfPresent(Double.self, forKey: .radialAngle) ?? 0
         feather    = try c.decodeIfPresent(Double.self, forKey: .feather)  ?? base.feather
         strokes    = try c.decodeIfPresent([Stroke].self, forKey: .strokes) ?? base.strokes
         refinements = try c.decodeIfPresent([Stroke].self, forKey: .refinements) ?? []
@@ -502,7 +547,7 @@ struct ExportSettings: Codable, Equatable {
     // MARK: 水印（只在出图时叠加，不进预览、不进副档）
     var watermarkEnabled: Bool = false
     var watermarkKind: String = "text"        // text / image
-    var watermarkText: String = "RawForge"
+    var watermarkText: String = "Phos"
     var watermarkDarkText: Bool = false       // false=白字，true=黑字（浅色画面用）
     var watermarkImagePath: String = ""       // 图片水印的本地路径（png 带透明最好）
     var watermarkPosition: String = "bottomRight"  // 九宫格：topLeft…bottomRight
@@ -521,14 +566,18 @@ struct ExportSettings: Codable, Equatable {
 
 // MARK: - 导出目录
 /// 导出 / 批量导出的默认落盘目录。
-/// 本机偏好写在 UserDefaults（`defaults write com.zeno.rawforge exportDirectory <路径>`），
+/// 本机偏好写在 UserDefaults（`defaults write com.zeno.phos exportDirectory <路径>`），
 /// 源码不含任何个人路径 —— 发到 GitHub 上就是通用逻辑，无需删改：
 /// 未配置时退回桌面。目录不存在会自动创建。
 enum ExportPaths {
     static let key = "exportDirectory"
+    private static let legacySuite = "com.zeno.rawforge"
 
     static var configured: String {
-        UserDefaults.standard.string(forKey: key) ?? ""
+        if let current = UserDefaults.standard.string(forKey: key), !current.isEmpty {
+            return current
+        }
+        return UserDefaults(suiteName: legacySuite)?.string(forKey: key) ?? ""
     }
 
     static var defaultDir: URL {
@@ -568,7 +617,7 @@ enum MergeMode: String, Codable, CaseIterable {
 // MARK: - 副档存档（非破坏编辑）
 struct Sidecar: Codable {
     var version: Int = 2
-    var app: String = "RawForge"
+    var app: String = "Phos"
     var params: EditParams
     var rating: Int = 0
     var picked: Bool = false
@@ -581,7 +630,7 @@ struct Sidecar: Codable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 1
-        app = try c.decodeIfPresent(String.self, forKey: .app) ?? "RawForge"
+        app = try c.decodeIfPresent(String.self, forKey: .app) ?? "Phos"
         params = try c.decode(EditParams.self, forKey: .params)
         rating = try c.decodeIfPresent(Int.self, forKey: .rating) ?? 0
         picked = try c.decodeIfPresent(Bool.self, forKey: .picked) ?? false

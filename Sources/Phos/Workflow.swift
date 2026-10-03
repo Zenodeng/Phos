@@ -53,8 +53,12 @@ struct MaskDragSession {
 enum MaskGeometry {
     enum Control { case move, linearStart, linearEnd, rotate, radialX, radialY, feather }
 
+    // 蒙版参数一律是 Double，而 CGPoint / CGSize 是 CGFloat。两者混算时 cos/sin/atan2
+    // 会同时匹配 CoreGraphics 的 CGFloat 版与 _math 的 Double 版，在完整 Xcode SDK 上
+    // 会报 “ambiguous use of 'cos'”（命令行工具 SDK 反而能过）。所以本模块内部一律
+    // 先转成 Double 计算，只在进出 CG* 的边界上转回 CGFloat。
     static func point(_ x: Double, _ y: Double, size: CGSize) -> CGPoint {
-        CGPoint(x: x * size.width, y: y * size.height)
+        CGPoint(x: CGFloat(x) * size.width, y: CGFloat(y) * size.height)
     }
     static func center(_ mask: Mask, size: CGSize) -> CGPoint {
         mask.kind == .linear
@@ -63,17 +67,18 @@ enum MaskGeometry {
     }
     static func angle(_ mask: Mask, size: CGSize) -> Double {
         if mask.kind == .radial { return mask.radialAngle }
-        return atan2((mask.y1 - mask.y0) * size.height, (mask.x1 - mask.x0) * size.width) * 180 / .pi
+        return atan2((mask.y1 - mask.y0) * Double(size.height),
+                     (mask.x1 - mask.x0) * Double(size.width)) * 180 / Double.pi
     }
     static func width(_ mask: Mask, size: CGSize) -> Double {
-        hypot((mask.x1 - mask.x0) * size.width, (mask.y1 - mask.y0) * size.height)
-            / max(min(size.width, size.height), 1)
+        hypot((mask.x1 - mask.x0) * Double(size.width), (mask.y1 - mask.y0) * Double(size.height))
+            / max(min(Double(size.width), Double(size.height)), 1)
     }
     static func radii(_ mask: Mask, size: CGSize) -> CGSize {
-        let base = max(min(size.width, size.height), 1)
+        let base = max(min(Double(size.width), Double(size.height)), 1)
         let outer = mask.gradientVersion == 1 ? 1 : 1 + mask.feather * 0.5
-        return CGSize(width: base * (mask.radiusX ?? mask.radius) * outer,
-                      height: base * (mask.radiusY ?? mask.radius) * outer)
+        return CGSize(width: CGFloat(base * (mask.radiusX ?? mask.radius) * outer),
+                      height: CGFloat(base * (mask.radiusY ?? mask.radius) * outer))
     }
     static func innerRatio(_ mask: Mask) -> Double {
         mask.gradientVersion == 1 ? 1 - mask.feather : (1 - mask.feather) / (1 + mask.feather * 0.5)
@@ -90,20 +95,21 @@ enum MaskGeometry {
         return result
     }
     static func rotatedPoint(center: CGPoint, x: Double, y: Double, angle: Double) -> CGPoint {
-        let a = angle * .pi / 180
-        return CGPoint(x: center.x + x * cos(a) - y * sin(a),
-                       y: center.y + x * sin(a) + y * cos(a))
+        let a = angle * Double.pi / 180
+        return CGPoint(x: center.x + CGFloat(x * cos(a) - y * sin(a)),
+                       y: center.y + CGFloat(x * sin(a) + y * cos(a)))
     }
     static func settingLinear(_ mask: Mask, width: Double? = nil, angle: Double? = nil,
                               size: CGSize) -> Mask {
         var result = mask
         let c = center(mask, size: size)
-        let a = (angle ?? Self.angle(mask, size: size)) * .pi / 180
-        let half = max(0.003, width ?? Self.width(mask, size: size)) * min(size.width, size.height) / 2
-        result.x0 = (c.x - half * cos(a)) / size.width
-        result.y0 = (c.y - half * sin(a)) / size.height
-        result.x1 = (c.x + half * cos(a)) / size.width
-        result.y1 = (c.y + half * sin(a)) / size.height
+        let a = (angle ?? Self.angle(mask, size: size)) * Double.pi / 180
+        let short = min(Double(size.width), Double(size.height))
+        let half = max(0.003, width ?? Self.width(mask, size: size)) * short / 2
+        result.x0 = (Double(c.x) - half * cos(a)) / Double(size.width)
+        result.y0 = (Double(c.y) - half * sin(a)) / Double(size.height)
+        result.x1 = (Double(c.x) + half * cos(a)) / Double(size.width)
+        result.y1 = (Double(c.y) + half * sin(a)) / Double(size.height)
         return result
     }
     private static func imagePoint(_ p: CGPoint, size: CGSize) -> CGPoint {
@@ -116,19 +122,20 @@ enum MaskGeometry {
         let end = imagePoint(end, size: size)
         var result = original
         result.gradientVersion = 1
+        let w = Double(size.width), h = Double(size.height)
         if original.kind == .linear {
-            var dx = end.x - start.x, dy = end.y - start.y
+            var dx = Double(end.x - start.x), dy = Double(end.y - start.y)
             if constrained {
                 let length = hypot(dx, dy)
-                let angle = (atan2(dy, dx) / (.pi / 4)).rounded() * (.pi / 4)
-                dx = cos(angle) * length; dy = sin(angle) * length
+                let snap = (atan2(dy, dx) / (Double.pi / 4)).rounded() * (Double.pi / 4)
+                dx = cos(snap) * length; dy = sin(snap) * length
             }
-            result.x0 = start.x / size.width; result.y0 = start.y / size.height
-            result.x1 = (start.x + dx) / size.width; result.y1 = (start.y + dy) / size.height
+            result.x0 = Double(start.x) / w; result.y0 = Double(start.y) / h
+            result.x1 = (Double(start.x) + dx) / w; result.y1 = (Double(start.y) + dy) / h
         } else {
-            result.x0 = start.x / size.width; result.y0 = start.y / size.height
-            let base = min(size.width, size.height)
-            var rx = abs(end.x - start.x) / base, ry = abs(end.y - start.y) / base
+            result.x0 = Double(start.x) / w; result.y0 = Double(start.y) / h
+            let base = min(w, h)
+            var rx = abs(Double(end.x - start.x)) / base, ry = abs(Double(end.y - start.y)) / base
             if constrained { rx = max(rx, ry); ry = rx }
             result.radiusX = min(max(rx, 0.003), 4)
             result.radiusY = min(max(ry, 0.003), 4)
@@ -141,36 +148,40 @@ enum MaskGeometry {
         let start = imagePoint(start, size: size)
         let end = imagePoint(end, size: size)
         var result = original
-        let dx = end.x - start.x, dy = end.y - start.y
+        // 手势坐标来自 CGPoint（CGFloat），蒙版参数一律是 Double。两边混算时 cos/sin 会同时
+        // 匹配 CoreGraphics 的 CGFloat 版和 _math 的 Double 版，在完整 Xcode SDK 上会报
+        // “ambiguous use of 'cos'”。所以这里先把像素量统一转成 Double 再算。
+        let dx = Double(end.x - start.x), dy = Double(end.y - start.y)
         let c = center(original, size: size)
         switch control {
         case .move:
             // Keep the shape intact at image edges; bounded off-canvas centers are useful for vignettes.
-            let tx = min(max(dx / size.width, -2 - original.x0), 3 - original.x0)
-            let ty = min(max(dy / size.height, -2 - original.y0), 3 - original.y0)
+            let tx = min(max(dx / Double(size.width), -2 - original.x0), 3 - original.x0)
+            let ty = min(max(dy / Double(size.height), -2 - original.y0), 3 - original.y0)
             result.x0 += tx; result.y0 += ty
             if original.kind == .linear { result.x1 += tx; result.y1 += ty }
         case .linearStart, .linearEnd:
-            let a = angle(original, size: size) * .pi / 180
+            let a = angle(original, size: size) * Double.pi / 180
             let projection = dx * cos(a) + dy * sin(a)
-            let shiftX = projection * cos(a) / size.width
-            let shiftY = projection * sin(a) / size.height
+            let shiftX = projection * cos(a) / Double(size.width)
+            let shiftY = projection * sin(a) / Double(size.height)
             if control == .linearStart { result.x0 += shiftX; result.y0 += shiftY }
             else { result.x1 += shiftX; result.y1 += shiftY }
             if width(result, size: size) < 0.003 { return original }
         case .rotate:
-            let initial = atan2(start.y - c.y, start.x - c.x)
-            let current = atan2(end.y - c.y, end.x - c.x)
-            var degrees = angle(original, size: size) + (current - initial) * 180 / .pi
+            let initial = atan2(Double(start.y - c.y), Double(start.x - c.x))
+            let current = atan2(Double(end.y - c.y), Double(end.x - c.x))
+            var degrees = angle(original, size: size) + (current - initial) * 180 / Double.pi
             if constrained { degrees = (degrees / 15).rounded() * 15 }
             if original.kind == .linear { result = settingLinear(original, angle: degrees, size: size) }
             else { result = ellipse(original); result.radialAngle = degrees }
         case .radialX, .radialY, .feather:
             result = ellipse(original)
-            let a = result.radialAngle * .pi / 180
-            let lx = (end.x - c.x) * cos(a) + (end.y - c.y) * sin(a)
-            let ly = -(end.x - c.x) * sin(a) + (end.y - c.y) * cos(a)
-            let base = min(size.width, size.height)
+            let a = result.radialAngle * Double.pi / 180
+            let ex = Double(end.x - c.x), ey = Double(end.y - c.y)
+            let lx = ex * cos(a) + ey * sin(a)
+            let ly = -ex * sin(a) + ey * cos(a)
+            let base = Double(min(size.width, size.height))
             if control == .radialX { result.radiusX = min(max(abs(lx) / base, 0.003), 4) }
             if control == .radialY { result.radiusY = min(max(abs(ly) / base, 0.003), 4) }
             if constrained, control != .feather {

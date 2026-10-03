@@ -24,6 +24,16 @@ First release under the new name: RawForge ships as **Phos**, plus a fix for mas
   - 用户仍可手动切换到画笔或擦除工具，但重新选中蒙版时会自动回到位置模式。
 - 清理蒙版叠加层的调试输出，发布版本不再向 stdout 打印诊断信息。
 
+### 2026-10-03 构建修复 / Build Fix
+
+- **修复 CI 构建失败**：蒙版参数一律是 `Double`，而 `CGPoint` / `CGSize` 是 `CGFloat`，
+  两者混算时 `cos` / `sin` / `atan2` 会同时匹配 `CoreGraphics` 的 `CGFloat` 版与 `_math` 的
+  `Double` 版，在完整 Xcode SDK 上报 `ambiguous use of 'cos'`
+  （本机 CommandLineTools SDK 不报，所以只在 CI 暴露）。
+- `MaskGeometry` 内部与 `MaskOverlay` 的手柄位置计算统一按 `Double` 计算，
+  只在进出 `CG*` 的边界转回 `CGFloat`；`.pi` 一律写 `Double.pi`。几何语义不变，
+  `Scripts/test_mask_drag.sh` 6 项结果与修改前逐位一致。
+
 ### 2026-10-01 品牌改名 / Rebrand
 
 - RawForge 更名为 **Phos**，更新界面、应用元数据、默认水印、构建产物和发布文件名。

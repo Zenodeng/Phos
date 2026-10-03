@@ -676,8 +676,8 @@ struct MaskOverlay: View {
     }
 
     private var linearGuides: some View {
-        let p0 = CGPoint(x: frame.width * mask.x0, y: frame.height * (1 - mask.y0))
-        let p1 = CGPoint(x: frame.width * mask.x1, y: frame.height * (1 - mask.y1))
+        let p0 = CGPoint(x: frame.width * CGFloat(mask.x0), y: frame.height * CGFloat(1 - mask.y0))
+        let p1 = CGPoint(x: frame.width * CGFloat(mask.x1), y: frame.height * CGFloat(1 - mask.y1))
         let c = CGPoint(x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2)
         let dx = p1.x - p0.x, dy = p1.y - p0.y
         let len = max(hypot(dx, dy), 1)
@@ -719,21 +719,26 @@ struct MaskOverlay: View {
                 .allowsHitTesting(false)
             Ellipse()
                 .stroke(Color.yellow.opacity(0.4), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
-                .frame(width: rx * 2 * MaskGeometry.innerRatio(mask), height: ry * 2 * MaskGeometry.innerRatio(mask))
+                .frame(width: rx * 2 * CGFloat(MaskGeometry.innerRatio(mask)),
+                       height: ry * 2 * CGFloat(MaskGeometry.innerRatio(mask)))
                 .rotationEffect(.degrees(-angle))
                 .position(c)
                 .allowsHitTesting(false)
             Handle(position: c, color: .yellow, size: 14, onMove: { start, end in
                 edit(.move, from: start, to: end)
             }, onEnd: { endDrag() })
-            let a = angle * .pi / 180
-            let xHandle = CGPoint(x: c.x + rx * cos(a), y: c.y - ry * sin(a))
-            let yHandle = CGPoint(x: c.x + rx * sin(a), y: c.y + ry * cos(a))
+            // angle 是 Double、rx/ry 是 CGFloat，混算会让 cos/sin 同时匹配
+            // CoreGraphics 的 CGFloat 版和 _math 的 Double 版，这里统一按 Double 算再转回。
+            let a = angle * Double.pi / 180
+            let rxD = Double(rx), ryD = Double(ry)
+            let xHandle = CGPoint(x: c.x + CGFloat(rxD * cos(a)), y: c.y - CGFloat(ryD * sin(a)))
+            let yHandle = CGPoint(x: c.x + CGFloat(rxD * sin(a)), y: c.y + CGFloat(ryD * cos(a)))
             Handle(position: xHandle, color: .yellow, size: 12,
                    onMove: { start, end in edit(.radialX, from: start, to: end) }, onEnd: { endDrag() })
             Handle(position: yHandle, color: .yellow, size: 12,
                    onMove: { start, end in edit(.radialY, from: start, to: end) }, onEnd: { endDrag() })
-            Handle(position: CGPoint(x: c.x + (rx + 24) * cos(a), y: c.y - (ry + 24) * sin(a)), color: .orange, size: 12,
+            Handle(position: CGPoint(x: c.x + CGFloat((rxD + 24) * cos(a)),
+                                     y: c.y - CGFloat((ryD + 24) * sin(a))), color: .orange, size: 12,
                    onMove: { start, end in edit(.rotate, from: start, to: end) },
                    onEnd: { endDrag() })
         }

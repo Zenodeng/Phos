@@ -1,3 +1,4 @@
 User-agent: *
 Allow: /
-Sitemap: https://zenodeng.github.io/Phos/sitemap.xml
+
+Sitemap: https://zenophos.dpdns.org/sitemap.xml

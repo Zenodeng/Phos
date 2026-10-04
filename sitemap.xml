@@ -1,26 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://zenodeng.github.io/Phos/</loc>
-    <lastmod>2026-09-30</lastmod>
-    <changefreq>weekly</changefreq>
+    <loc>https://zenophos.dpdns.org/</loc>
+    <changefreq>monthly</changefreq>
     <priority>1.0</priority>
-    <image:image>
-      <image:loc>https://zenodeng.github.io/Phos/images/01-workspace-dark.jpg</image:loc>
-      <image:title>RawForge 深色工作台界面</image:title>
-    </image:image>
-    <image:image>
-      <image:loc>https://zenodeng.github.io/Phos/images/02-workspace-light.jpg</image:loc>
-      <image:title>RawForge 浅色主题工作台</image:title>
-    </image:image>
-    <image:image>
-      <image:loc>https://zenodeng.github.io/Phos/images/03-inspector-detail.jpg</image:loc>
-      <image:title>RawForge 检视器面板细节</image:title>
-    </image:image>
-    <image:image>
-      <image:loc>https://zenodeng.github.io/Phos/images/04-export-dialog.jpg</image:loc>
-      <image:title>RawForge 导出面板</image:title>
-    </image:image>
   </url>
 </urlset>

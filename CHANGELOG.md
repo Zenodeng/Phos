@@ -17,6 +17,14 @@ First release under the new name: RawForge ships as **Phos**, plus a fix for mas
   重新计算，结果不再随鼠标事件密度变化。线性起/终点、中心移动、旋转柄、径向三手柄一并受益。
 - 新增 `Tools/MaskDragTest.swift` 与 `Scripts/test_mask_drag.sh`：纯几何回归测试，不需要照片素材。
 
+### 2026-10-04 径向蒙版旋转方向修复 / Radial Mask Rotation Direction Fix
+
+- **修复径向蒙版旋转柄方向反了的问题**：鼠标手势使用画布坐标（Y 轴向下），而蒙版的 `radialAngle`
+  使用图像坐标（Y 轴向上）；原先直接相减会把径向旋转方向翻转。现在径向旋转使用反向角度增量，
+  线性蒙版保持原有行为不变。
+- 回归测试新增径向旋转方向断言：从右侧控制点向左上拖 90° 时，内部角度为 `-90°`，
+  与画布上看到的旋转方向一致。
+
 ### 2026-10-03 蒙版交互完善 / Mask Interaction Refinements
 
 - **蒙版参考线显示逻辑优化**：选中线性或径向渐变蒙版时自动切换到位置调整模式（`.position`），确保控制点、参考线和旋转柄立即可见。

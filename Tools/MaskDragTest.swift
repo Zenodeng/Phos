@@ -87,7 +87,26 @@ struct MaskDragTest {
         let rot = MaskGeometry.dragging(base, control: .rotate, from: rotateGrab, to: rotateEnd, size: size)
         let rotAngle = MaskGeometry.angle(rot, size: size)
         check(abs(rotAngle - 90) < 0.5,
-              String(format: "旋转柄拖 90° 后角度正确：%.1f°", rotAngle))
+              String(format: "线性旋转柄拖 90° 后角度正确：%.1f°", rotAngle))
+
+        // 径向旋转柄使用画布坐标（Y 向下），而 radialAngle 使用图像坐标（Y 向上）。
+        // 画布里从右向上拖动时，内部角度应为 -90°，这样渲染出来的椭圆也向上转。
+        var radialRotation = Mask()
+        radialRotation.kind = .radial
+        radialRotation.gradientVersion = 1
+        radialRotation.x0 = 0.5; radialRotation.y0 = 0.5
+        radialRotation.radiusX = 0.2; radialRotation.radiusY = 0.12
+        radialRotation.radialAngle = 0
+        let radialCenter = CGPoint(x: size.width * radialRotation.x0,
+                                   y: size.height * (1 - radialRotation.y0))
+        let radialRotateGrab = CGPoint(x: radialCenter.x + 26, y: radialCenter.y)
+        let radialRotateEnd = CGPoint(x: radialCenter.x, y: radialCenter.y - 26)
+        let radialRotated = MaskGeometry.dragging(radialRotation, control: .rotate,
+                                                   from: radialRotateGrab, to: radialRotateEnd,
+                                                   size: size)
+        let radialAngle = MaskGeometry.angle(radialRotated, size: size)
+        check(abs(radialAngle + 90) < 0.5,
+              String(format: "径向旋转柄向左上拖 90° 方向正确：%.1f°", radialAngle))
 
         // 径向：拖到距圆心 240px 处，radiusX 应为 240 / min(800,600)
         var radial = Mask()

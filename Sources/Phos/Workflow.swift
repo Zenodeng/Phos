@@ -171,7 +171,10 @@ enum MaskGeometry {
         case .rotate:
             let initial = atan2(Double(start.y - c.y), Double(start.x - c.x))
             let current = atan2(Double(end.y - c.y), Double(end.x - c.x))
-            var degrees = angle(original, size: size) + (current - initial) * 180 / Double.pi
+            // 径向蒙版的旋转柄在画布坐标（Y 向下），而 radialAngle 是图像坐标（Y 向上）。
+            // 因此画布里的顺时针拖动对应图像角度的负增量，取反后才会和鼠标方向一致。
+            let delta = original.kind == .radial ? initial - current : current - initial
+            var degrees = angle(original, size: size) + delta * 180 / Double.pi
             if constrained { degrees = (degrees / 15).rounded() * 15 }
             if original.kind == .linear { result = settingLinear(original, angle: degrees, size: size) }
             else { result = ellipse(original); result.radialAngle = degrees }

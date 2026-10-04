@@ -445,9 +445,24 @@ footer a:hover{color:#fff}
                   <feFuncB type="table" id="cvB" tableValues="0 1"/>
                 </feComponentTransfer>
               </filter>
+              <!-- 颗粒：feTurbulence 生成噪点 -->
+              <filter id="grainFx" x="0" y="0" width="100%" height="100%"
+                      color-interpolation-filters="sRGB">
+                <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="7"/>
+                <feColorMatrix type="saturate" values="0"/>
+              </filter>
+              <!-- 暗角：中心透明、四角压暗 -->
+              <radialGradient id="vignetteGrad" cx="0.5" cy="0.48" r="0.72">
+                <stop offset="0.45" stop-color="#000000" stop-opacity="0"/>
+                <stop offset="1" stop-color="#000000" stop-opacity="0.85"/>
+              </radialGradient>
             </defs>
 
             <g clip-path="url(#frameClip)">
+              <!-- 色调曲线用 SVG 的 filter 属性挂在外层：
+                   CSS 的 filter 里混用函数与 url() 一旦 url 解析异常，
+                   整条声明会失效、画面完全不响应 —— 所以分成两层。 -->
+              <g filter="url(#curveFx)">
               <g id="sceneGroup">
                 <!-- 天空 -->
                 <rect x="0" y="0" width="1200" height="760" fill="url(#sky)"/>
@@ -498,6 +513,13 @@ footer a:hover{color:#fff}
                 <!-- 蒙版着色层（局部曝光） -->
                 <rect id="maskLayer" x="0" y="0" width="1200" height="760" fill="url(#maskGrad)" opacity="0" style="mix-blend-mode:screen;transition:opacity .3s ease"/>
               </g>
+              </g>
+
+              <!-- 颗粒与暗角：后期效果层，不参与上面的影调 / 色彩调整链 -->
+              <rect id="grainLayer" x="0" y="0" width="1200" height="760" filter="url(#grainFx)"
+                    opacity="0" style="mix-blend-mode:overlay;pointer-events:none;transition:opacity .25s ease"/>
+              <rect id="vignetteLayer" x="0" y="0" width="1200" height="760" fill="url(#vignetteGrad)"
+                    opacity="0" style="pointer-events:none;transition:opacity .25s ease"/>
 
               <!-- 蒙版参考线：线性为三线，径向为椭圆 -->
               <g id="guides" opacity="0" style="transition:opacity .28s ease">
@@ -898,6 +920,8 @@ footer a:hover{color:#fff}
   var cvR        = document.getElementById('cvR');
   var cvG        = document.getElementById('cvG');
   var cvB        = document.getElementById('cvB');
+  var grainLayer    = document.getElementById('grainLayer');
+  var vignetteLayer = document.getElementById('vignetteLayer');
   var histBox    = document.getElementById('hist');
   var badgeText  = document.getElementById('badgeText');
   var shown      = 'after';
@@ -1001,6 +1025,8 @@ footer a:hover{color:#fff}
     if (shown === 'before') {
       sceneGroup.style.filter = 'none';
       maskLayer.style.opacity = 0;
+      if (grainLayer)    grainLayer.setAttribute('opacity', '0');
+      if (vignetteLayer) vignetteLayer.setAttribute('opacity', '0');
       badgeText.textContent = '原图 · 未调整';
       return;
     }
@@ -1021,9 +1047,12 @@ footer a:hover{color:#fff}
       parts.push('hue-rotate(' + (fm.hue * strength).toFixed(2) + 'deg)');
       parts.push('brightness(' + mix(fm.bri).toFixed(3) + ')');
     }
-    // 色调曲线：SVG feComponentTransfer 查找表（由 drawCurve 实时写入）
-    parts.push('url(#curveFx)');
+    // 色调曲线改由外层 SVG 滤镜承担，这里不再往 CSS filter 里塞 url()
     sceneGroup.style.filter = parts.join(' ');
+
+    // 颗粒与暗角：后期层，直接改自身 opacity
+    if (grainLayer)    grainLayer.setAttribute('opacity',    (S.gr  / 100 * 0.30).toFixed(3));
+    if (vignetteLayer) vignetteLayer.setAttribute('opacity', (S.vig / 100 * 0.92).toFixed(3));
 
     // 局部蒙版的曝光只在该蒙版被选中时叠加
     maskLayer.style.opacity = guidesOn() ? Math.max(0, S.mExp / 100 * 0.85).toFixed(3) : '0';

@@ -382,7 +382,7 @@ footer a:hover{color:#fff}
     <div class="wrap">
       <p class="eyebrow">试一试</p>
       <h2>不用下载，先拖两下滑杆。</h2>
-      <p class="lead">下面是按 Phos 的渲染顺序做的一个演示：影调、色彩、胶片 CLUT、局部蒙版，参数与真实面板一一对应。画面是这个网页画的，但滑杆的手感是真的——拖动它，看着它变。</p>
+      <p class="lead">下面是按 Phos 的渲染顺序做的一个演示：影调、色彩、胶片 CLUT、局部蒙版，参数与真实面板一一对应。滑杆、色调曲线上的圆点、画面上的蒙版控制点，都可以直接拖，画面会实时跟着变。</p>
     </div>
 
     <div class="wide">
@@ -392,37 +392,6 @@ footer a:hover{color:#fff}
         <div class="stage" id="stage">
           <svg class="scene" viewBox="0 0 1200 760" preserveAspectRatio="xMidYMid slice" aria-label="演示用照片，会随右侧参数实时变化" role="img">
             <defs>
-              <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#0e2438"/>
-                <stop offset="0.34" stop-color="#3f5a75"/>
-                <stop offset="0.58" stop-color="#9a7a86"/>
-                <stop offset="0.76" stop-color="#d99361"/>
-                <stop offset="0.9" stop-color="#f0bc7d"/>
-                <stop offset="1" stop-color="#f8d9a9"/>
-              </linearGradient>
-              <radialGradient id="sunGlow" cx="0.5" cy="0.5" r="0.5">
-                <stop offset="0" stop-color="#fff2d0" stop-opacity="0.95"/>
-                <stop offset="0.35" stop-color="#ffcf8a" stop-opacity="0.5"/>
-                <stop offset="1" stop-color="#ff9f5a" stop-opacity="0"/>
-              </radialGradient>
-              <linearGradient id="farRidge" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#5c6b82"/>
-                <stop offset="1" stop-color="#38455a"/>
-              </linearGradient>
-              <linearGradient id="nearRidge" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#2b3648"/>
-                <stop offset="1" stop-color="#131a26"/>
-              </linearGradient>
-              <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#6d7f7a"/>
-                <stop offset="0.22" stop-color="#3d5f5c"/>
-                <stop offset="0.7" stop-color="#1d3a3c"/>
-                <stop offset="1" stop-color="#0d1c21"/>
-              </linearGradient>
-              <linearGradient id="field" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#3a3a24"/>
-                <stop offset="1" stop-color="#14140d"/>
-              </linearGradient>
               <!-- 蒙版：从暖到透明，用来做局部曝光 -->
               <linearGradient id="maskGrad" gradientUnits="userSpaceOnUse" x1="240" y1="560" x2="900" y2="220">
                 <stop offset="0" stop-color="#ffd9a0" stop-opacity="0"/>
@@ -464,52 +433,9 @@ footer a:hover{color:#fff}
                    整条声明会失效、画面完全不响应 —— 所以分成两层。 -->
               <g filter="url(#curveFx)">
               <g id="sceneGroup">
-                <!-- 天空 -->
-                <rect x="0" y="0" width="1200" height="760" fill="url(#sky)"/>
-                <!-- 云带 -->
-                <g opacity="0.5">
-                  <ellipse cx="300" cy="150" rx="320" ry="34" fill="#e9dfe2" opacity="0.28"/>
-                  <ellipse cx="820" cy="105" rx="260" ry="26" fill="#e9dfe2" opacity="0.22"/>
-                  <ellipse cx="600" cy="240" rx="420" ry="30" fill="#f3d7bb" opacity="0.22"/>
-                  <ellipse cx="980" cy="290" rx="300" ry="22" fill="#f7c898" opacity="0.2"/>
-                </g>
-                <!-- 太阳 -->
-                <circle cx="850" cy="352" r="150" fill="url(#sunGlow)"/>
-                <circle cx="850" cy="352" r="34" fill="#fff0cf" opacity="0.92"/>
-                <!-- 远山 -->
-                <path d="M0 430 L120 372 L214 408 L330 340 L430 396 L540 352 L648 404 L760 358 L880 410 L990 372 L1100 414 L1200 380 L1200 470 L0 470 Z" fill="url(#farRidge)" opacity="0.85"/>
-                <!-- 雾带 -->
-                <rect x="0" y="404" width="1200" height="46" fill="#cfd8e2" opacity="0.16"/>
-                <!-- 近山 -->
-                <path d="M0 470 L150 418 L260 458 L400 400 L520 452 L660 410 L800 462 L940 424 L1080 468 L1200 436 L1200 520 L0 520 Z" fill="url(#nearRidge)"/>
-                <!-- 水面 -->
-                <rect x="0" y="500" width="1200" height="180" fill="url(#water)"/>
-                <!-- 水面反光 -->
-                <rect x="790" y="500" width="120" height="180" fill="#ffd9a0" opacity="0.2"/>
-                <g opacity="0.24">
-                  <rect x="120" y="540" width="150" height="2" rx="1" fill="#cfe0dc"/>
-                  <rect x="330" y="566" width="210" height="2" rx="1" fill="#cfe0dc"/>
-                  <rect x="180" y="600" width="170" height="2" rx="1" fill="#cfe0dc"/>
-                  <rect x="520" y="626" width="240" height="2" rx="1" fill="#cfe0dc"/>
-                  <rect x="90" y="656" width="200" height="2" rx="1" fill="#cfe0dc"/>
-                </g>
-                <!-- 前景田野 -->
-                <path d="M0 620 C 180 596, 380 640, 600 618 C 820 596, 1010 646, 1200 614 L1200 760 L0 760 Z" fill="url(#field)"/>
-                <!-- 孤树 -->
-                <g fill="#0a0a06">
-                  <path d="M296 700 L302 640 L308 700 Z"/>
-                  <ellipse cx="302" cy="626" rx="46" ry="30"/>
-                  <ellipse cx="272" cy="640" rx="26" ry="18"/>
-                  <ellipse cx="332" cy="636" rx="28" ry="19"/>
-                </g>
-                <!-- 草穗 -->
-                <g stroke="#8a8a5c" stroke-width="1.2" opacity="0.4" stroke-linecap="round">
-                  <path d="M120 720 q 6 -34 20 -48"/>
-                  <path d="M180 736 q 4 -30 16 -44"/>
-                  <path d="M980 726 q -6 -32 -18 -46"/>
-                  <path d="M1060 742 q -4 -28 -16 -42"/>
-                  <path d="M760 748 q 5 -26 16 -38"/>
-                </g>
+                <!-- 演示用照片：AI 生成，无水印 -->
+                <image href="images/demo-scene.jpg" x="0" y="0" width="1200" height="760"
+                       preserveAspectRatio="xMidYMid slice"/>
                 <!-- 蒙版着色层（局部曝光） -->
                 <rect id="maskLayer" x="0" y="0" width="1200" height="760" fill="url(#maskGrad)" opacity="0" style="mix-blend-mode:screen;transition:opacity .3s ease"/>
               </g>
@@ -1061,6 +987,18 @@ footer a:hover{color:#fff}
   }
 
   /* ---------- 控件绑定 ---------- */
+  /* 拖动滑杆时 input 事件触发极密，每次都重建 9 个曲线控制点 + 重算直方图 + 重设滤镜
+     会明显卡顿。用 rAF 合并成每帧一次。 */
+  var rafPending = false;
+  function scheduleRender(){
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(function(){
+      rafPending = false;
+      drawHist(); drawCurve(); render();
+    });
+  }
+
   function bind(id, key, out, fmt){
     var el = document.getElementById(id), o = document.getElementById(out);
     if (!el) return;
@@ -1070,7 +1008,9 @@ footer a:hover{color:#fff}
       else if (key === 'mFe') o.textContent = (S.mFe / 100).toFixed(2);
       else if (key === 'exp') o.textContent = (S.exp >= 0 ? '+' : '−') + Math.abs(S.exp / 100).toFixed(2);
       else o.textContent = (S[key] > 0 ? '+' : S[key] < 0 ? '−' : '') + Math.abs(Math.round(S[key]));
-      drawHist(); drawCurve(); render();
+      // 停在「原图」时拖滑杆会自动切回「已调整」，否则用户会以为滑杆坏了
+      if (shown === 'before') setCompareState('after');
+      scheduleRender();
     }
     el.addEventListener('input', apply);
     apply();
@@ -1100,14 +1040,14 @@ footer a:hover{color:#fff}
       // 让「总曲线」落在手指/鼠标位置：手动值 = 目标值 - 滑杆贡献
       curvePts[cvDrag] = Math.max(0, Math.min(1, p.v - curveSliders(cvDrag / (CVN - 1))));
       if (curveSvg.setPointerCapture) curveSvg.setPointerCapture(ev.pointerId);
-      drawCurve(); render();
+      scheduleRender();
       ev.preventDefault();
     });
     curveSvg.addEventListener('pointermove', function(ev){
       if (cvDrag < 0) return;
       var p = cvLocal(ev);
       curvePts[cvDrag] = Math.max(0, Math.min(1, p.v - curveSliders(cvDrag / (CVN - 1))));
-      drawCurve(); render();
+      scheduleRender();
       ev.preventDefault();
     });
     function cvEnd(ev){
@@ -1121,7 +1061,7 @@ footer a:hover{color:#fff}
     curveSvg.addEventListener('pointercancel', function(){ cvDrag = -1; });
     curveSvg.addEventListener('dblclick', function(){        // 双击复位
       for (var k = 0; k < CVN; k++) curvePts[k] = k / (CVN - 1);
-      drawCurve(); render();
+      scheduleRender();
     });
   }
 
@@ -1150,24 +1090,35 @@ footer a:hover{color:#fff}
 
   /* ---------- 前后对比 ---------- */
   var bAfter = document.getElementById('btnAfter'), bBefore = document.getElementById('btnBefore');
-  function setCompare(which){
+  function setCompareState(which){          // 只改状态与按钮外观，不触发渲染
     shown = which;
     bAfter.setAttribute('aria-pressed', String(which === 'after'));
     bBefore.setAttribute('aria-pressed', String(which === 'before'));
-    render();
   }
-  bAfter.addEventListener('click', function(){ setCompare('after'); });
-  bBefore.addEventListener('click', function(){ setCompare('before'); });
-  // 按住空格临时看原图
-  var spaceDown = false;
+  function setCompare(which){ setCompareState(which); render(); }
+  bAfter.addEventListener('click', function(){ spacePeek = false; setCompare('after'); });
+  bBefore.addEventListener('click', function(){ spacePeek = false; setCompare('before'); });
+
+  /* 按住空格临时看原图。
+     ⚠️ 只靠 keyup 复位会卡死：切窗口 / 失焦 / 切标签页时 keyup 收不到，
+        shown 会永远停在 'before'，表现就是「拖滑杆画面完全没反应」。
+        所以额外用 blur 与 visibilitychange 兜底。 */
+  var spaceDown = false, spacePeek = false;
+  function endSpacePeek(){
+    if (!spaceDown && !spacePeek) return;
+    spaceDown = false;
+    if (spacePeek) { spacePeek = false; setCompare('after'); }
+  }
   window.addEventListener('keydown', function(ev){
     if (ev.code === 'Space' && !spaceDown && document.activeElement.tagName !== 'INPUT') {
-      spaceDown = true; setCompare('before'); ev.preventDefault();
+      spaceDown = true; spacePeek = true; setCompare('before'); ev.preventDefault();
     }
   });
   window.addEventListener('keyup', function(ev){
-    if (ev.code === 'Space' && spaceDown) { spaceDown = false; setCompare('after'); }
+    if (ev.code === 'Space') endSpacePeek();
   });
+  window.addEventListener('blur', endSpacePeek);
+  document.addEventListener('visibilitychange', function(){ if (document.hidden) endSpacePeek(); });
 
   /* =========================================================
      蒙版：线性 = 三条参考线；径向 = 椭圆 + 羽化内圈

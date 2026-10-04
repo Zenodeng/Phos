@@ -50,7 +50,7 @@ body{
   font-size:17px;line-height:1.47;letter-spacing:-.022em;
   color:var(--ink);background:#fff;-webkit-font-smoothing:antialiased;
 }
-img{max-width:100%;display:block}
+img{max-width:100%;height:auto;display:block}
 a{text-decoration:none}
 .wrap{max-width:980px;margin:0 auto;padding:0 24px}
 .wide{max-width:1200px;margin:0 auto;padding:0 24px}
@@ -115,7 +115,7 @@ a:focus-visible,.btn:focus-visible{outline:2px solid var(--gold);outline-offset:
 .stat span{display:block;margin-top:4px;font-size:12px;letter-spacing:-.01em;color:var(--w-56)}
 
 /* ---------- shots ---------- */
-.shot{width:100%;border-radius:12px;box-shadow:var(--shadow)}
+.shot{width:100%;height:auto;border-radius:12px;box-shadow:var(--shadow)}
 .dark .shot{box-shadow:var(--shadow),0 0 0 1px rgba(255,255,255,.08)}
 .light .shot{box-shadow:var(--shadow),0 0 0 1px rgba(0,0,0,.06)}
 
@@ -147,8 +147,8 @@ figcaption .d{font-size:15px;line-height:1.5;letter-spacing:-.016em;margin-top:8
 .feat p{font-size:15px;line-height:1.5;letter-spacing:-.016em;color:var(--ink-80)}
 
 /* ---------- install ---------- */
-.install-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-top:56px}
-.install-grid figure figcaption{font-size:13px;line-height:1.45;color:var(--w-56);margin-top:14px}
+.install-shots{display:flex;flex-direction:column;gap:56px;margin-top:56px}
+.install-shots figcaption{font-size:14px;line-height:1.5;letter-spacing:-.016em;color:var(--w-56);margin-top:16px}
 .steps{counter-reset:s;margin-top:64px;display:grid;gap:2px}
 .step{counter-increment:s;display:flex;gap:20px;padding:26px 0;border-top:1px solid rgba(255,255,255,.1)}
 .step::before{content:counter(s,decimal-leading-zero);font-size:13px;font-weight:600;letter-spacing:.06em;color:var(--gold-glow);flex:none;padding-top:4px;font-variant-numeric:tabular-nums}
@@ -266,7 +266,7 @@ footer a:hover{color:#fff}
           </figcaption>
         </figure>
         <figure class="rv">
-          <img class="shot" src="images/04-export-dialog.jpg" width="1920" height="1207" loading="lazy" alt="Phos 导出面板：格式与位深、色彩空间、长边缩放、水印叠加与导出目录设置">
+          <img class="shot" src="images/04-export-dialog.jpg" width="2200" height="1375" loading="lazy" alt="Phos 导出面板：格式与位深、色彩空间、长边缩放、水印叠加与导出目录设置">
           <figcaption>
             <div class="t">专业导出</div>
             <div class="d">8 位与 16 位 TIFF 多色域输出，长边缩放，文字与图片水印九宫格叠加，可固定导出目录。</div>
@@ -346,16 +346,20 @@ footer a:hover{color:#fff}
       <p class="eyebrow">安装</p>
       <h2>四步就能开始修图。</h2>
       <p class="lead">Phos 目前没有做 Apple 公证，所以首次打开需要手动放行一次，之后不会再问。这是 macOS 对所有未公证应用的统一处理，不是 Phos 独有的问题。</p>
-      <div class="install-grid">
+    </div>
+    <div class="wide">
+      <div class="install-shots">
         <figure class="rv">
-          <img class="shot" src="images/09-gatekeeper-dialog.jpg" width="1920" height="1207" loading="lazy" alt="macOS 弹窗提示无法打开 Phos，因为 Apple 无法检查其是否包含恶意软件，弹窗中提供「打开」按钮">
-          <figcaption>右键点图标选「打开」，弹窗里再点一次「打开」。</figcaption>
+          <img class="shot" src="images/09-gatekeeper-dialog.jpg" width="3024" height="1572" loading="lazy" alt="macOS 弹窗提示无法打开 Phos，因为 Apple 无法检查其是否包含恶意软件，弹窗中提供「完成」与「移到废纸篓」按钮">
+          <figcaption>右键点图标选「打开」，弹窗里再点一次「打开」。图中是 macOS 的「无法验证开发者」提示。</figcaption>
         </figure>
         <figure class="rv">
-          <img class="shot" src="images/10-system-settings-open-anyway.jpg" width="1920" height="1207" loading="lazy" alt="系统设置中的隐私与安全性面板，在安全性一栏显示 Phos 已被阻止，右侧有「仍要打开」按钮">
+          <img class="shot" src="images/10-system-settings-open-anyway.jpg" width="1920" height="998" loading="lazy" alt="系统设置中的隐私与安全性面板，在安全性一栏显示 Phos 已被阻止，右侧有「仍要打开」按钮">
           <figcaption>如果已经双击过，也可以到「系统设置 → 隐私与安全性」点「仍要打开」。</figcaption>
         </figure>
       </div>
+    </div>
+    <div class="wrap">
       <div class="steps">
         <div class="step rv">
           <div>

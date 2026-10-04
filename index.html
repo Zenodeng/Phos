@@ -37,32 +37,40 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
   --gold-ink:#7A6238;
   --gold-glow:#E3CB9E;
   --black:#000;
+  --near:#0b0b0c;
   --light:#f5f5f7;
   --ink:#1d1d1f;
   --ink-80:rgba(0,0,0,.8);
+  --ink-64:rgba(0,0,0,.64);
   --ink-48:rgba(0,0,0,.48);
   --w-80:rgba(255,255,255,.8);
   --w-56:rgba(255,255,255,.56);
+  --w-32:rgba(255,255,255,.32);
   --shadow:0 3px 30px rgba(0,0,0,.22);
+  --shadow-lg:0 40px 100px -20px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.07);
+  --ease:cubic-bezier(.16,1,.3,1);
 }
 body{
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","PingFang SC","Helvetica Neue",Helvetica,Arial,sans-serif;
   font-size:17px;line-height:1.47;letter-spacing:-.022em;
   color:var(--ink);background:#fff;-webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
 }
 img{max-width:100%;height:auto;display:block}
-a{text-decoration:none}
+a{text-decoration:none;color:inherit}
 .light p a{color:var(--gold-ink);text-decoration:underline;text-underline-offset:3px}
 .dark p a{color:var(--gold-glow);text-decoration:underline;text-underline-offset:3px}
 .wrap{max-width:980px;margin:0 auto;padding:0 24px}
 .wide{max-width:1200px;margin:0 auto;padding:0 24px}
+.narrow{max-width:760px;margin:0 auto;padding:0 24px}
 
 /* ---------- nav ---------- */
 .nav{
   position:sticky;top:0;z-index:100;height:48px;
-  background:rgba(0,0,0,.8);
+  background:rgba(0,0,0,.72);
   -webkit-backdrop-filter:saturate(180%) blur(20px);
   backdrop-filter:saturate(180%) blur(20px);
+  transition:background-color .3s ease;
 }
 .nav .inner{max-width:1024px;margin:0 auto;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;gap:20px}
 .nav .brand{display:flex;align-items:center;gap:7px;color:#fff;font-size:15px;font-weight:600;letter-spacing:-.01em;flex:none}
@@ -75,7 +83,7 @@ a{text-decoration:none}
 .nav .act a:hover{color:#fff}
 
 /* ---------- sections ---------- */
-section{padding:120px 0}
+section{padding:130px 0}
 .dark{background:var(--black);color:#fff}
 .light{background:var(--light);color:var(--ink)}
 .eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px}
@@ -97,22 +105,34 @@ h3{font-size:21px;font-weight:600;line-height:1.19;letter-spacing:-.012em;margin
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   font-size:17px;font-weight:400;line-height:1;letter-spacing:-.022em;
   padding:13px 24px;border-radius:8px;border:1px solid transparent;
-  cursor:pointer;transition:background-color .2s ease,border-color .2s ease,color .2s ease;
+  cursor:pointer;transition:background-color .2s ease,border-color .2s ease,color .2s ease,transform .2s var(--ease);
 }
+.btn:active{transform:scale(.975)}
 .btn-primary{background:var(--gold);color:#000}
 .btn-primary:hover{background:var(--gold-hi)}
-.btn-outline-d{background:transparent;color:#fff;border-color:rgba(255,255,255,.32)}
+.btn-outline-d{background:transparent;color:#fff;border-color:var(--w-32)}
 .btn-outline-d:hover{border-color:#fff;background:rgba(255,255,255,.08)}
 .btn-outline-l{background:transparent;color:var(--ink);border-color:rgba(0,0,0,.24)}
 .btn-outline-l:hover{border-color:var(--ink);background:rgba(0,0,0,.04)}
-a:focus-visible,.btn:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:8px}
+a:focus-visible,.btn:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:8px}
 
 /* ---------- hero ---------- */
-.hero{padding:96px 0 0;text-align:center;overflow:hidden}
+.hero{padding:104px 0 0;text-align:center;overflow:hidden;position:relative}
+.hero::after{
+  content:"";position:absolute;left:50%;top:8%;transform:translateX(-50%);
+  width:1100px;height:1100px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(201,168,118,.13),transparent 62%);
+  filter:blur(30px);
+}
+.hero .wrap{position:relative;z-index:1}
+.hero h1{
+  background:linear-gradient(180deg,#fff 20%,rgba(255,255,255,.62) 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
 .hero .subhead{margin-top:20px}
 .hero .lead{margin:18px auto 0}
-.hero-shot{margin-top:64px}
-.stats{display:flex;flex-wrap:wrap;justify-content:center;gap:20px 56px;padding:56px 0 8px}
+.hero-shot{margin-top:72px;position:relative;z-index:1}
+.stats{display:flex;flex-wrap:wrap;justify-content:center;gap:20px 56px;padding:60px 0 8px}
 .stat b{display:block;font-size:24px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:#fff}
 .stat span{display:block;margin-top:4px;font-size:12px;letter-spacing:-.01em;color:var(--w-56)}
 
@@ -121,10 +141,103 @@ a:focus-visible,.btn:focus-visible{outline:2px solid var(--gold);outline-offset:
 .dark .shot{box-shadow:var(--shadow),0 0 0 1px rgba(255,255,255,.08)}
 .light .shot{box-shadow:var(--shadow),0 0 0 1px rgba(0,0,0,.06)}
 
+/* ---------- live demo ---------- */
+.demo-intro{padding:120px 0 0}
+.demo{
+  margin-top:64px;border-radius:20px;overflow:hidden;
+  background:#131315;box-shadow:var(--shadow-lg);
+  display:grid;grid-template-columns:minmax(0,1fr) 340px;
+}
+.stage{position:relative;background:#08080a;min-height:460px;overflow:hidden;touch-action:none}
+.stage svg.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
+.stage .badge{
+  position:absolute;left:16px;bottom:16px;z-index:3;
+  display:flex;align-items:center;gap:7px;padding:6px 11px;border-radius:980px;
+  background:rgba(0,0,0,.62);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  color:var(--w-80);font-size:11px;letter-spacing:-.01em;font-variant-numeric:tabular-nums;
+}
+.stage .badge i{width:6px;height:6px;border-radius:50%;background:#4ad07a;flex:none;font-style:normal}
+.stage .cmp{
+  position:absolute;right:16px;top:16px;z-index:3;display:flex;padding:3px;gap:2px;
+  border-radius:9px;background:rgba(0,0,0,.62);
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+}
+.stage .cmp button{
+  appearance:none;border:0;background:transparent;color:var(--w-56);
+  font:inherit;font-size:11.5px;letter-spacing:-.01em;padding:5px 11px;border-radius:6px;cursor:pointer;
+  transition:background-color .18s ease,color .18s ease;
+}
+.stage .cmp button[aria-pressed="true"]{background:rgba(255,255,255,.14);color:#fff}
+
+.panel{background:#151517;border-left:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column}
+.panel .tabs{display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,.07)}
+.panel .tabs button{
+  flex:1;appearance:none;border:0;background:transparent;cursor:pointer;
+  color:var(--w-56);font:inherit;font-size:11.5px;letter-spacing:-.01em;
+  padding:14px 4px 12px;border-bottom:2px solid transparent;transition:color .18s ease,border-color .18s ease;
+}
+.panel .tabs button[aria-selected="true"]{color:#fff;border-bottom-color:var(--gold)}
+.panel .body{padding:18px 18px 22px;flex:1;overflow-y:auto}
+.pane{display:none}
+.pane.on{display:block}
+
+.ctrl{display:grid;grid-template-columns:52px 1fr 40px;align-items:center;gap:10px;margin-bottom:2px}
+.ctrl label{font-size:11.5px;color:var(--w-56);letter-spacing:-.01em}
+.ctrl output{
+  font-size:11.5px;color:#fff;text-align:right;
+  font-variant-numeric:tabular-nums;font-family:"SF Mono",ui-monospace,Menlo,monospace;
+}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;cursor:pointer;display:block;
+}
+input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:2px;background:rgba(255,255,255,.16)}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--gold);border:2px solid #fff;margin-top:-5.5px;
+  box-shadow:0 1px 4px rgba(0,0,0,.5);transition:transform .15s var(--ease);
+}
+input[type=range]:active::-webkit-slider-thumb{transform:scale(1.18)}
+input[type=range]::-moz-range-track{height:3px;border-radius:2px;background:rgba(255,255,255,.16)}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--gold);border:2px solid #fff}
+.sep{height:1px;background:rgba(255,255,255,.07);margin:16px 0}
+.pane h4{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--w-56);margin-bottom:12px}
+
+.films{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.films button{
+  appearance:none;font:inherit;cursor:pointer;text-align:left;
+  background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);
+  border-radius:10px;padding:11px 12px;color:var(--w-80);
+  transition:background-color .18s ease,border-color .18s ease,color .18s ease;
+}
+.films button b{display:block;font-size:12px;font-weight:600;letter-spacing:-.01em;color:#fff}
+.films button span{display:block;margin-top:3px;font-size:10px;color:var(--w-56);letter-spacing:-.01em}
+.films button[aria-pressed="true"]{background:rgba(201,168,118,.16);border-color:rgba(201,168,118,.55)}
+.films button[aria-pressed="true"] b{color:var(--gold-glow)}
+
+.masklist{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
+.maskrow{
+  display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:9px;
+  background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);
+  font-size:11.5px;color:var(--w-80);cursor:pointer;transition:border-color .18s ease,background-color .18s ease;
+}
+.maskrow[aria-pressed="true"]{background:rgba(201,168,118,.14);border-color:rgba(201,168,118,.5);color:#fff}
+.maskrow .g{width:7px;height:7px;border-radius:50%;background:var(--gold);flex:none}
+.maskrow em{margin-left:auto;font-style:normal;font-size:10px;color:var(--w-56)}
+.hint{
+  font-size:10.5px;line-height:1.5;color:var(--w-56);letter-spacing:-.01em;
+  padding:10px 11px;border-radius:9px;background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.07);
+}
+
+.hist{display:flex;align-items:flex-end;gap:1px;height:56px;margin-bottom:6px}
+.hist i{flex:1;background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(255,255,255,.28));border-radius:1px 1px 0 0;transition:height .22s var(--ease)}
+.curve-box{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:8px}
+.curve-box svg{display:block;width:100%;height:110px}
+
 /* ---------- tiles ---------- */
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(272px,1fr));gap:20px;margin-top:56px}
 .tile{background:#fff;border-radius:12px;padding:34px 30px}
-.dark .tile{background:#161617}
+.dark .tile{background:#141416;border:1px solid rgba(255,255,255,.07)}
 .tile p{font-size:15px;line-height:1.5;letter-spacing:-.016em}
 .light .tile p{color:var(--ink-80)}
 .dark .tile p{color:var(--w-80)}
@@ -148,6 +261,13 @@ figcaption .d{font-size:15px;line-height:1.5;letter-spacing:-.016em;margin-top:8
 .feat .ico svg{width:17px;height:17px;stroke:var(--gold-ink);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .feat p{font-size:15px;line-height:1.5;letter-spacing:-.016em;color:var(--ink-80)}
 
+/* ---------- mask anatomy ---------- */
+.anatomy{margin-top:64px;background:#141416;border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:8px}
+.anatomy svg{display:block;width:100%;height:auto;border-radius:14px}
+.legend{display:flex;flex-wrap:wrap;gap:14px 30px;padding:22px 22px 14px}
+.legend div{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--w-80);letter-spacing:-.01em}
+.legend i{width:11px;height:11px;border-radius:50%;border:2px solid #fff;flex:none;font-style:normal}
+
 /* ---------- install ---------- */
 .install-shots{display:flex;flex-direction:column;gap:56px;margin-top:56px}
 .install-shots figcaption{font-size:14px;line-height:1.5;letter-spacing:-.016em;color:var(--w-56);margin-top:16px}
@@ -159,7 +279,7 @@ figcaption .d{font-size:15px;line-height:1.5;letter-spacing:-.016em;margin-top:8
 code{font-family:"SF Mono",ui-monospace,Menlo,Monaco,monospace;font-size:13px;background:rgba(255,255,255,.1);border-radius:6px;padding:3px 8px;letter-spacing:0;word-break:break-all}
 
 /* ---------- download ---------- */
-.dl{padding:140px 0}
+.dl{padding:150px 0}
 .dl .note{font-size:13px;line-height:1.5;letter-spacing:-.012em;margin-top:24px;color:var(--ink-48)}
 .channels{max-width:620px;margin:56px auto 0;text-align:left}
 .channels h3{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-48);margin-bottom:8px}
@@ -179,31 +299,39 @@ footer a{color:var(--w-80)}
 footer a:hover{color:#fff}
 
 /* ---------- reveal ---------- */
-.rv{opacity:0;transform:translateY(24px);transition:opacity .8s cubic-bezier(.16,1,.3,1),transform .8s cubic-bezier(.16,1,.3,1)}
+.rv{opacity:0;transform:translateY(24px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
 .rv.in{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   .rv{opacity:1;transform:none;transition:none}
+  .hist i{transition:none}
 }
 
 /* ---------- responsive ---------- */
-@media (max-width:900px){
+@media (max-width:960px){
   .nav .links{display:none}
-  section{padding:88px 0}
-  .hero{padding:72px 0 0}
+  section{padding:92px 0}
+  .hero{padding:76px 0 0}
   .gal{gap:64px;margin-top:52px}
+  .demo{grid-template-columns:1fr}
+  .panel{border-left:0;border-top:1px solid rgba(255,255,255,.07)}
+  .stage{min-height:340px}
+  .legend{padding:18px 16px 10px;gap:12px 20px}
 }
 @media (max-width:600px){
   body{font-size:16px}
-  .wrap,.wide{padding:0 20px}
-  section{padding:72px 0}
-  .dl{padding:96px 0}
+  .wrap,.wide,.narrow{padding:0 20px}
+  section{padding:76px 0}
+  .dl{padding:100px 0}
   .stats{gap:24px 32px;padding:44px 0 0}
   .stat b{font-size:20px}
   .btnrow{flex-direction:column;align-items:stretch}
   .btn{width:100%}
   .tiles,.feats{gap:16px;margin-top:40px}
   .tile,.feat{padding:26px 22px}
+  .films{grid-template-columns:1fr}
+  .stage{min-height:260px}
+  .ctrl{grid-template-columns:46px 1fr 36px;gap:8px}
 }
 </style>
 </head>
@@ -213,6 +341,7 @@ footer a:hover{color:#fff}
   <div class="inner">
     <a class="brand" href="#top"><span class="dot"></span>Phos</a>
     <div class="links">
+      <a href="#studio">试一试</a>
       <a href="#gallery">界面演示</a>
       <a href="#design">设计语言</a>
       <a href="#features">功能</a>
@@ -248,6 +377,249 @@ footer a:hover{color:#fff}
     </div>
   </header>
 
+  <!-- ================= 实时试用 ================= -->
+  <section id="studio" class="dark demo-intro">
+    <div class="wrap">
+      <p class="eyebrow">试一试</p>
+      <h2>不用下载，先拖两下滑杆。</h2>
+      <p class="lead">下面是按 Phos 的渲染顺序做的一个演示：影调、色彩、胶片 CLUT、局部蒙版，参数与真实面板一一对应。画面是这个网页画的，但滑杆的手感是真的——拖动它，看着它变。</p>
+    </div>
+
+    <div class="wide">
+      <div class="demo rv">
+
+        <!-- 画布 -->
+        <div class="stage" id="stage">
+          <svg class="scene" viewBox="0 0 1200 760" preserveAspectRatio="xMidYMid slice" aria-label="演示用照片，会随右侧参数实时变化" role="img">
+            <defs>
+              <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#0e2438"/>
+                <stop offset="0.34" stop-color="#3f5a75"/>
+                <stop offset="0.58" stop-color="#9a7a86"/>
+                <stop offset="0.76" stop-color="#d99361"/>
+                <stop offset="0.9" stop-color="#f0bc7d"/>
+                <stop offset="1" stop-color="#f8d9a9"/>
+              </linearGradient>
+              <radialGradient id="sunGlow" cx="0.5" cy="0.5" r="0.5">
+                <stop offset="0" stop-color="#fff2d0" stop-opacity="0.95"/>
+                <stop offset="0.35" stop-color="#ffcf8a" stop-opacity="0.5"/>
+                <stop offset="1" stop-color="#ff9f5a" stop-opacity="0"/>
+              </radialGradient>
+              <linearGradient id="farRidge" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#5c6b82"/>
+                <stop offset="1" stop-color="#38455a"/>
+              </linearGradient>
+              <linearGradient id="nearRidge" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#2b3648"/>
+                <stop offset="1" stop-color="#131a26"/>
+              </linearGradient>
+              <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#6d7f7a"/>
+                <stop offset="0.22" stop-color="#3d5f5c"/>
+                <stop offset="0.7" stop-color="#1d3a3c"/>
+                <stop offset="1" stop-color="#0d1c21"/>
+              </linearGradient>
+              <linearGradient id="field" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#3a3a24"/>
+                <stop offset="1" stop-color="#14140d"/>
+              </linearGradient>
+              <!-- 蒙版：从暖到透明，用来做局部曝光 -->
+              <linearGradient id="maskGrad" gradientUnits="userSpaceOnUse" x1="240" y1="560" x2="900" y2="220">
+                <stop offset="0" stop-color="#ffd9a0" stop-opacity="0"/>
+                <stop offset="0.5" stop-color="#ffd9a0" stop-opacity="0.26"/>
+                <stop offset="1" stop-color="#ffd9a0" stop-opacity="0.52"/>
+              </linearGradient>
+              <!-- 径向蒙版：中心亮、向外衰减 -->
+              <radialGradient id="maskRadialGrad" gradientUnits="userSpaceOnUse" cx="552" cy="350" r="300">
+                <stop offset="0" stop-color="#ffd9a0" stop-opacity="0.5"/>
+                <stop offset="0.62" stop-color="#ffd9a0" stop-opacity="0.3"/>
+                <stop offset="1" stop-color="#ffd9a0" stop-opacity="0"/>
+              </radialGradient>
+              <clipPath id="frameClip"><rect x="0" y="0" width="1200" height="760"/></clipPath>
+              <!-- 色调曲线：查找表由 JS 的 drawCurve() 实时写入 tableValues -->
+              <filter id="curveFx" color-interpolation-filters="sRGB"
+                      x="-2%" y="-2%" width="104%" height="104%">
+                <feComponentTransfer>
+                  <feFuncR type="table" id="cvR" tableValues="0 1"/>
+                  <feFuncG type="table" id="cvG" tableValues="0 1"/>
+                  <feFuncB type="table" id="cvB" tableValues="0 1"/>
+                </feComponentTransfer>
+              </filter>
+            </defs>
+
+            <g clip-path="url(#frameClip)">
+              <g id="sceneGroup">
+                <!-- 天空 -->
+                <rect x="0" y="0" width="1200" height="760" fill="url(#sky)"/>
+                <!-- 云带 -->
+                <g opacity="0.5">
+                  <ellipse cx="300" cy="150" rx="320" ry="34" fill="#e9dfe2" opacity="0.28"/>
+                  <ellipse cx="820" cy="105" rx="260" ry="26" fill="#e9dfe2" opacity="0.22"/>
+                  <ellipse cx="600" cy="240" rx="420" ry="30" fill="#f3d7bb" opacity="0.22"/>
+                  <ellipse cx="980" cy="290" rx="300" ry="22" fill="#f7c898" opacity="0.2"/>
+                </g>
+                <!-- 太阳 -->
+                <circle cx="850" cy="352" r="150" fill="url(#sunGlow)"/>
+                <circle cx="850" cy="352" r="34" fill="#fff0cf" opacity="0.92"/>
+                <!-- 远山 -->
+                <path d="M0 430 L120 372 L214 408 L330 340 L430 396 L540 352 L648 404 L760 358 L880 410 L990 372 L1100 414 L1200 380 L1200 470 L0 470 Z" fill="url(#farRidge)" opacity="0.85"/>
+                <!-- 雾带 -->
+                <rect x="0" y="404" width="1200" height="46" fill="#cfd8e2" opacity="0.16"/>
+                <!-- 近山 -->
+                <path d="M0 470 L150 418 L260 458 L400 400 L520 452 L660 410 L800 462 L940 424 L1080 468 L1200 436 L1200 520 L0 520 Z" fill="url(#nearRidge)"/>
+                <!-- 水面 -->
+                <rect x="0" y="500" width="1200" height="180" fill="url(#water)"/>
+                <!-- 水面反光 -->
+                <rect x="790" y="500" width="120" height="180" fill="#ffd9a0" opacity="0.2"/>
+                <g opacity="0.24">
+                  <rect x="120" y="540" width="150" height="2" rx="1" fill="#cfe0dc"/>
+                  <rect x="330" y="566" width="210" height="2" rx="1" fill="#cfe0dc"/>
+                  <rect x="180" y="600" width="170" height="2" rx="1" fill="#cfe0dc"/>
+                  <rect x="520" y="626" width="240" height="2" rx="1" fill="#cfe0dc"/>
+                  <rect x="90" y="656" width="200" height="2" rx="1" fill="#cfe0dc"/>
+                </g>
+                <!-- 前景田野 -->
+                <path d="M0 620 C 180 596, 380 640, 600 618 C 820 596, 1010 646, 1200 614 L1200 760 L0 760 Z" fill="url(#field)"/>
+                <!-- 孤树 -->
+                <g fill="#0a0a06">
+                  <path d="M296 700 L302 640 L308 700 Z"/>
+                  <ellipse cx="302" cy="626" rx="46" ry="30"/>
+                  <ellipse cx="272" cy="640" rx="26" ry="18"/>
+                  <ellipse cx="332" cy="636" rx="28" ry="19"/>
+                </g>
+                <!-- 草穗 -->
+                <g stroke="#8a8a5c" stroke-width="1.2" opacity="0.4" stroke-linecap="round">
+                  <path d="M120 720 q 6 -34 20 -48"/>
+                  <path d="M180 736 q 4 -30 16 -44"/>
+                  <path d="M980 726 q -6 -32 -18 -46"/>
+                  <path d="M1060 742 q -4 -28 -16 -42"/>
+                  <path d="M760 748 q 5 -26 16 -38"/>
+                </g>
+                <!-- 蒙版着色层（局部曝光） -->
+                <rect id="maskLayer" x="0" y="0" width="1200" height="760" fill="url(#maskGrad)" opacity="0" style="mix-blend-mode:screen;transition:opacity .3s ease"/>
+              </g>
+
+              <!-- 蒙版参考线：线性为三线，径向为椭圆 -->
+              <g id="guides" opacity="0" style="transition:opacity .28s ease">
+                <g id="linearGuides" stroke="#fff" stroke-opacity="0.78" stroke-width="1.4" stroke-dasharray="7 6" fill="none">
+                  <line id="gA" x1="0" y1="0" x2="0" y2="0"/>
+                  <line id="gB" x1="0" y1="0" x2="0" y2="0"/>
+                  <line id="gC" x1="0" y1="0" x2="0" y2="0"/>
+                </g>
+                <g id="radialGuides" style="display:none">
+                  <ellipse id="rOuter" cx="0" cy="0" rx="1" ry="1" fill="none"
+                           stroke="#f5d94a" stroke-opacity="0.9" stroke-width="1.8"/>
+                  <ellipse id="rInner" cx="0" cy="0" rx="1" ry="1" fill="none"
+                           stroke="#f5d94a" stroke-opacity="0.4" stroke-width="1.2" stroke-dasharray="5 5"/>
+                </g>
+                <g id="handles">
+                  <circle id="hStart" r="11" fill="#3ad0e0" stroke="#fff" stroke-width="2.5" style="cursor:grab"/>
+                  <circle id="hEnd"   r="11" fill="#3ad0e0" stroke="#fff" stroke-width="2.5" style="cursor:grab"/>
+                  <circle id="hMid"   r="9"  fill="#ffffff" stroke="#fff" stroke-width="1.5" style="cursor:grab"/>
+                  <circle id="hRot"   r="8.5" fill="#e08b3a" stroke="#fff" stroke-width="2" style="cursor:grab"/>
+                </g>
+              </g>
+            </g>
+          </svg>
+
+          <div class="cmp" role="group" aria-label="前后对比">
+            <button type="button" id="btnAfter" aria-pressed="true">调整后</button>
+            <button type="button" id="btnBefore" aria-pressed="false">原图</button>
+          </div>
+          <div class="badge"><i></i><span id="badgeText">已渲染 24ms · 4096 × 6144</span></div>
+        </div>
+
+        <!-- 面板 -->
+        <div class="panel">
+          <div class="tabs" role="tablist">
+            <button type="button" role="tab" aria-selected="true" data-pane="p-light">明暗</button>
+            <button type="button" role="tab" aria-selected="false" data-pane="p-color">色彩</button>
+            <button type="button" role="tab" aria-selected="false" data-pane="p-film">胶片</button>
+            <button type="button" role="tab" aria-selected="false" data-pane="p-mask">蒙版</button>
+          </div>
+
+          <div class="body">
+            <!-- 明暗 -->
+            <div class="pane on" id="p-light" role="tabpanel">
+              <h4>影调与明暗</h4>
+              <div class="ctrl"><label for="rExp">曝光</label><input type="range" id="rExp" min="-100" max="100" value="14"><output id="oExp">+0.14</output></div>
+              <div class="ctrl"><label for="rCon">对比</label><input type="range" id="rCon" min="-100" max="100" value="18"><output id="oCon">+18</output></div>
+              <div class="ctrl"><label for="rHi">高光</label><input type="range" id="rHi" min="-100" max="100" value="-22"><output id="oHi">−22</output></div>
+              <div class="ctrl"><label for="rSh">阴影</label><input type="range" id="rSh" min="-100" max="100" value="26"><output id="oSh">+26</output></div>
+              <div class="sep"></div>
+              <h4>直方图</h4>
+              <div class="hist" id="hist" aria-hidden="true"></div>
+              <div class="hint">拖动滑杆时，直方图会跟着影调重新分布——和 Phos 面板里一样，它读的是真实渲染结果。</div>
+            </div>
+
+            <!-- 色彩 -->
+            <div class="pane" id="p-color" role="tabpanel">
+              <h4>色彩</h4>
+              <div class="ctrl"><label for="rSat">饱和</label><input type="range" id="rSat" min="-100" max="100" value="8"><output id="oSat">+8</output></div>
+              <div class="ctrl"><label for="rTem">色温</label><input type="range" id="rTem" min="-100" max="100" value="6"><output id="oTem">+6</output></div>
+              <div class="ctrl"><label for="rVib">鲜艳度</label><input type="range" id="rVib" min="-100" max="100" value="16"><output id="oVib">+16</output></div>
+              <div class="sep"></div>
+              <h4>色调曲线</h4>
+              <div class="curve-box">
+                <svg id="curveSvg" viewBox="0 0 260 110" preserveAspectRatio="none" aria-label="色调曲线，可拖动圆点调整" role="img">
+                  <g stroke="rgba(255,255,255,.13)" stroke-width="1">
+                    <line x1="0" y1="27.5" x2="260" y2="27.5"/>
+                    <line x1="0" y1="55" x2="260" y2="55"/>
+                    <line x1="0" y1="82.5" x2="260" y2="82.5"/>
+                    <line x1="65" y1="0" x2="65" y2="110"/>
+                    <line x1="130" y1="0" x2="130" y2="110"/>
+                    <line x1="195" y1="0" x2="195" y2="110"/>
+                  </g>
+                  <polyline id="curveLine" fill="none" stroke="#C9A876" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points=""/>
+                  <g id="curvePts" fill="#C9A876" stroke="#0b0c0e" stroke-width="1.5"></g>
+                </svg>
+              </div>
+              <div class="hint" style="margin-top:12px"><strong>拖动曲线上的圆点</strong>就能改形状，画面会实时跟着变；切到「明暗」页拖对比、高光、阴影，它也会一起动。双击复位。</div>
+            </div>
+
+            <!-- 胶片 -->
+            <div class="pane" id="p-film" role="tabpanel">
+              <h4>胶片 CLUT</h4>
+              <div class="films" id="films">
+                <button type="button" data-film="none" aria-pressed="false"><b>不使用</b><span>保持原始色彩</span></button>
+                <button type="button" data-film="k2383" aria-pressed="true"><b>Kodak 2383</b><span>印片模拟 · 64³</span></button>
+                <button type="button" data-film="k2393" aria-pressed="false"><b>Kodak 2393</b><span>印片模拟 · 64³</span></button>
+                <button type="button" data-film="f3510" aria-pressed="false"><b>Fuji 3510</b><span>印片模拟 · 64³</span></button>
+              </div>
+              <div class="sep"></div>
+              <div class="ctrl"><label for="rStr">浓度</label><input type="range" id="rStr" min="0" max="100" value="85"><output id="oStr">85%</output></div>
+              <div class="sep"></div>
+              <h4>颗粒与暗角</h4>
+              <div class="ctrl"><label for="rGr">颗粒</label><input type="range" id="rGr" min="0" max="100" value="22"><output id="oGr">22</output></div>
+              <div class="ctrl"><label for="rVig">暗角</label><input type="range" id="rVig" min="0" max="100" value="18"><output id="oVig">18</output></div>
+              <div class="hint" style="margin-top:14px">Phos 内置 303 个 HALD 胶片模拟 LUT，也可以扫描你自备的外置 HaldCLUT 目录；浓度连续可调，不是开关式的。</div>
+            </div>
+
+            <!-- 蒙版 -->
+            <div class="pane" id="p-mask" role="tabpanel">
+              <h4>局部调整（蒙版）</h4>
+              <div class="masklist">
+                <div class="maskrow" data-mask="linear" aria-pressed="true" role="button" tabindex="0"><span class="g"></span>线性渐变<em>可拖动</em></div>
+                <div class="maskrow" data-mask="radial" aria-pressed="false" role="button" tabindex="0"><span class="g"></span>径向渐变<em>拖出椭圆</em></div>
+                <div class="maskrow" data-mask="brush" aria-pressed="false" role="button" tabindex="0"><span class="g"></span>画笔<em>按住涂抹</em></div>
+                <div class="maskrow" data-mask="range" aria-pressed="false" role="button" tabindex="0"><span class="g"></span>颜色 / 亮度范围<em>画布取样</em></div>
+                <div class="maskrow" data-mask="ai" aria-pressed="false" role="button" tabindex="0"><span class="g"></span>选择主体 · 人物 · 抠图<em>本地 Vision</em></div>
+                <div class="maskrow" data-mask="depth" aria-pressed="false" role="button" tabindex="0"><span class="g"></span>深度涂绘<em>焦外散景</em></div>
+              </div>
+              <div class="sep"></div>
+              <div class="ctrl"><label for="rMExp">曝光</label><input type="range" id="rMExp" min="-100" max="100" value="52"><output id="oMExp">+52</output></div>
+              <div class="ctrl"><label for="rMFe">羽化</label><input type="range" id="rMFe" min="0" max="100" value="60"><output id="oMFe">0.60</output></div>
+              <div class="sep"></div>
+              <div class="hint" id="maskHint">线性渐变工具已激活：<strong>直接拖动画面上的三个圆点</strong>——青色改范围，白色移中轴。参数只作用在选区内，和全局调整互不干扰。</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 界面演示 ================= -->
   <section id="gallery" class="light">
     <div class="wrap">
       <p class="eyebrow">界面演示</p>
@@ -288,6 +660,7 @@ footer a:hover{color:#fff}
     </div>
   </section>
 
+  <!-- ================= 设计语言 ================= -->
   <section id="design" class="dark">
     <div class="wrap">
       <p class="eyebrow">设计语言</p>
@@ -311,8 +684,59 @@ footer a:hover{color:#fff}
         </div>
       </div>
     </div>
+
+    <div class="wide">
+      <div class="anatomy rv">
+        <svg viewBox="0 0 1000 420" role="img" aria-label="线性渐变蒙版示意图：三条平行虚线参考线，两个青色端点控制点、一个白色中心控制点与一个琥珀色旋转柄">
+          <defs>
+            <linearGradient id="anatBg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#1d2a3c"/><stop offset="0.5" stop-color="#6b5a60"/>
+              <stop offset="0.78" stop-color="#c98a5c"/><stop offset="1" stop-color="#2a3026"/>
+            </linearGradient>
+            <linearGradient id="anatMask" gradientUnits="userSpaceOnUse" x1="250" y1="330" x2="760" y2="120">
+              <stop offset="0" stop-color="#ffd9a0" stop-opacity="0"/>
+              <stop offset="1" stop-color="#ffd9a0" stop-opacity="0.34"/>
+            </linearGradient>
+          </defs>
+          <rect width="1000" height="420" rx="14" fill="url(#anatBg)"/>
+          <rect width="1000" height="420" rx="14" fill="url(#anatMask)"/>
+          <!-- 三条参考线 -->
+          <g stroke="#fff" stroke-opacity="0.8" stroke-width="1.4" stroke-dasharray="7 6">
+            <line x1="118" y1="404" x2="612" y2="60"/>
+            <line x1="310" y1="430" x2="804" y2="86"/>
+            <line x1="500" y1="456" x2="994" y2="112"/>
+          </g>
+          <!-- 控制点 -->
+          <circle cx="161" cy="374" r="12" fill="#3ad0e0" stroke="#fff" stroke-width="2.5"/>
+          <circle cx="741" cy="126" r="12" fill="#3ad0e0" stroke="#fff" stroke-width="2.5"/>
+          <circle cx="451" cy="250" r="10" fill="#fff"/>
+          <circle cx="520" cy="196" r="9" fill="#e08b3a" stroke="#fff" stroke-width="2"/>
+          <!-- 标注 -->
+          <g font-family="-apple-system,BlinkMacSystemFont,PingFang SC,sans-serif" font-size="13" fill="rgba(255,255,255,.82)">
+            <line x1="161" y1="374" x2="92" y2="374" stroke="rgba(58,208,224,.6)" stroke-width="1"/>
+            <text x="20" y="362">拖端点</text><text x="20" y="380" fill="rgba(255,255,255,.5)" font-size="11.5">改范围</text>
+
+            <line x1="741" y1="126" x2="880" y2="86" stroke="rgba(58,208,224,.6)" stroke-width="1"/>
+            <text x="888" y="82">拖端点</text><text x="888" y="100" fill="rgba(255,255,255,.5)" font-size="11.5">改范围</text>
+
+            <line x1="451" y1="250" x2="300" y2="182" stroke="rgba(255,255,255,.4)" stroke-width="1"/>
+            <text x="212" y="172">拖中心整条平移</text>
+
+            <line x1="520" y1="196" x2="592" y2="300" stroke="rgba(224,139,58,.6)" stroke-width="1"/>
+            <text x="600" y="306">旋转柄 · 改方向</text>
+          </g>
+        </svg>
+        <div class="legend">
+          <div><i style="background:#3ad0e0"></i>端点：控制渐变宽度</div>
+          <div><i style="background:#fff"></i>中心：整条平移</div>
+          <div><i style="background:#e08b3a"></i>旋转柄：改变方向</div>
+          <div><i style="background:#f5d94a"></i>径向渐变：椭圆与羽化边界</div>
+        </div>
+      </div>
+    </div>
   </section>
 
+  <!-- ================= 功能 ================= -->
   <section id="features" class="light">
     <div class="wrap">
       <p class="eyebrow">功能</p>
@@ -353,6 +777,7 @@ footer a:hover{color:#fff}
     </div>
   </section>
 
+  <!-- ================= 安装 ================= -->
   <section id="install" class="dark">
     <div class="wrap">
       <p class="eyebrow">安装</p>
@@ -402,6 +827,7 @@ footer a:hover{color:#fff}
     </div>
   </section>
 
+  <!-- ================= 下载 ================= -->
   <section class="dl light">
     <div class="wrap center">
       <p class="eyebrow">开始使用</p>
@@ -437,17 +863,486 @@ footer a:hover{color:#fff}
 
 <script>
 (function(){
-  var els=document.querySelectorAll('.rv');
-  if(!('IntersectionObserver' in window)||window.matchMedia('(prefers-reduced-motion: reduce)').matches){
-    els.forEach(function(e){e.classList.add('in')});
-    return;
+  'use strict';
+
+  /* ---------- 滚动入场 ---------- */
+  var rv = document.querySelectorAll('.rv');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!('IntersectionObserver' in window) || reduce) {
+    rv.forEach(function(el){ el.classList.add('in'); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
+      });
+    }, {rootMargin:'0px 0px -12% 0px', threshold:.08});
+    rv.forEach(function(el, i){ el.style.transitionDelay = (Math.min(i % 4, 3) * 60) + 'ms'; io.observe(el); });
   }
-  var io=new IntersectionObserver(function(entries){
-    entries.forEach(function(en){
-      if(en.isIntersecting){en.target.classList.add('in');io.unobserve(en.target);}
+
+  /* =========================================================
+     实时演示
+     渲染顺序：影调 → 色彩 → 胶片 → 蒙版，与 Phos 一致
+     ========================================================= */
+  var stage = document.getElementById('stage');
+  if (!stage) return;
+
+  var S = { exp:14, con:18, hi:-22, sh:26, sat:8, tem:6, vib:16,
+            film:'k2383', str:85, gr:22, vig:18, mExp:52, mFe:60 };
+
+  var sceneGroup = document.getElementById('sceneGroup');
+  var maskLayer  = document.getElementById('maskLayer');
+  var guides     = document.getElementById('guides');
+  var curveLine  = document.getElementById('curveLine');
+  var curveSvg   = document.getElementById('curveSvg');
+  var curvePtsG  = document.getElementById('curvePts');
+  var cvR        = document.getElementById('cvR');
+  var cvG        = document.getElementById('cvG');
+  var cvB        = document.getElementById('cvB');
+  var histBox    = document.getElementById('hist');
+  var badgeText  = document.getElementById('badgeText');
+  var shown      = 'after';
+
+  /* ---------- 胶片预设 ----------
+     每支胶片用一组数值参数描述，渲染时按「浓度」从 1 插值过去。
+     旧版这里存的是整串 filter 字符串，但 render() 只用了浓度、没读这个字符串，
+     导致三支胶片出来一模一样 —— 所以改成数值参数。 */
+  var FILM = {
+    none:  null,
+    k2383: {sat:0.96, con:1.16, sep:0.20, hue: -9, bri:1.02}, // 暖调、对比强、略降饱和
+    k2393: {sat:0.88, con:1.24, sep:0.30, hue:-16, bri:0.97}, // 更暖更浓、压暗部
+    f3510: {sat:1.22, con:1.05, sep:0.02, hue: 11, bri:1.04}  // 偏冷青、高饱和、通透
+  };
+
+  /* ---------- 直方图 ---------- */
+  var BARS = 34, barEls = [];
+  for (var i = 0; i < BARS; i++) {
+    var b = document.createElement('i');
+    b.style.height = '2px';
+    histBox.appendChild(b);
+    barEls.push(b);
+  }
+  function drawHist(){
+    // 用一条随参数移动的双峰分布模拟真实直方图
+    var shift = (S.exp / 100) * 10 + (S.con / 100) * 3;
+    var spread = 6 - (S.con / 100) * 2.4 + (S.sh / 100) * 1.2;
+    var peakA = BARS * 0.34 + shift, peakB = BARS * 0.70 + shift * 0.7;
+    var hA = 1 + (S.hi / 100) * 0.45, hB = 1 + (S.sh / 100) * 0.5;
+    for (var k = 0; k < BARS; k++) {
+      var gA = Math.exp(-Math.pow((k - peakA) / spread, 2)) * hA;
+      var gB = Math.exp(-Math.pow((k - peakB) / (spread * 0.78), 2)) * hB;
+      var v = Math.min(1, (gA * 0.92 + gB * 0.68) * (1 + (S.sat / 100) * 0.10));
+      barEls[k].style.height = Math.max(2, Math.round(v * 56)) + 'px';
+    }
+  }
+
+  /* ---------- 色调曲线 ----------
+     曲线 = 手动控制点（可拖动） + 滑杆贡献（对比 / 高光 / 阴影 / 曝光）。
+     两者叠加后同时用于「画出来」和「写进 feComponentTransfer 查找表」，
+     所以看到的形状和画面实际变化是一致的。 */
+  var CVN = 9;                              // 控制点个数
+  var curvePts = [];                        // 手动曲线：9 个 y 值（0..1），初始为对角线
+  for (var ci = 0; ci < CVN; ci++) curvePts.push(ci / (CVN - 1));
+
+  function curveManual(t){                  // 手动曲线在 t 处的值（分段线性，与画面所画一致）
+    var x = t * (CVN - 1), i = Math.floor(x), f = x - i;
+    if (i >= CVN - 1) return curvePts[CVN - 1];
+    return curvePts[i] + (curvePts[i + 1] - curvePts[i]) * f;
+  }
+  function curveSliders(t){                 // 滑杆对曲线的贡献
+    var v = 0;
+    v += (S.con / 100) * 0.55 * (t - 0.5) * (1 - Math.pow(2 * t - 1, 2));
+    v += (S.hi / 100) * 0.16 * Math.pow(t, 2.4);
+    v += (S.sh / 100) * 0.18 * Math.pow(1 - t, 2.4);
+    v += (S.exp / 100) * 0.10;
+    return v;
+  }
+  function curveTotal(t){
+    return Math.max(0, Math.min(1, curveManual(t) + curveSliders(t)));
+  }
+
+  var CSTEP = 33;
+  function drawCurve(){
+    var pts = [];
+    for (var x = 0; x <= CSTEP; x++) {
+      var t = x / CSTEP;
+      pts.push((t * 260).toFixed(1) + ',' + (110 - curveTotal(t) * 110).toFixed(1));
+    }
+    curveLine.setAttribute('points', pts.join(' '));
+
+    // 控制点圆点
+    if (curvePtsG) {
+      while (curvePtsG.firstChild) curvePtsG.removeChild(curvePtsG.firstChild);
+      for (var k = 0; k < CVN; k++) {
+        var c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        c.setAttribute('data-cpi', k);
+        c.setAttribute('cx', ((k / (CVN - 1)) * 260).toFixed(1));
+        c.setAttribute('cy', (110 - curveTotal(k / (CVN - 1)) * 110).toFixed(1));
+        c.setAttribute('r', 4);
+        c.style.cursor = 'ns-resize';
+        curvePtsG.appendChild(c);
+      }
+    }
+
+    // 写进查找表 —— 这一步才让曲线真正作用于画面
+    var N = 17, tv = [];
+    for (var m = 0; m < N; m++) tv.push(curveTotal(m / (N - 1)).toFixed(4));
+    var s = tv.join(' ');
+    if (cvR) cvR.setAttribute('tableValues', s);
+    if (cvG) cvG.setAttribute('tableValues', s);
+    if (cvB) cvB.setAttribute('tableValues', s);
+  }
+
+  /* ---------- 画面 ---------- */
+  var renderMs = 24;
+  function render(){
+    var e = S.exp / 100, c = S.con / 100, s = S.sat / 100, vi = S.vib / 100, t = S.tem / 100;
+    var strength = S.str / 100;
+
+    if (shown === 'before') {
+      sceneGroup.style.filter = 'none';
+      maskLayer.style.opacity = 0;
+      badgeText.textContent = '原图 · 未调整';
+      return;
+    }
+
+    var parts = [];
+    parts.push('brightness(' + (1 + e * 0.62).toFixed(3) + ')');
+    parts.push('contrast(' + (1 + c * 0.55).toFixed(3) + ')');
+    parts.push('saturate(' + Math.max(0, 1 + s * 0.85 + vi * 0.35).toFixed(3) + ')');
+    parts.push('sepia(' + Math.max(0, t * 0.16).toFixed(3) + ')');
+    parts.push('hue-rotate(' + (-t * 6).toFixed(2) + 'deg)');
+    var fm = FILM[S.film];
+    if (fm && strength > 0.01) {
+      // 从中性值 1 向胶片参数插值，strength 就是「浓度」
+      var mix = function(v){ return 1 + (v - 1) * strength; };
+      parts.push('saturate(' + mix(fm.sat).toFixed(3) + ')');
+      parts.push('contrast(' + mix(fm.con).toFixed(3) + ')');
+      parts.push('sepia(' + (fm.sep * strength).toFixed(3) + ')');
+      parts.push('hue-rotate(' + (fm.hue * strength).toFixed(2) + 'deg)');
+      parts.push('brightness(' + mix(fm.bri).toFixed(3) + ')');
+    }
+    // 色调曲线：SVG feComponentTransfer 查找表（由 drawCurve 实时写入）
+    parts.push('url(#curveFx)');
+    sceneGroup.style.filter = parts.join(' ');
+
+    // 局部蒙版的曝光只在该蒙版被选中时叠加
+    maskLayer.style.opacity = guidesOn() ? Math.max(0, S.mExp / 100 * 0.85).toFixed(3) : '0';
+
+    badgeText.textContent = '已渲染 ' + renderMs + 'ms · 4096 × 6144';
+  }
+
+  /* ---------- 控件绑定 ---------- */
+  function bind(id, key, out, fmt){
+    var el = document.getElementById(id), o = document.getElementById(out);
+    if (!el) return;
+    function apply(){
+      S[key] = +el.value;
+      if (key === 'str') o.textContent = S.str + '%';
+      else if (key === 'mFe') o.textContent = (S.mFe / 100).toFixed(2);
+      else if (key === 'exp') o.textContent = (S.exp >= 0 ? '+' : '−') + Math.abs(S.exp / 100).toFixed(2);
+      else o.textContent = (S[key] > 0 ? '+' : S[key] < 0 ? '−' : '') + Math.abs(Math.round(S[key]));
+      drawHist(); drawCurve(); render();
+    }
+    el.addEventListener('input', apply);
+    apply();
+  }
+  bind('rExp','exp','oExp'); bind('rCon','con','oCon');
+  bind('rHi','hi','oHi');    bind('rSh','sh','oSh');
+  bind('rSat','sat','oSat'); bind('rTem','tem','oTem'); bind('rVib','vib','oVib');
+  bind('rStr','str','oStr'); bind('rGr','gr','oGr');    bind('rVig','vig','oVig');
+  bind('rMExp','mExp','oMExp'); bind('rMFe','mFe','oMFe');
+
+  /* ---------- 曲线拖动 ---------- */
+  if (curveSvg) {
+    var cvDrag = -1;
+    curveSvg.style.touchAction = 'none';
+    curveSvg.style.cursor = 'crosshair';
+
+    function cvLocal(ev){                 // 屏幕坐标 -> 曲线坐标
+      var r = curveSvg.getBoundingClientRect();
+      return {
+        t: Math.max(0, Math.min(1, (ev.clientX - r.left) / (r.width || 1))),
+        v: Math.max(0, Math.min(1, 1 - (ev.clientY - r.top) / (r.height || 1)))
+      };
+    }
+    curveSvg.addEventListener('pointerdown', function(ev){
+      var p = cvLocal(ev);
+      cvDrag = Math.round(p.t * (CVN - 1));
+      // 让「总曲线」落在手指/鼠标位置：手动值 = 目标值 - 滑杆贡献
+      curvePts[cvDrag] = Math.max(0, Math.min(1, p.v - curveSliders(cvDrag / (CVN - 1))));
+      if (curveSvg.setPointerCapture) curveSvg.setPointerCapture(ev.pointerId);
+      drawCurve(); render();
+      ev.preventDefault();
     });
-  },{rootMargin:'0px 0px -12% 0px',threshold:.08});
-  els.forEach(function(e,i){e.style.transitionDelay=(Math.min(i%4,3)*60)+'ms';io.observe(e);});
+    curveSvg.addEventListener('pointermove', function(ev){
+      if (cvDrag < 0) return;
+      var p = cvLocal(ev);
+      curvePts[cvDrag] = Math.max(0, Math.min(1, p.v - curveSliders(cvDrag / (CVN - 1))));
+      drawCurve(); render();
+      ev.preventDefault();
+    });
+    function cvEnd(ev){
+      if (cvDrag >= 0 && curveSvg.releasePointerCapture && curveSvg.hasPointerCapture &&
+          curveSvg.hasPointerCapture(ev.pointerId)) {
+        curveSvg.releasePointerCapture(ev.pointerId);
+      }
+      cvDrag = -1;
+    }
+    curveSvg.addEventListener('pointerup', cvEnd);
+    curveSvg.addEventListener('pointercancel', function(){ cvDrag = -1; });
+    curveSvg.addEventListener('dblclick', function(){        // 双击复位
+      for (var k = 0; k < CVN; k++) curvePts[k] = k / (CVN - 1);
+      drawCurve(); render();
+    });
+  }
+
+  /* ---------- 标签页 ---------- */
+  var tabBtns = document.querySelectorAll('.panel .tabs button');
+  tabBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      tabBtns.forEach(function(b){ b.setAttribute('aria-selected', String(b === btn)); });
+      document.querySelectorAll('.pane').forEach(function(p){
+        p.classList.toggle('on', p.id === btn.dataset.pane);
+      });
+      // 切到蒙版页时自动显示参考线
+      if (btn.dataset.pane === 'p-mask') { setGuides(true); } else { setGuides(false); }
+    });
+  });
+
+  /* ---------- 胶片 ---------- */
+  var filmBtns = document.querySelectorAll('#films button');
+  filmBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      S.film = btn.dataset.film;
+      filmBtns.forEach(function(b){ b.setAttribute('aria-pressed', String(b === btn)); });
+      render();
+    });
+  });
+
+  /* ---------- 前后对比 ---------- */
+  var bAfter = document.getElementById('btnAfter'), bBefore = document.getElementById('btnBefore');
+  function setCompare(which){
+    shown = which;
+    bAfter.setAttribute('aria-pressed', String(which === 'after'));
+    bBefore.setAttribute('aria-pressed', String(which === 'before'));
+    render();
+  }
+  bAfter.addEventListener('click', function(){ setCompare('after'); });
+  bBefore.addEventListener('click', function(){ setCompare('before'); });
+  // 按住空格临时看原图
+  var spaceDown = false;
+  window.addEventListener('keydown', function(ev){
+    if (ev.code === 'Space' && !spaceDown && document.activeElement.tagName !== 'INPUT') {
+      spaceDown = true; setCompare('before'); ev.preventDefault();
+    }
+  });
+  window.addEventListener('keyup', function(ev){
+    if (ev.code === 'Space' && spaceDown) { spaceDown = false; setCompare('after'); }
+  });
+
+  /* =========================================================
+     蒙版：线性 = 三条参考线；径向 = 椭圆 + 羽化内圈
+     两组控制点都能直接拖，坐标统一在 1200×760 的画面空间里
+     ========================================================= */
+  var gA = document.getElementById('gA'), gB = document.getElementById('gB'), gC = document.getElementById('gC');
+  var linearGuides = document.getElementById('linearGuides');
+  var radialGuides = document.getElementById('radialGuides');
+  var rOuter = document.getElementById('rOuter'), rInner = document.getElementById('rInner');
+  var hStart = document.getElementById('hStart'), hEnd = document.getElementById('hEnd'),
+      hMid = document.getElementById('hMid'), hRot = document.getElementById('hRot');
+  var maskGrad = document.getElementById('maskGrad');
+  var maskRadialGrad = document.getElementById('maskRadialGrad');
+
+  var W = 1200, H = 760;
+  var maskKind = 'linear';
+  // 线性：归一化起止点
+  var mS = {x:0.20, y:0.72}, mE = {x:0.78, y:0.24};
+  // 径向：归一化圆心 + 像素半径 + 角度
+  var rC = {x:0.46, y:0.46}, rRX = 300, rRY = 200, rAngle = -18;
+  var ROT_OFF = 92, ROT_DIST = 34;
+
+  function guidesOn(){ return guides.getAttribute('opacity') === '1'; }
+  function setGuides(on){
+    guides.setAttribute('opacity', on ? '1' : '0');
+    maskLayer.style.opacity = on ? Math.max(0, S.mExp / 100 * 0.85).toFixed(3) : '0';
+  }
+
+  function rot(cx, cy, x, y, deg){
+    var a = deg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+    return { x: cx + x * c - y * s, y: cy + x * s + y * c };
+  }
+
+  function updateMask(){
+    var radial = (maskKind === 'radial');
+    linearGuides.style.display = radial ? 'none' : '';
+    radialGuides.style.display = radial ? '' : 'none';
+    maskLayer.setAttribute('fill', radial ? 'url(#maskRadialGrad)' : 'url(#maskGrad)');
+
+    // 控制点配色与真机一致：线性为青/白/琥珀，径向为黄/黄/琥珀
+    var edge = radial ? '#f5d94a' : '#3ad0e0';
+    var midColor = radial ? '#f5d94a' : '#ffffff';
+    [hStart, hEnd].forEach(function(el){
+      el.setAttribute('fill', edge);
+      el.setAttribute('r', radial ? 9.5 : 11);
+    });
+    hMid.setAttribute('fill', midColor);
+
+    if (!radial) {
+      var sx = mS.x * W, sy = mS.y * H, ex = mE.x * W, ey = mE.y * H;
+      var mx = (sx + ex) / 2, my = (sy + ey) / 2;
+      var dx = ex - sx, dy = ey - sy;
+      var len = Math.max(Math.hypot(dx, dy), 1);
+      var nx = -dy / len, ny = dx / len, L = 1500;
+
+      function line(el, px, py){
+        el.setAttribute('x1', px - nx * L); el.setAttribute('y1', py - ny * L);
+        el.setAttribute('x2', px + nx * L); el.setAttribute('y2', py + ny * L);
+      }
+      line(gA, sx, sy); line(gB, mx, my); line(gC, ex, ey);
+
+      hStart.setAttribute('cx', sx); hStart.setAttribute('cy', sy);
+      hEnd.setAttribute('cx', ex);   hEnd.setAttribute('cy', ey);
+      hMid.setAttribute('cx', mx);   hMid.setAttribute('cy', my);
+      hRot.setAttribute('cx', mx + nx * ROT_OFF);
+      hRot.setAttribute('cy', my + ny * ROT_OFF);
+
+      maskGrad.setAttribute('x1', sx); maskGrad.setAttribute('y1', sy);
+      maskGrad.setAttribute('x2', ex); maskGrad.setAttribute('y2', ey);
+    } else {
+      var cx = rC.x * W, cy = rC.y * H;
+      var t = 'rotate(' + rAngle + ' ' + cx + ' ' + cy + ')';
+      var inner = Math.max(0.05, 1 - S.mFe / 100);
+
+      rOuter.setAttribute('cx', cx); rOuter.setAttribute('cy', cy);
+      rOuter.setAttribute('rx', rRX); rOuter.setAttribute('ry', rRY);
+      rOuter.setAttribute('transform', t);
+      rInner.setAttribute('cx', cx); rInner.setAttribute('cy', cy);
+      rInner.setAttribute('rx', rRX * inner); rInner.setAttribute('ry', rRY * inner);
+      rInner.setAttribute('transform', t);
+
+      var px = rot(cx, cy, rRX, 0, rAngle);
+      var py = rot(cx, cy, 0, rRY, rAngle);
+      var pr = rot(cx, cy, rRX + ROT_DIST, 0, rAngle);
+      hMid.setAttribute('cx', cx);  hMid.setAttribute('cy', cy);
+      hStart.setAttribute('cx', px.x); hStart.setAttribute('cy', px.y);
+      hEnd.setAttribute('cx', py.x);   hEnd.setAttribute('cy', py.y);
+      hRot.setAttribute('cx', pr.x);   hRot.setAttribute('cy', pr.y);
+
+      maskRadialGrad.setAttribute('cx', cx);
+      maskRadialGrad.setAttribute('cy', cy);
+      maskRadialGrad.setAttribute('r', Math.max(rRX, rRY));
+    }
+  }
+
+  // 屏幕坐标 → 画面像素坐标（svg 用 slice，按较长边换算）
+  function toPix(ev){
+    var r = stage.getBoundingClientRect();
+    var scale = Math.max(r.width / W, r.height / H);
+    var offX = (r.width - W * scale) / 2, offY = (r.height - H * scale) / 2;
+    return { x: (ev.clientX - r.left - offX) / scale,
+             y: (ev.clientY - r.top  - offY) / scale };
+  }
+  function clampN(v){ return Math.max(-0.2, Math.min(1.2, v)); }
+  function clampR(v){ return Math.max(24, Math.min(1400, v)); }
+
+  var drag = null;
+  function startDrag(which){
+    return function(ev){
+      if (!guidesOn()) return;
+      ev.preventDefault();
+      drag = { which: which,
+               s0: {x:mS.x, y:mS.y}, e0: {x:mE.x, y:mE.y},
+               c0: {x:rC.x, y:rC.y}, rx0: rRX, ry0: rRY, ang0: rAngle,
+               p0: toPix(ev) };
+      if (stage.setPointerCapture) { try { stage.setPointerCapture(ev.pointerId); } catch(e){} }
+    };
+  }
+  [[hStart,'s'],[hEnd,'e'],[hMid,'m'],[hRot,'r']].forEach(function(pair){
+    pair[0].addEventListener('pointerdown', startDrag(pair[1]));
+  });
+
+  stage.addEventListener('pointermove', function(ev){
+    if (!drag) return;
+    var p = toPix(ev);
+
+    if (maskKind === 'linear') {
+      var dx = (p.x - drag.p0.x) / W, dy = (p.y - drag.p0.y) / H;
+      if (drag.which === 'm') {
+        mS = {x: clampN(drag.s0.x + dx), y: clampN(drag.s0.y + dy)};
+        mE = {x: clampN(drag.e0.x + dx), y: clampN(drag.e0.y + dy)};
+      } else if (drag.which === 's') {
+        mS = {x: clampN(drag.s0.x + dx), y: clampN(drag.s0.y + dy)};
+      } else if (drag.which === 'e') {
+        mE = {x: clampN(drag.e0.x + dx), y: clampN(drag.e0.y + dy)};
+      } else if (drag.which === 'r') {
+        var lmx = (drag.s0.x + drag.e0.x) / 2 * W, lmy = (drag.s0.y + drag.e0.y) / 2 * H;
+        var a0 = Math.atan2(drag.e0.y * H - drag.s0.y * H, drag.e0.x * W - drag.s0.x * W);
+        var a1 = Math.atan2(p.y - lmy, p.x - lmx);
+        var da = a1 - a0, c = Math.cos(da), s = Math.sin(da);
+        function rr(pt){ var x = pt.x * W - lmx, y = pt.y * H - lmy;
+          return { x: clampN((lmx + x * c - y * s) / W), y: clampN((lmy + x * s + y * c) / H) }; }
+        mS = rr(drag.s0); mE = rr(drag.e0);
+      }
+    } else {
+      var c0x = drag.c0.x * W, c0y = drag.c0.y * H;
+      if (drag.which === 'm') {
+        rC = { x: clampN(drag.c0.x + (p.x - drag.p0.x) / W),
+               y: clampN(drag.c0.y + (p.y - drag.p0.y) / H) };
+      } else if (drag.which === 's') {
+        var lx = rot(0, 0, p.x - c0x, p.y - c0y, -drag.ang0);
+        rRX = clampR(Math.abs(lx.x));
+      } else if (drag.which === 'e') {
+        var ly = rot(0, 0, p.x - c0x, p.y - c0y, -drag.ang0);
+        rRY = clampR(Math.abs(ly.y));
+      } else if (drag.which === 'r') {
+        rAngle = drag.ang0 + (Math.atan2(p.y - c0y, p.x - c0x) -
+                              Math.atan2(drag.p0.y - c0y, drag.p0.x - c0x)) * 180 / Math.PI;
+      }
+    }
+    updateMask();
+  });
+  stage.addEventListener('pointerup', function(){ drag = null; });
+  stage.addEventListener('pointercancel', function(){ drag = null; });
+
+  /* ---------- 蒙版列表 ---------- */
+  var HINTS = {
+    linear: '线性渐变工具已激活：<strong>直接拖动画面上的三个圆点</strong>——青色改范围，白色移中轴。参数只作用在选区内，和全局调整互不干扰。',
+    radial: '径向渐变：在画布上拖出椭圆，再拖边缘改横纵半径、拖旋转柄改角度。羽化控制内外过渡，虚线内圈就是羽化边界。',
+    brush:  '画笔：直接在画布上按住拖动涂抹，一次拖动算一笔。软边与笔刷大小随时可调，涂多了切橡皮擦擦回去。',
+    range:  '颜色 / 亮度范围：在画布上点一下就把那一点的颜色或亮度收进来，容差决定范围宽窄，再配合下面的滑杆微调。',
+    ai:     '选择主体 / 人物 / 主体抠图：全部由系统 Vision 模型在本机计算，不联网。第一次算要等一两秒，结果会缓存，不准可以重算。',
+    depth:  '深度涂绘：把想虚化的背景涂白、要清晰的主体留黑，配合「焦外散景」强度使用；也可以直接读 iPhone 人像的深度数据。'
+  };
+  var maskRows = document.querySelectorAll('.maskrow');
+  var maskHint = document.getElementById('maskHint');
+  maskRows.forEach(function(row){
+    function pick(){
+      maskRows.forEach(function(r){ r.setAttribute('aria-pressed', String(r === row)); });
+      var k = row.dataset.mask;
+      maskHint.innerHTML = HINTS[k] || '';
+      var isMask = (k === 'linear' || k === 'radial');
+      setGuides(isMask);
+      if (k === 'linear') {
+        maskKind = 'linear';
+        mS = {x:0.20, y:0.72}; mE = {x:0.78, y:0.24};
+      }
+      if (k === 'radial') {
+        maskKind = 'radial';
+        rC = {x:0.46, y:0.46}; rRX = 300; rRY = 200; rAngle = -18;
+      }
+      updateMask(); render();
+    }
+    row.addEventListener('click', pick);
+    row.addEventListener('keydown', function(ev){ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pick(); } });
+  });
+
+  /* ---------- 初始化 ---------- */
+  updateMask();
+  setGuides(true);
+  drawHist();
+  drawCurve();
+  render();
+  window.addEventListener('resize', updateMask);
 })();
 </script>
 </body>

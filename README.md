@@ -59,21 +59,24 @@ original file is never modified**.
    shasum -a 256 Phos-macOS-apple-silicon.zip
    ```
 3. Unzip and move `Phos.app` to `/Applications`.
-4. **Open it once with a right-click — macOS asks for a one-time confirmation.**
+4. **macOS asks once — here's what to do.**
 
-   Phos is ad-hoc signed and not notarised, so macOS shows a warning the first time.
+   Phos is ad-hoc signed and not notarised, so the first double-click shows a warning.
    This is expected: the app never phones home, and the full source is public.
-   Pick whichever is easiest:
 
-   - **Right-click (or Control-click) `Phos.app` and choose “Open”.** The dialog has an
-     **Open** button — click it once and macOS remembers the choice from then on.
-     <br>*(This is the shortest path: one dialog, no trip to System Settings.)*
-   - Or remove the quarantine flag before the first launch, and macOS won't ask at all:
-     ```sh
-     xattr -dr com.apple.quarantine /Applications/Phos.app
-     ```
-   - Or double-click it, then go to *System Settings → Privacy & Security*, scroll to the
-     bottom and choose **Open Anyway**.
+   ![macOS Gatekeeper 拦截弹窗](https://zenodeng.github.io/Phos/images/09-gatekeeper-dialog.jpg)
+
+   Click **完成** to close it, then immediately open
+   *System Settings → Privacy & Security*, scroll to the bottom, and click
+   **Open Anyway**:
+
+   ![系统设置 → 隐私与安全 → 仍要打开](https://zenodeng.github.io/Phos/images/10-system-settings-open-anyway.jpg)
+
+   The button only stays visible for about an hour after the warning, so do it right away.
+   From then on Phos opens normally.
+
+   > If you prefer the command line: `xattr -dr com.apple.quarantine /Applications/Phos.app`
+   > does the same thing and skips the GUI steps entirely.
 
 > [!IMPORTANT]  
 > **App Sandbox is intentionally not enabled.** Under ad-hoc signing, entitlements are not bound correctly; enabling the sandbox would break folder access and sidecar writing. The repository contains no entitlements file, and none should be added.
@@ -271,19 +274,27 @@ Phos 是一款用 Swift 编写、基于 Core Image、Vision 与 AppKit 的**非�
    ```
    与 Release 中的 `SHA256.txt` 比对。
 3. 解压后把 `Phos.app` 拖进 `/Applications`。
-4. **右键打开一次，macOS 会弹一次确认**。
+4. **macOS 首次启动会弹一次确认，按下面走一次就好。**
 
    Phos 是 ad-hoc 本地签名、未做 Apple 公证，所以首次启动会有一次警告。
-   这是正常的 —— 应用不联网、不回传任何数据，源码完全公开。三种方式任选：
+   这是正常的 —— 应用不联网、不回传任何数据，源码完全公开。
 
-   - **右键（或按住 Control 点按）`Phos.app` → 「打开」。** 弹窗里直接有「打开」按钮，
-     点一次即可，之后 macOS 会记住这个选择。
-     <br>*(最省事：只有一个弹窗，不用去系统设置里翻。)*
-   - 或者先去掉隔离标记，之后就不会再问：
-     ```sh
-     xattr -dr com.apple.quarantine /Applications/Phos.app
-     ```
-   - 或者双击打开一次 → 系统设置 → 隐私与安全性 → 滚到底 → 点「仍要打开」。
+   第一次双击会看到这张：
+
+   ![macOS Gatekeeper 拦截弹窗](https://zenodeng.github.io/Phos/images/09-gatekeeper-dialog.jpg)
+
+   点「完成」关掉它，**立刻**打开「系统设置 → 隐私与安全性」，滚到底，点「仍要打开」：
+
+   ![系统设置 → 隐私与安全 → 仍要打开](https://zenodeng.github.io/Phos/images/10-system-settings-open-anyway.jpg)
+
+   「仍要打开」按钮在弹窗出现后大约 **一小时内**会消失，所以**马上点**。
+   之后 Phos 就能正常打开了。
+
+   > 习惯用命令行的可以一行解决：
+   > ```sh
+   > xattr -dr com.apple.quarantine /Applications/Phos.app
+   > ```
+   > 效果完全一样，跳过系统设置里这几步。
 
 > [!IMPORTANT]  
 > **本项目不启用 App Sandbox。** 免费 ad-hoc 签名下 entitlements 不会正确 bind，一旦 sandbox 生效，读取照片文件夹与写入 `.rawforge.json` 旁挂会全部失效。仓库中没有任何 entitlements 文件，也请不要添加。

@@ -944,6 +944,12 @@ footer a:hover{color:#fff}
 
   /* ---------- 画面 ---------- */
   var renderMs = 24;
+  // 值没变就不写属性：颗粒层挂了 feTurbulence，无谓地改它会触发滤镜重算
+  function setOpacityIfChanged(el, v){
+    if (!el) return;
+    var s = v.toFixed(3);
+    if (el.getAttribute('opacity') !== s) el.setAttribute('opacity', s);
+  }
   function render(){
     var e = S.exp / 100, c = S.con / 100, s = S.sat / 100, vi = S.vib / 100, t = S.tem / 100;
     var strength = S.str / 100;
@@ -977,8 +983,8 @@ footer a:hover{color:#fff}
     sceneGroup.style.filter = parts.join(' ');
 
     // 颗粒与暗角：后期层，直接改自身 opacity
-    if (grainLayer)    grainLayer.setAttribute('opacity',    (S.gr  / 100 * 0.30).toFixed(3));
-    if (vignetteLayer) vignetteLayer.setAttribute('opacity', (S.vig / 100 * 0.92).toFixed(3));
+    setOpacityIfChanged(grainLayer,    S.gr  / 100 * 0.30);
+    setOpacityIfChanged(vignetteLayer, S.vig / 100 * 0.92);
 
     // 局部蒙版的曝光只在该蒙版被选中时叠加
     maskLayer.style.opacity = guidesOn() ? Math.max(0, S.mExp / 100 * 0.85).toFixed(3) : '0';
@@ -988,16 +994,28 @@ footer a:hover{color:#fff}
 
   /* ---------- 控件绑定 ---------- */
   /* 拖动滑杆时 input 事件触发极密，每次都重建 9 个曲线控制点 + 重算直方图 + 重设滤镜
-     会明显卡顿。用 rAF 合并成每帧一次。 */
-  var rafPending = false;
+     会明显卡顿。用 rAF 合并成每帧一次。
+
+     ⚠️ requestAnimationFrame 在页面不可见（切标签页 / 切窗口 / 被遮挡）时不会触发。
+        只靠它的话，一次没执行到的回调就会让 rafPending 永久卡在 true，
+        之后所有滑杆都不再渲染 —— 而且蒙版拖动走的是直接 render()，仍然正常，
+        症状就成了「只有非蒙版功能偶发无响应」。
+        所以必须加定时器兜底 + 回到前台补一帧。 */
+  var rafPending = false, rafTimer = 0;
+  function forceRender(){
+    rafPending = false;
+    if (rafTimer) { clearTimeout(rafTimer); rafTimer = 0; }
+    // 即使直方图 / 曲线出错，也要保证画面本身渲染出来
+    try { drawHist(); drawCurve(); } finally { render(); }
+  }
+  function flushRender(){ if (rafPending) forceRender(); }
   function scheduleRender(){
     if (rafPending) return;
     rafPending = true;
-    requestAnimationFrame(function(){
-      rafPending = false;
-      drawHist(); drawCurve(); render();
-    });
+    requestAnimationFrame(flushRender);
+    rafTimer = setTimeout(flushRender, 120);   // rAF 不触发时的兜底
   }
+  document.addEventListener('visibilitychange', function(){ if (!document.hidden) forceRender(); });
 
   function bind(id, key, out, fmt){
     var el = document.getElementById(id), o = document.getElementById(out);

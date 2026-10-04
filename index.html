@@ -406,12 +406,26 @@ footer a:hover{color:#fff}
               </radialGradient>
               <clipPath id="frameClip"><rect x="0" y="0" width="1200" height="760"/></clipPath>
               <!-- 色调曲线：查找表由 JS 的 drawCurve() 实时写入 tableValues -->
-              <filter id="curveFx" color-interpolation-filters="sRGB"
+              <!-- 影调滤镜：所有调整合并在这一个 SVG 滤镜里。
+                   不要拆成「外层 SVG 滤镜 + 内层 CSS filter」——外层滤镜会缓存输入，
+                   后代元素的 CSS filter 变化不会让它重算，症状就是
+                   「只有曲线能动、其他滑杆没反应」。
+                   顺序与 CSS filter 链一致：亮度/对比 -> 饱和 -> 棕调 -> 色相 -> 曲线 -->
+              <filter id="toneFx" color-interpolation-filters="sRGB"
                       x="-2%" y="-2%" width="104%" height="104%">
                 <feComponentTransfer>
-                  <feFuncR type="table" id="cvR" tableValues="0 1"/>
-                  <feFuncG type="table" id="cvG" tableValues="0 1"/>
-                  <feFuncB type="table" id="cvB" tableValues="0 1"/>
+                  <feFuncR type="linear" id="tfRS" slope="1" intercept="0"/>
+                  <feFuncG type="linear" id="tfGS" slope="1" intercept="0"/>
+                  <feFuncB type="linear" id="tfBS" slope="1" intercept="0"/>
+                </feComponentTransfer>
+                <feColorMatrix type="saturate" id="tfSat" values="1"/>
+                <feColorMatrix type="matrix" id="tfSep"
+                  values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"/>
+                <feColorMatrix type="hueRotate" id="tfHue" values="0"/>
+                <feComponentTransfer>
+                  <feFuncR type="table" id="tfCR" tableValues="0 1"/>
+                  <feFuncG type="table" id="tfCG" tableValues="0 1"/>
+                  <feFuncB type="table" id="tfCB" tableValues="0 1"/>
                 </feComponentTransfer>
               </filter>
               <!-- 颗粒：feTurbulence 生成噪点 -->
@@ -428,10 +442,8 @@ footer a:hover{color:#fff}
             </defs>
 
             <g clip-path="url(#frameClip)">
-              <!-- 色调曲线用 SVG 的 filter 属性挂在外层：
-                   CSS 的 filter 里混用函数与 url() 一旦 url 解析异常，
-                   整条声明会失效、画面完全不响应 —— 所以分成两层。 -->
-              <g filter="url(#curveFx)">
+              <!-- 全部影调/色彩/胶片调整都在这一个滤镜里完成，sceneGroup 上不再挂 CSS filter -->
+              <g filter="url(#toneFx)">
               <g id="sceneGroup">
                 <!-- 演示用照片：AI 生成，无水印 -->
                 <image href="images/demo-scene.jpg" x="0" y="0" width="1200" height="760"
@@ -843,9 +855,34 @@ footer a:hover{color:#fff}
   var curveLine  = document.getElementById('curveLine');
   var curveSvg   = document.getElementById('curveSvg');
   var curvePtsG  = document.getElementById('curvePts');
-  var cvR        = document.getElementById('cvR');
-  var cvG        = document.getElementById('cvG');
-  var cvB        = document.getElementById('cvB');
+  /* 影调滤镜 #toneFx 的各个基元。所有调整都写在这里，
+     sceneGroup 上不再有 CSS filter，避免「外层滤镜缓存输入」的问题。 */
+  var tf = {};
+  ['tfRS','tfGS','tfBS','tfSat','tfSep','tfHue','tfCR','tfCG','tfCB'].forEach(function(id){
+    tf[id] = document.getElementById(id);
+  });
+  function setNum(id, name, v){
+    var el = tf[id];
+    if (!el) return;
+    var s = isFinite(v) ? (+v).toFixed(4) : '1';
+    if (el.getAttribute(name) !== s) el.setAttribute(name, s);
+  }
+  function setStr(id, name, s){
+    var el = tf[id];
+    if (el && el.getAttribute(name) !== s) el.setAttribute(name, s);
+  }
+  function setCurveTable(str){
+    setStr('tfCR','tableValues',str); setStr('tfCG','tableValues',str); setStr('tfCB','tableValues',str);
+  }
+  function resetTone(){                     // 全部回到中性（用于「原图」对比）
+    setNum('tfRS','slope',1); setNum('tfRS','intercept',0);
+    setNum('tfGS','slope',1); setNum('tfGS','intercept',0);
+    setNum('tfBS','slope',1); setNum('tfBS','intercept',0);
+    setNum('tfSat','values',1);
+    setStr('tfSep','values','1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0');
+    setNum('tfHue','values',0);
+    setCurveTable('0 1');
+  }
   var grainLayer    = document.getElementById('grainLayer');
   var vignetteLayer = document.getElementById('vignetteLayer');
   var histBox    = document.getElementById('hist');
@@ -936,10 +973,7 @@ footer a:hover{color:#fff}
     // 写进查找表 —— 这一步才让曲线真正作用于画面
     var N = 17, tv = [];
     for (var m = 0; m < N; m++) tv.push(curveTotal(m / (N - 1)).toFixed(4));
-    var s = tv.join(' ');
-    if (cvR) cvR.setAttribute('tableValues', s);
-    if (cvG) cvG.setAttribute('tableValues', s);
-    if (cvB) cvB.setAttribute('tableValues', s);
+    setCurveTable(tv.join(' '));
   }
 
   /* ---------- 画面 ---------- */
@@ -950,46 +984,67 @@ footer a:hover{color:#fff}
     var s = v.toFixed(3);
     if (el.getAttribute('opacity') !== s) el.setAttribute('opacity', s);
   }
+  var renderCount = 0;
   function render(){
     var e = S.exp / 100, c = S.con / 100, s = S.sat / 100, vi = S.vib / 100, t = S.tem / 100;
     var strength = S.str / 100;
 
     if (shown === 'before') {
-      sceneGroup.style.filter = 'none';
+      resetTone();
       maskLayer.style.opacity = 0;
-      if (grainLayer)    grainLayer.setAttribute('opacity', '0');
-      if (vignetteLayer) vignetteLayer.setAttribute('opacity', '0');
+      setOpacityIfChanged(grainLayer, 0);
+      setOpacityIfChanged(vignetteLayer, 0);
+      renderCount++;
       badgeText.textContent = '原图 · 未调整';
       return;
     }
 
-    var parts = [];
-    parts.push('brightness(' + (1 + e * 0.62).toFixed(3) + ')');
-    parts.push('contrast(' + (1 + c * 0.55).toFixed(3) + ')');
-    parts.push('saturate(' + Math.max(0, 1 + s * 0.85 + vi * 0.35).toFixed(3) + ')');
-    parts.push('sepia(' + Math.max(0, t * 0.16).toFixed(3) + ')');
-    parts.push('hue-rotate(' + (-t * 6).toFixed(2) + 'deg)');
+    // ---- 基础调整 + 胶片，先合并成同类项（避免滤镜链过长）----
     var fm = FILM[S.film];
-    if (fm && strength > 0.01) {
-      // 从中性值 1 向胶片参数插值，strength 就是「浓度」
-      var mix = function(v){ return 1 + (v - 1) * strength; };
-      parts.push('saturate(' + mix(fm.sat).toFixed(3) + ')');
-      parts.push('contrast(' + mix(fm.con).toFixed(3) + ')');
-      parts.push('sepia(' + (fm.sep * strength).toFixed(3) + ')');
-      parts.push('hue-rotate(' + (fm.hue * strength).toFixed(2) + 'deg)');
-      parts.push('brightness(' + mix(fm.bri).toFixed(3) + ')');
-    }
-    // 色调曲线改由外层 SVG 滤镜承担，这里不再往 CSS filter 里塞 url()
-    sceneGroup.style.filter = parts.join(' ');
+    var hasFilm = !!(fm && strength > 0.01);
+    var fSat = hasFilm ? 1 + (fm.sat - 1) * strength : 1;
+    var fCon = hasFilm ? 1 + (fm.con - 1) * strength : 1;
+    var fBri = hasFilm ? 1 + (fm.bri - 1) * strength : 1;
+    var fSep = hasFilm ? fm.sep * strength : 0;
+    var fHue = hasFilm ? fm.hue * strength : 0;
+
+    var vBri = (1 + e * 0.62) * fBri;
+    var vCon = (1 + c * 0.55) * fCon;
+    var vSat = Math.max(0, 1 + s * 0.85 + vi * 0.55) * fSat;
+    // 色温与鲜艳度原先给得太弱（色温满量程只有 sepia .16 / hue -6°），
+    // 拖到底几乎看不出变化，容易被误判成「滑杆坏了」，这里加到能明显感知
+    var vSep = Math.min(1, Math.max(0, t * 0.30 + fSep));
+    var vHue = -t * 14 + fHue;
+
+    // 亮度 + 对比合成一个线性变换：out = b*(c*(in-0.5)+0.5)
+    var slope = vBri * vCon;
+    var inter = vBri * 0.5 * (1 - vCon);
+    setNum('tfRS','slope',slope); setNum('tfRS','intercept',inter);
+    setNum('tfGS','slope',slope); setNum('tfGS','intercept',inter);
+    setNum('tfBS','slope',slope); setNum('tfBS','intercept',inter);
+
+    setNum('tfSat','values',vSat);
+
+    // sepia 矩阵按强度 a 向单位阵插值
+    var a = vSep;
+    setStr('tfSep','values', [
+      1 - 0.607 * a, 0.769 * a,     0.189 * a,     0, 0,
+      0.349 * a,     1 - 0.314 * a, 0.168 * a,     0, 0,
+      0.272 * a,     0.534 * a,     1 - 0.869 * a, 0, 0,
+      0,             0,             0,             1, 0
+    ].map(function(x){ return (+x).toFixed(4); }).join(' '));
+
+    setNum('tfHue','values',vHue);
 
     // 颗粒与暗角：后期层，直接改自身 opacity
-    setOpacityIfChanged(grainLayer,    S.gr  / 100 * 0.30);
+    setOpacityIfChanged(grainLayer,    S.gr  / 100 * 0.42);
     setOpacityIfChanged(vignetteLayer, S.vig / 100 * 0.92);
 
     // 局部蒙版的曝光只在该蒙版被选中时叠加
     maskLayer.style.opacity = guidesOn() ? Math.max(0, S.mExp / 100 * 0.85).toFixed(3) : '0';
 
-    badgeText.textContent = '已渲染 ' + renderMs + 'ms · 4096 × 6144';
+    renderCount++;
+    badgeText.textContent = '第 ' + renderCount + ' 次渲染 · ' + renderMs + 'ms · 4096 × 6144';
   }
 
   /* ---------- 控件绑定 ---------- */
@@ -1041,7 +1096,7 @@ footer a:hover{color:#fff}
 
   /* ---------- 曲线拖动 ---------- */
   if (curveSvg) {
-    var cvDrag = -1;
+    var cvDrag = -1, cvPid = -1;
     curveSvg.style.touchAction = 'none';
     curveSvg.style.cursor = 'crosshair';
 
@@ -1052,31 +1107,41 @@ footer a:hover{color:#fff}
         v: Math.max(0, Math.min(1, 1 - (ev.clientY - r.top) / (r.height || 1)))
       };
     }
+    function cvApply(ev){
+      // 让「总曲线」落在光标位置：手动值 = 目标值 - 滑杆贡献
+      var p = cvLocal(ev);
+      curvePts[cvDrag] = Math.max(0, Math.min(1, p.v - curveSliders(cvDrag / (CVN - 1))));
+      scheduleRender();
+    }
+    function cvEnd(){
+      if (cvPid >= 0 && curveSvg.releasePointerCapture && curveSvg.hasPointerCapture &&
+          curveSvg.hasPointerCapture(cvPid)) {
+        try { curveSvg.releasePointerCapture(cvPid); } catch (e) {}
+      }
+      cvDrag = -1; cvPid = -1;
+    }
     curveSvg.addEventListener('pointerdown', function(ev){
       var p = cvLocal(ev);
       cvDrag = Math.round(p.t * (CVN - 1));
-      // 让「总曲线」落在手指/鼠标位置：手动值 = 目标值 - 滑杆贡献
-      curvePts[cvDrag] = Math.max(0, Math.min(1, p.v - curveSliders(cvDrag / (CVN - 1))));
-      if (curveSvg.setPointerCapture) curveSvg.setPointerCapture(ev.pointerId);
-      scheduleRender();
+      cvPid = ev.pointerId;
+      cvApply(ev);
+      if (curveSvg.setPointerCapture) {
+        try { curveSvg.setPointerCapture(cvPid); } catch (e) {}
+      }
       ev.preventDefault();
     });
     curveSvg.addEventListener('pointermove', function(ev){
       if (cvDrag < 0) return;
-      var p = cvLocal(ev);
-      curvePts[cvDrag] = Math.max(0, Math.min(1, p.v - curveSliders(cvDrag / (CVN - 1))));
-      scheduleRender();
+      cvApply(ev);
       ev.preventDefault();
     });
-    function cvEnd(ev){
-      if (cvDrag >= 0 && curveSvg.releasePointerCapture && curveSvg.hasPointerCapture &&
-          curveSvg.hasPointerCapture(ev.pointerId)) {
-        curveSvg.releasePointerCapture(ev.pointerId);
-      }
-      cvDrag = -1;
-    }
     curveSvg.addEventListener('pointerup', cvEnd);
-    curveSvg.addEventListener('pointercancel', function(){ cvDrag = -1; });
+    curveSvg.addEventListener('pointercancel', cvEnd);
+    // 兜底：指针在窗口外松开时可能收不到 pointerup。
+    // 若指针捕获没释放，后续指针事件会全被 curveSvg 抢走，滑杆就点不动了。
+    window.addEventListener('pointerup', cvEnd);
+    window.addEventListener('blur', cvEnd);
+
     curveSvg.addEventListener('dblclick', function(){        // 双击复位
       for (var k = 0; k < CVN; k++) curvePts[k] = k / (CVN - 1);
       scheduleRender();
@@ -1113,7 +1178,8 @@ footer a:hover{color:#fff}
     bAfter.setAttribute('aria-pressed', String(which === 'after'));
     bBefore.setAttribute('aria-pressed', String(which === 'before'));
   }
-  function setCompare(which){ setCompareState(which); render(); }
+  // 「原图」时滤镜被重置成中性，切回「已调整」必须重画曲线才能恢复
+  function setCompare(which){ setCompareState(which); drawCurve(); render(); }
   bAfter.addEventListener('click', function(){ spacePeek = false; setCompare('after'); });
   bBefore.addEventListener('click', function(){ spacePeek = false; setCompare('before'); });
 

@@ -178,8 +178,10 @@ cd Phos
 default SDK is newer than the installed compiler. A `Package.swift` is provided for use with SwiftPM-aware
 editors; the release pipeline does not depend on it.
 
-`build.sh` installs to `/Applications/Phos.app` by default (override with `APP_PATH=`), stages and signs
-the bundle before swapping it in, and refreshes the copy inside the repository.
+`build.sh` installs to `/Applications/Phos.app` by default (override with `APP_PATH=`), and stages and
+signs the bundle before swapping it in. It deliberately does **not** keep a second copy inside the
+repository — a `.app` sitting in a project folder is picked up by LaunchServices and shows up as a
+duplicate in Launchpad. Set `KEEP_LOCAL_APP=1` if you want one anyway.
 
 ### Tests
 
@@ -375,7 +377,9 @@ cd Phos
 仓库同时提供 `Package.swift` 供支持 SwiftPM 的编辑器使用，但发布流程不依赖它。
 
 `build.sh` 默认安装到 `/Applications/Phos.app`（可用 `APP_PATH=` 覆盖），
-先在暂存目录组装并签名再整体替换，同时刷新仓库内的副本。
+先在暂存目录组装并签名再整体替换。它**刻意不在仓库里再留一份副本** ——
+项目目录里的 `.app` 会被 LaunchServices 收录，在启动台里显示成一个重复的应用。
+确实需要时加 `KEEP_LOCAL_APP=1`。
 
 ### 测试
 

@@ -70,8 +70,11 @@ install_app() {
 install_app "$APP_PATH"
 echo "已构建并安装到 $APP_PATH"
 
-# 项目内也留一份最新产物，方便直接双击运行或与历史版本对照
-if [ "$APP_PATH" != "$LOCAL_APP" ]; then
+# 默认不再往仓库里留副本。
+# 仓库在桌面上，而 LaunchServices 会持续扫描桌面 —— 留在仓库里的 Phos.app
+# 会在启动台 / 聚焦里一直显示成一个重复的应用。确实需要时显式打开：
+#   KEEP_LOCAL_APP=1 ./build.sh
+if [ "${KEEP_LOCAL_APP:-0}" = "1" ] && [ "$APP_PATH" != "$LOCAL_APP" ]; then
     install_app "$LOCAL_APP"
-    echo "同步更新项目内副本 $LOCAL_APP"
+    echo "同步更新项目内副本 $LOCAL_APP（KEEP_LOCAL_APP=1）"
 fi

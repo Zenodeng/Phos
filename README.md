@@ -17,12 +17,16 @@ Older releases may still use the former application and archive names.
 
 🌐 **Showcase & UI design:** [zenodeng.github.io/Phos](https://zenodeng.github.io/Phos/) · **界面设计展示页**
 
-![Phos — 调整面板：白平衡、基本影调、质感与饱和度、HDR · Adjust panel](https://zenodeng.github.io/Phos/images/05-tone-adjustments.jpg)
+![Phos — 明暗调整：白平衡、基本影调、质感与饱和度、HDR · Light panel](https://zenodeng.github.io/Phos/images/05-tone-adjustments.jpg)
 
-![Phos — 线性渐变蒙版：三条参考线与控制点 · Linear gradient mask](https://zenodeng.github.io/Phos/images/06-linear-gradient-mask.jpg)
+<p align="center">
+  <img src="https://zenodeng.github.io/Phos/images/07-color-grading.jpg" width="32%" alt="Phos — 色彩：颜色分级色轮与胶片 CLUT · Colour grading">
+  <img src="https://zenodeng.github.io/Phos/images/06-linear-gradient-mask.jpg" width="32%" alt="Phos — 线性渐变蒙版：三条参考线与控制点 · Linear gradient mask">
+  <img src="https://zenodeng.github.io/Phos/images/08-radial-gradient-mask.jpg" width="32%" alt="Phos — 径向渐变蒙版：椭圆选区与控制点 · Radial gradient mask">
+</p>
 
-> 工作台 · 五分类检视器 · 九种局部蒙版。更多界面见[设计展示页](https://zenodeng.github.io/Phos/)。
-> Workspace · five-tab inspector · nine mask types. See the [showcase page](https://zenodeng.github.io/Phos/) for more.
+> 明暗调整 · 色彩分级与胶片 CLUT · 线性 / 径向渐变蒙版。更多界面见[设计展示页](https://zenodeng.github.io/Phos/)。
+> Light adjustments · colour grading and film CLUT · linear and radial gradient masks. See the [showcase page](https://zenodeng.github.io/Phos/) for more.
 
 ---
 

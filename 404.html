@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>页面不存在 — Phos</title>
+<meta name="robots" content="noindex, follow">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23000'/%3E%3Ctext x='50' y='68' font-size='58' font-family='Helvetica' font-weight='600' fill='%23C9A876' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#C9A876;
+  --gold-hi:#D8BC8E;
+  --gold-glow:#E3CB9E;
+  --w-80:rgba(255,255,255,.8);
+  --w-56:rgba(255,255,255,.56);
+  --w-32:rgba(255,255,255,.32);
+}
+html,body{height:100%}
+body{
+  background:#000;color:#fff;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","PingFang SC","Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:17px;line-height:1.47;letter-spacing:-.022em;
+  -webkit-font-smoothing:antialiased;
+  display:flex;flex-direction:column;
+}
+.nav{
+  height:48px;flex:none;
+  background:rgba(0,0,0,.8);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
+  backdrop-filter:saturate(180%) blur(20px);
+}
+.nav .inner{max-width:1024px;margin:0 auto;height:48px;display:flex;align-items:center;padding:0 24px}
+.nav a{display:flex;align-items:center;gap:7px;color:#fff;font-size:15px;font-weight:600;letter-spacing:-.01em;text-decoration:none}
+.nav .dot{width:7px;height:7px;border-radius:50%;background:var(--gold);flex:none}
+main{flex:1;display:flex;align-items:center;justify-content:center;padding:64px 24px}
+.box{max-width:620px;text-align:center}
+.code{
+  font-size:clamp(88px,20vw,168px);font-weight:600;line-height:1;letter-spacing:-.05em;
+  color:transparent;-webkit-text-stroke:1px rgba(201,168,118,.55);
+  font-variant-numeric:tabular-nums;
+}
+h1{font-size:clamp(24px,4.4vw,34px);font-weight:600;line-height:1.15;letter-spacing:-.018em;margin-top:8px}
+p{color:var(--w-56);font-size:16px;line-height:1.6;margin-top:16px}
+.path{
+  display:inline-block;max-width:100%;
+  margin-top:20px;padding:8px 14px;border-radius:8px;
+  background:rgba(255,255,255,.06);
+  font-family:"SF Mono",ui-monospace,Menlo,Monaco,monospace;
+  font-size:12.5px;letter-spacing:0;color:var(--w-56);
+  word-break:break-all;
+}
+.btnrow{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-top:36px}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:17px;font-weight:400;line-height:1;letter-spacing:-.022em;
+  padding:13px 24px;border-radius:8px;border:1px solid transparent;
+  text-decoration:none;transition:background-color .2s ease,border-color .2s ease;
+}
+.btn-primary{background:var(--gold);color:#000}
+.btn-primary:hover{background:var(--gold-hi)}
+.btn-ghost{background:transparent;color:#fff;border-color:var(--w-32)}
+.btn-ghost:hover{border-color:#fff;background:rgba(255,255,255,.08)}
+a:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:8px}
+footer{flex:none;padding:28px 24px;text-align:center;font-size:12px;color:var(--w-56);letter-spacing:-.01em}
+footer a{color:var(--w-80);text-decoration:none}
+footer a:hover{color:#fff}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="inner">
+    <a href="/"><span class="dot"></span>Phos</a>
+  </div>
+</nav>
+
+<main>
+  <div class="box">
+    <div class="code" aria-hidden="true">404</div>
+    <h1>这个页面不存在。</h1>
+    <p>链接可能已经失效，或者地址打错了。你可以回到首页，或者直接下载 Phos。</p>
+    <div class="path" id="reqPath" hidden></div>
+    <div class="btnrow">
+      <a class="btn btn-primary" href="/">回到首页</a>
+      <a class="btn btn-ghost" href="/download/Phos-macOS-apple-silicon.zip" download>下载 macOS 版</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <a href="/">首页</a> · <a href="https://github.com/Zenodeng/Phos">GitHub</a> · MIT License
+</footer>
+
+<script>
+(function(){
+  var el = document.getElementById('reqPath');
+  if (!el) return;
+  var p = location.pathname + location.search;
+  if (p === '/' || p === '') return;
+  el.textContent = p;
+  el.hidden = false;
+})();
+</script>
+</body>
+</html>

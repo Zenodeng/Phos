@@ -2,7 +2,10 @@
 
 本项目遵循语义化版本。日期为发布日（Asia/Shanghai）。
 
-## [Unreleased]
+## [3.2.0] — 2026-10-05
+
+新增启动时的更新提示；安装包从 zip 改为 DMG（zip 仍然一并发布）。
+Adds a launch-time update check, and switches the download from zip to DMG (the zip is still published).
 
 ### 2026-10-05 安装包改为 DMG / DMG Distribution
 

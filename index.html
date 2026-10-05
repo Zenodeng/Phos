@@ -21,12 +21,50 @@
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "Phos",
+  "alternateName": "RawForge",
   "operatingSystem": "macOS 15+",
-  "applicationCategory": "PhotoApplication",
-  "offers": {"@type": "Offer", "price": "0"},
+  "applicationCategory": "MultimediaApplication",
+  "applicationSubCategory": "RAW 照片编辑器 / Photo Editing",
+  "softwareVersion": "3.2.1",
+  "fileSize": "2.48MB",
+  "isAccessibleForFree": true,
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "CNY"},
   "license": "https://opensource.org/licenses/MIT",
-  "description": "macOS 原生非破坏性 RAW 照片编辑器：RAW 解码、完整影调与色彩调整、胶片 CLUT 模拟、九种局部蒙版、批量同步与导出水印。",
-  "url": "https://github.com/Zenodeng/Phos"
+  "description": "macOS 原生非破坏性 RAW 照片编辑器：RAW 解码、完整影调与色彩调整、胶片 CLUT 模拟、九种局部蒙版、批量同步与导出水印。全部在本机完成，不联网、无账号、无订阅。",
+  "url": "https://zenophos.dpdns.org/",
+  "downloadUrl": "https://zenophos.dpdns.org/download/Phos-macOS-apple-silicon.dmg",
+  "installUrl": "https://zenophos.dpdns.org/#install",
+  "screenshot": "https://zenophos.dpdns.org/images/05-tone-adjustments.jpg",
+  "inLanguage": ["zh-CN", "en"],
+  "sameAs": ["https://github.com/Zenodeng/Phos"],
+  "author": {"@type": "Person", "name": "Zenodeng", "url": "https://github.com/Zenodeng"},
+  "featureList": [
+    "RAW 解码（走 macOS 系统内置解码器）",
+    "完整影调与色彩调整",
+    "胶片 CLUT 模拟",
+    "九种局部蒙版（线性 / 径向渐变、主体与人物识别等）",
+    "批量同步与批量导出",
+    "导出水印",
+    "非破坏性编辑，参数保存在侧车文件",
+    "纯本地处理，不联网、无账号、无订阅"
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "Phos 收费吗？", "acceptedAnswer": {"@type": "Answer", "text": "免费，开源，采用 MIT 协议。没有订阅、没有内购、不需要注册账号，也不存在「专业版」的区分。"}},
+    {"@type": "Question", "name": "Phos 支持哪些 macOS 版本和机型？", "acceptedAnswer": {"@type": "Answer", "text": "需要 macOS 15 或更高版本，且是 Apple 芯片（M 系列）的 Mac。当前只提供 Apple 芯片构建，Intel 机型暂不支持。"}},
+    {"@type": "Question", "name": "Phos 支持哪些相机的 RAW 文件？", "acceptedAnswer": {"@type": "Answer", "text": "走 macOS 系统内置的 RAW 解码（Core Image 与 ImageIO），凡是系统「预览」能打开的 RAW 都能编辑，覆盖佳能 CR2 / CR3、尼康 NEF、索尼 ARW、富士 RAF、Adobe DNG 等主流格式。更新的机型能否支持，取决于所用的 macOS 版本是否已内置该机型的解码器。"}},
+    {"@type": "Question", "name": "Phos 会上传我的照片吗？联网是做什么的？", "acceptedAnswer": {"@type": "Answer", "text": "不会上传。照片全程在本机处理，没有云端、没有账号、没有遥测。唯一的联网行为是启动时向官网查一次最新版本号，请求里不含任何关于用户、照片或这台 Mac 的信息。"}},
+    {"@type": "Question", "name": "Phos 和 Lightroom 有什么不一样？", "acceptedAnswer": {"@type": "Answer", "text": "Phos 是本地优先：不订阅、不云同步、不做移动端，专注把 RAW 解码、影调与色彩、胶片 CLUT 模拟、局部蒙版和批量导出做扎实。适合希望照片完全留在自己机器上的个人摄影流程。"}},
+    {"@type": "Question", "name": "第一次打开 Phos 被 macOS 拦住了怎么办？", "acceptedAnswer": {"@type": "Answer", "text": "这是所有未做 Apple 公证的应用都会遇到的统一提示。双击 Phos，点弹窗里的「完成」，打开「系统设置 → 隐私与安全性」，滚到底部点「仍要打开」。也可以在终端执行 xattr -dr com.apple.quarantine /Applications/Phos.app 一次性去掉隔离标记。"}},
+    {"@type": "Question", "name": "Phos 支持批量处理吗？", "acceptedAnswer": {"@type": "Answer", "text": "支持。可以批量导入、把一张照片的调整同步到其他照片，并批量导出（含导出水印）。"}},
+    {"@type": "Question", "name": "Phos 有 Windows 或 iPad 版吗？", "acceptedAnswer": {"@type": "Answer", "text": "目前只有 macOS 版。Windows 暂无计划；iPad 版仍在可行性评估阶段，没有可发布的时间表。"}},
+    {"@type": "Question", "name": "怎么反馈问题或参与 Phos 的开发？", "acceptedAnswer": {"@type": "Answer", "text": "到 GitHub 仓库（github.com/Zenodeng/Phos）提 Issue 或 Pull Request 都可以。项目用 Swift 编写，基于 Core Image、Vision 与 AppKit。"}}
+  ]
 }
 </script>
 <script>/* 首屏淡入的前置状态只在「允许动效」时才加。
@@ -424,6 +462,22 @@ footer a:hover{color:#fff}
 .rv.in{opacity:1;translate:0 0}
 .rv-stagger{opacity:0;translate:0 24px;transition:opacity .7s var(--ease),translate .7s var(--ease)}
 .rv-stagger.in{opacity:1;translate:0 0}
+
+/* ---------- FAQ ---------- */
+.faq{display:grid;gap:10px;max-width:780px;margin:40px auto 0}
+.faq details{border:1px solid rgba(0,0,0,.1);border-radius:14px;background:#fff;padding:0 22px;transition:border-color .35s var(--ease),box-shadow .35s var(--ease)}
+.faq details:hover{border-color:rgba(201,168,118,.45)}
+.faq details[open]{border-color:rgba(201,168,118,.6);box-shadow:0 8px 26px -14px rgba(0,0,0,.2)}
+.faq summary{cursor:pointer;list-style:none;padding:17px 0;font-size:16px;font-weight:600;letter-spacing:-.01em;display:flex;align-items:center;justify-content:space-between;gap:18px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:'+';flex:none;font-size:20px;font-weight:400;line-height:1;color:var(--gold);transition:transform .35s var(--ease)}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq summary:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:8px}
+.faq .ans{padding-bottom:18px}
+.faq .ans p{margin:0;font-size:15px;line-height:1.75;color:var(--ink-64)}
+.faq .ans p + p{margin-top:10px}
+.faq .ans a{color:var(--gold-ink);text-decoration:underline;text-underline-offset:3px}
+.light .faq code{background:rgba(0,0,0,.055);color:var(--ink-80)}
 
 /* 界面演示的四张图：除了上浮，还从 98.5% 轻微放大归位，比纯位移更有“落定”感 */
 .gal figure.rv{scale:.985}
@@ -912,7 +966,7 @@ footer a:hover{color:#fff}
       <div class="install-shots">
         <figure class="rv">
           <img class="shot" src="images/09-gatekeeper-dialog.jpg" width="3024" height="1572" loading="lazy" alt="macOS 弹窗提示无法打开 Phos，因为 Apple 无法检查其是否包含恶意软件，弹窗中提供「完成」与「移到废纸篓」按钮">
-          <figcaption>右键点图标选「打开」，弹窗里再点一次「打开」。图中是 macOS 的「无法验证开发者」提示。</figcaption>
+          <figcaption>双击 Phos 会被拦一次。这个弹窗里只有「完成」和「移到废纸篓」两个按钮 —— 点「完成」，别点废纸篓。</figcaption>
         </figure>
         <figure class="rv">
           <img class="shot" src="images/10-system-settings-open-anyway.jpg" width="1920" height="998" loading="lazy" alt="系统设置中的隐私与安全性面板，在安全性一栏显示 Phos 已被阻止，右侧有「仍要打开」按钮">
@@ -952,10 +1006,59 @@ footer a:hover{color:#fff}
     </div>
   </section>
 
+  <!-- ================= 常见问题 ================= -->
+  <section id="faq" class="light">
+    <div class="wrap rv">
+      <p class="eyebrow"><span class="idx">06</span>常见问题</p>
+      <h2>你可能想问的。</h2>
+      <p class="lead">价格、格式支持、隐私与安装 —— 关于 Phos 最常见的疑问都在这儿。</p>
+    </div>
+    <div class="wrap">
+      <div class="faq">
+        <details class="rv-stagger">
+          <summary>Phos 收费吗？</summary>
+          <div class="ans"><p>免费，开源，采用 MIT 协议。没有订阅、没有内购、不需要注册账号，也不存在「专业版」的区分。</p></div>
+        </details>
+        <details class="rv-stagger">
+          <summary>支持哪些 macOS 版本和机型？</summary>
+          <div class="ans"><p>需要 macOS 15 或更高版本，且是 Apple 芯片（M 系列）的 Mac。当前只提供 Apple 芯片构建，Intel 机型暂不支持。</p></div>
+        </details>
+        <details class="rv-stagger">
+          <summary>支持哪些相机的 RAW 文件？</summary>
+          <div class="ans"><p>走 macOS 系统内置的 RAW 解码（Core Image 与 ImageIO），凡是系统「预览」能打开的 RAW 都能编辑 —— 覆盖佳能 CR2 / CR3、尼康 NEF、索尼 ARW、富士 RAF、Adobe DNG 等主流格式。</p><p>更新的机型能否支持，取决于你所用的 macOS 版本是否已内置该机型的解码器。</p></div>
+        </details>
+        <details class="rv-stagger">
+          <summary>会上传我的照片吗？联网是做什么的？</summary>
+          <div class="ans"><p>不会上传。照片全程在本机处理，没有云端、没有账号、没有遥测。</p><p>唯一的联网行为是启动时向官网查一次最新版本号，请求里不含任何关于你、你的照片或这台 Mac 的信息。</p></div>
+        </details>
+        <details class="rv-stagger">
+          <summary>和 Lightroom 有什么不一样？</summary>
+          <div class="ans"><p>Phos 是本地优先：不订阅、不云同步、不做移动端，专注把 RAW 解码、影调与色彩、胶片 CLUT 模拟、局部蒙版和批量导出做扎实。</p><p>适合希望照片完全留在自己机器上的个人摄影流程。</p></div>
+        </details>
+        <details class="rv-stagger">
+          <summary>第一次打开被 macOS 拦住了怎么办？</summary>
+          <div class="ans"><p>这是所有未做 Apple 公证的应用都会遇到的统一提示，不是 Phos 独有的问题。双击 Phos → 点弹窗里的「完成」→ 打开「系统设置 → 隐私与安全性」→ 滚到底部点「仍要打开」。</p><p>也可以在「终端」执行 <code>xattr -dr com.apple.quarantine /Applications/Phos.app</code> 一次性去掉隔离标记。</p></div>
+        </details>
+        <details class="rv-stagger">
+          <summary>支持批量处理吗？</summary>
+          <div class="ans"><p>支持。可以批量导入、把一张照片的调整同步到其他照片，并批量导出（含导出水印）。</p></div>
+        </details>
+        <details class="rv-stagger">
+          <summary>有 Windows 或 iPad 版吗？</summary>
+          <div class="ans"><p>目前只有 macOS 版。Windows 暂无计划；iPad 版仍在可行性评估阶段，没有可发布的时间表。</p></div>
+        </details>
+        <details class="rv-stagger">
+          <summary>怎么反馈问题或参与开发？</summary>
+          <div class="ans"><p>到 <a href="https://github.com/Zenodeng/Phos">GitHub 仓库</a>提 Issue 或 Pull Request 都可以。项目用 Swift 编写，基于 Core Image、Vision 与 AppKit。</p></div>
+        </details>
+      </div>
+    </div>
+  </section>
+
   <!-- ================= 下载 ================= -->
   <section class="dl light">
     <div class="wrap center rv">
-      <p class="eyebrow"><span class="idx">06</span>开始使用</p>
+      <p class="eyebrow"><span class="idx">07</span>开始使用</p>
       <h2>免费，开源，不联网。</h2>
       <p class="lead">没有账号，没有订阅，没有云端上传。你的照片始终留在自己的 Mac 上。</p>
       <div class="btnrow">

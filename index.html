@@ -72,6 +72,8 @@ html.anim-on body{opacity:0;animation:fadeInBody .6s ease forwards}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 @keyframes shimmer{from{background-position:-160% center}to{background-position:260% center}}
 @keyframes barIn{from{transform:scaleY(.1)}to{transform:scaleY(1)}}
+/* 悬停放大后的“呼吸”：在 1.04 与 1.052 之间缓慢起伏 */
+@keyframes breathe{0%,100%{transform:scale(1.04)}50%{transform:scale(1.052)}}
 img{max-width:100%;height:auto;display:block}
 a{text-decoration:none;color:inherit}
 .light p a{color:var(--gold-ink);text-decoration:underline;text-underline-offset:3px}
@@ -303,21 +305,24 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;bac
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(272px,1fr));gap:20px;margin-top:56px}
 .tile{
   background:#fff;border-radius:12px;padding:34px 30px;
-  transition:transform .4s var(--ease),box-shadow .4s var(--ease);
+  transition:transform .6s var(--ease),box-shadow .6s var(--ease);
   /* 不要用 transform-style:preserve-3d：
      它会把 h3 / p / chips 拆成独立图层放进 3D 空间，
      倾斜时 z 序会错乱，部分文字被卡片背景盖住。
-     这里没有任何子元素做 translateZ，preserve-3d 没有意义。
      overflow:hidden 顺带让圆角正确裁切内容。 */
   overflow:hidden;
 }
-.tile:hover{transform:translateY(-4px)}
+/* 悬停：柔和放大 + 缓慢呼吸 */
+.tile:hover{
+  transform:scale(1.04);
+  animation:breathe 3.6s ease-in-out .5s infinite;
+}
 .dark .tile{
   background:#141416;border:1px solid rgba(255,255,255,.07);
-  transition:transform .4s var(--ease),box-shadow .4s var(--ease),border-color .4s var(--ease);
+  transition:transform .6s var(--ease),box-shadow .6s var(--ease),border-color .6s var(--ease);
 }
-.dark .tile:hover{border-color:rgba(201,168,118,.3);box-shadow:0 8px 32px rgba(0,0,0,.4)}
-.light .tile:hover{box-shadow:0 8px 24px rgba(0,0,0,.08)}
+.dark .tile:hover{border-color:rgba(201,168,118,.32);box-shadow:0 14px 44px rgba(0,0,0,.5)}
+.light .tile:hover{box-shadow:0 14px 40px rgba(0,0,0,.14)}
 .tile p{font-size:15px;line-height:1.5;letter-spacing:-.016em}
 .light .tile p{color:var(--ink-80)}
 .dark .tile p{color:var(--w-80)}
@@ -342,11 +347,16 @@ figcaption .d{font-size:15px;line-height:1.5;letter-spacing:-.016em;margin-top:8
 .feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(288px,1fr));gap:20px;margin-top:56px}
 .feat{
   background:#fff;border-radius:12px;padding:32px 28px;
-  transition:transform .4s var(--ease),box-shadow .4s var(--ease);
+  transition:transform .6s var(--ease),box-shadow .6s var(--ease);
   /* 同 .tile：去掉 preserve-3d，避免倾斜时子元素 z 序错乱压住文字 */
   overflow:hidden;
 }
-.feat:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,.08)}
+/* 与 .tile 同一套手感：柔和放大 + 缓慢呼吸 */
+.feat:hover{
+  transform:scale(1.04);
+  animation:breathe 3.6s ease-in-out .5s infinite;
+  box-shadow:0 14px 40px rgba(0,0,0,.14);
+}
 .feat .ico{
   width:32px;height:32px;border-radius:8px;background:rgba(201,168,118,.18);
   display:flex;align-items:center;justify-content:center;margin-bottom:18px;
@@ -429,6 +439,7 @@ footer a:hover{color:#fff}
   .eyebrow::after{transform:none;transition:none}
   .hero::after{animation:none}
   .btn-primary::after{display:none}
+  .tile:hover,.feat:hover{animation:none}
   .btn:hover,.btn:active,.tile:hover,.feat:hover,.chip:hover,.shot:hover img{transform:none}
 }
 
@@ -1659,37 +1670,9 @@ footer a:hover{color:#fff}
   var statsSection = document.querySelector('.stats');
   if (statsSection) statsObserver.observe(statsSection);
 
-  /* ---------- 卡片 3D 倾斜 ----------
-     ⚠️ .tile / .feat 的 CSS 里带着 transition:transform .4s，
-        直接在 mousemove 里写 transform 会被这条过渡拖糊。
-        所以倾斜期间临时去掉 transform 过渡，离开时再恢复。 */
-  var tiles = document.querySelectorAll('.tile, .feat');
-  tiles.forEach(function(tile){
-    var raf = 0, nx = 0, ny = 0;
-    function applyTilt(){
-      raf = 0;
-      tile.style.transform = 'perspective(900px) rotateX(' + ny.toFixed(2) + 'deg) rotateY(' +
-                             nx.toFixed(2) + 'deg) translateY(-4px)';
-    }
-    tile.addEventListener('mouseenter', function(){
-      if (reduce) return;
-      tile.style.willChange = 'transform';
-      tile.style.transition = 'box-shadow .4s var(--ease)';
-    });
-    tile.addEventListener('mousemove', function(e){
-      if (reduce) return;
-      var rect = tile.getBoundingClientRect();
-      nx = ((e.clientX - rect.left) / rect.width - 0.5) * 7;
-      ny = ((e.clientY - rect.top) / rect.height - 0.5) * -7;
-      if (!raf) raf = requestAnimationFrame(applyTilt);
-    });
-    tile.addEventListener('mouseleave', function(){
-      if (raf) { cancelAnimationFrame(raf); raf = 0; }
-      tile.style.transform = '';
-      tile.style.transition = '';
-      tile.style.willChange = '';
-    });
-  });
+  /* ---------- 卡片悬停：柔和放大（原来这里是 3D 倾斜，
+       倾斜会把子元素带进 3D 空间，文字容易被卡片背景压住，
+       已改为纯 CSS 的呼吸式放大，见 .tile:hover / .feat:hover）---------- */
 
   /* ---------- 滚动动效 ----------
      原先有三个独立的 scroll 监听，而且每滚一帧就对每张 .shot 调一次

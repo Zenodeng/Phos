@@ -20,3 +20,7 @@ SHA256.txt
 # 照片旁挂（不要把别人照片的调整文件提交上来）
 *.rawforge.json
 build/
+
+# Python 缓存
+__pycache__/
+*.pyc

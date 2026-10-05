@@ -113,6 +113,11 @@ final class AppState: ObservableObject {
     // 当前照片是否带人像深度辅助数据
     @Published var hasDisparity = false
 
+    // 版本更新：启动时静默查一次，有新版才在工具栏显示提示图标
+    @Published var availableUpdate: UpdateInfo?
+    @Published var showUpdateResult = false
+    private var didCheckForUpdates = false
+
     let history = History()
     let cluts = CLUTLibrary.shared
 
@@ -339,6 +344,32 @@ final class AppState: ObservableObject {
     }
 
     func autoSave() { saveCurrent() }
+
+    /// 检查更新。
+    ///
+    /// `silent` 为 true 时用于启动时的静默检查：每次运行只跑一次，且只有真的发现新版本
+    /// 才会在工具栏冒出提示图标，没有更新就什么都不做。
+    /// 手动点「检查更新…」时传 false，无论有没有更新都会弹一个结果。
+    func checkForUpdates(silent: Bool) {
+        if silent {
+            guard !didCheckForUpdates else { return }
+            didCheckForUpdates = true
+        }
+        Task { [weak self] in
+            let info = await UpdateChecker.check()
+            await MainActor.run {
+                guard let self else { return }
+                self.availableUpdate = info
+                if !silent { self.showUpdateResult = true }
+            }
+        }
+    }
+
+    /// 打开官网下载页（提示图标和更新结果弹窗共用）
+    func openUpdatePage() {
+        guard let page = availableUpdate?.page, let url = URL(string: page) else { return }
+        NSWorkspace.shared.open(url)
+    }
 
     @discardableResult
     func saveCurrent() -> Bool {

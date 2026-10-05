@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 // Neutral surfaces follow the HTML reference; gold is reserved for selection and edits.
@@ -21,8 +22,21 @@ struct StudioMainWindow: View {
                 StudioWorkspace().frame(minWidth: 440, maxWidth: .infinity)
                 InspectorPane(initialCategory: initialInspectorCategory).frame(minWidth: 330, idealWidth: 360, maxWidth: 440)
             }
+            // 手动「检查更新…」的结果。挂在 HSplitView 上，和上面的 workflowError 弹窗分开
+            .alert("检查更新", isPresented: $s.showUpdateResult) {
+                if s.availableUpdate != nil { Button("前往下载") { s.openUpdatePage() } }
+                Button("好", role: .cancel) {}
+            } message: {
+                if let info = s.availableUpdate {
+                    Text("发现新版本 \(info.version)（当前 \(UpdateChecker.currentVersion)）。")
+                } else {
+                    Text("已是最新版本 \(UpdateChecker.currentVersion)。")
+                }
+            }
             PremiumStatusBar()
         }
+        // 启动时静默查一次版本：有新版才会在工具栏冒出提示图标
+        .task { s.checkForUpdates(silent: true) }
         .background(StudioStyle.panel).tint(StudioStyle.accent)
         .preferredColorScheme(appearance == "dark" ? .dark : appearance == "light" ? .light : nil)
         .disabled(s.syncRunning)
@@ -53,6 +67,7 @@ struct StudioToolbar: View {
     var body: some View {
         HStack(spacing: 8) {
             Label("Phos", systemImage: "camera.aperture").font(.system(size: 13, weight: .semibold)).foregroundStyle(StudioStyle.accent)
+            if let update = s.availableUpdate { UpdateBadge(info: update) }
             ToolDivider()
             ToolButton(systemImage: "folder", title: "打开文件夹") {
                 let p = NSOpenPanel(); p.canChooseDirectories = true; p.canChooseFiles = false
@@ -82,6 +97,8 @@ struct StudioToolbar: View {
                 Picker("外观", selection: $appearance) {
                     Text("跟随系统").tag("system"); Text("深色").tag("dark"); Text("浅色").tag("light")
                 }
+                Divider()
+                Button("检查更新…") { s.checkForUpdates(silent: false) }
             } label: { Image(systemName: "ellipsis").frame(width: 24) }
                 .menuStyle(.borderlessButton).fixedSize().help("更多操作与外观")
             Button { s.showExport = true } label: { Label("导出", systemImage: "square.and.arrow.up") }
@@ -99,6 +116,30 @@ private struct StudioHistoryButtons: View {
             ToolButton(systemImage: "arrow.uturn.backward", title: "撤销", disabled: !history.canUndo || s.source == nil) { s.undo() }
             ToolButton(systemImage: "arrow.uturn.forward", title: "重做", disabled: !history.canRedo || s.source == nil) { s.redo() }
         }
+    }
+}
+
+/// 发现新版本时才出现的小提示。平时完全不存在，不占位置。
+private struct UpdateBadge: View {
+    @EnvironmentObject var s: AppState
+    let info: UpdateInfo
+    @State private var hover = false
+
+    var body: some View {
+        Button { s.openUpdatePage() } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "arrow.down.circle.fill").font(.system(size: 11.5, weight: .semibold))
+                Text(info.version).font(.system(size: 10.5, weight: .semibold))
+            }
+            .padding(.horizontal, 7)
+            .frame(height: 20)
+            .foregroundStyle(StudioStyle.accent)
+            .background(Capsule().fill(StudioStyle.accent.opacity(hover ? 0.24 : 0.14)))
+            .overlay(Capsule().stroke(StudioStyle.accent.opacity(hover ? 0.55 : 0.30), lineWidth: 0.5))
+        }
+        .buttonStyle(.plain)
+        .onHover { hover = $0 }
+        .help("Phos \(info.version) 已发布，点击前往下载")
     }
 }
 

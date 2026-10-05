@@ -1,6 +1,6 @@
 # Phos
 
-**A native, non-destructive RAW photo editor for macOS — local-only, no account, no subscription.**  
+**A native, non-destructive RAW photo editor for macOS — no account, no subscription, and your photos never leave your Mac.**  
 **为个人摄影流程打造的原生 macOS 非破坏性 RAW 修图软件 —— 纯本地、无账号、无订阅。**
 
 Phos uses the `com.zeno.phos` application identifier. Existing `.rawforge.json` sidecars and the legacy
@@ -35,8 +35,16 @@ Older releases may still use the former application and archive names.
 ### Overview
 
 Phos is a non-destructive RAW photo editor written in Swift on top of Core Image, Vision and AppKit.
-It runs entirely on the local machine: no cloud services, no accounts, no subscription, no telemetry.
+Everything runs on the local machine: no cloud services, no accounts, no subscription, no telemetry.
 Every pixel operation is executed on the GPU, and there are no third-party dependencies.
+
+**The only network request Phos ever makes** is a version check against its own website at launch.
+It sends nothing about you, your photos or your machine, and it is the sole reason the app is not
+strictly offline. Turn it off with:
+
+```sh
+defaults write com.zeno.phos updateCheckDisabled -bool true
+```
 
 The project deliberately favours a small, complete set of high-frequency editing capabilities over
 breadth of features. All edits are stored in a sidecar file next to the original image, and **the
@@ -62,7 +70,8 @@ original file is never modified**.
 4. **macOS asks once — here's what to do.**
 
    Phos is ad-hoc signed and not notarised, so the first double-click shows a warning.
-   This is expected: the app never phones home, and the full source is public.
+   This is expected: the full source is public, and the app's only network request is a version
+   check against its own website.
 
    ![macOS Gatekeeper 拦截弹窗](https://zenodeng.github.io/Phos/images/09-gatekeeper-dialog.jpg)
 
@@ -162,6 +171,10 @@ full resolution as 16-bit TIFF and can be edited further.
 - **Batch export** — applies each photo's own sidecar, or exports only the flagged photos. Destination can be a fixed folder or chosen per run.
 - **Transparent-background export** — exports a cut-out using the foreground mask (format is forced to PNG or TIFF, which support alpha).
 - **Adaptive light / dark interface** that follows the system appearance.
+- **Update check** — on launch Phos asks its own website for the latest version number. If a newer
+  release exists, a small badge appears next to the app name in the toolbar; clicking it opens the
+  download page. Nothing about you or your machine is sent, and the check can be turned off (see
+  *Overview*). There is also a manual **Check for Updates…** in the toolbar's more menu.
 
 ### Keyboard shortcuts
 
@@ -199,6 +212,7 @@ duplicate in Launchpad. Set `KEEP_LOCAL_APP=1` if you want one anyway.
 
 ```sh
 bash Scripts/test_mask_drag.sh        # mask handle geometry, no photo needed, runs in seconds
+bash Scripts/test_update.sh           # version comparison, offline, runs in milliseconds
 bash Scripts/test_performance.sh      # rendering, caches, undo/redo, async export
 bash Scripts/test_studio.sh <fixture-image> <output-directory> [render-baseline-directory]
 bash Scripts/test_real_photos.sh <output-directory> <soak-seconds> <photo> [more-photos...]
@@ -228,6 +242,7 @@ separate real-photo testing.
 | `Sources/Phos/Inspector.swift` | Adjustment panels, curve editor, colour wheels, mask panels                               |
 | `Sources/Phos/Theme.swift`     | Adaptive colour palette                                                                   |
 | `Sources/Phos/CLUT.swift`      | Film LUT loading and baking                                                               |
+| `Sources/Phos/Update.swift`    | The one network call: version check against the project's own website                     |
 
 The application is non-destructive by design: all parameters are serialised to a sidecar file, and
 rendering is a pure function of (source image, parameters).
@@ -251,7 +266,14 @@ Released under the [MIT License](LICENSE).
 ### 概述
 
 Phos 是一款用 Swift 编写、基于 Core Image、Vision 与 AppKit 的**非破坏性 RAW 修图软件**。
-它完全在本机运行：不联网、无账号、无订阅、无遥测。全部像素处理在 GPU 上完成，不依赖任何第三方库。
+所有处理都在本机完成：无账号、无订阅、无遥测。全部像素处理在 GPU 上完成，不依赖任何第三方库。
+
+**Phos 唯一的联网行为**是启动时向自己的官网查一次版本号。请求里不带任何关于你、你的照片或
+本机环境的信息 —— 这也是这个应用唯一不是「完全离线」的地方。想关掉：
+
+```sh
+defaults write com.zeno.phos updateCheckDisabled -bool true
+```
 
 项目刻意选择「把高频能力做全做透」而非堆砌功能。所有调整写入原图旁边的副档，
 **原始文件一个字节都不会被修改**。
@@ -277,7 +299,7 @@ Phos 是一款用 Swift 编写、基于 Core Image、Vision 与 AppKit 的**非�
 4. **macOS 首次启动会弹一次确认，按下面走一次就好。**
 
    Phos 是 ad-hoc 本地签名、未做 Apple 公证，所以首次启动会有一次警告。
-   这是正常的 —— 应用不联网、不回传任何数据，源码完全公开。
+   这是正常的 —— 源码完全公开，应用唯一的联网行为是向自己的官网查一次版本号。
 
    第一次双击会看到这张：
 
@@ -348,7 +370,7 @@ Phos 是一款用 Swift 编写、基于 Core Image、Vision 与 AppKit 的**非�
 | 画笔 | 直接在画布上涂抹或擦除，一次拖动算一笔；可调笔刷大小与边缘软硬。 |
 | 颜色范围 | 用吸管取色，「容差」控制收进来的颜色范围。 |
 | 亮度范围 | 在画布上拖动取样亮度，或用上下界滑块手动框定。 |
-| 选择主体 | 系统视觉模型算显著性主体，本地跑、不联网，结果按「蒙版 + 画幅尺寸」缓存。 |
+| 选择主体 | 系统视觉模型算显著性主体，全部在本机算，结果按「蒙版 + 画幅尺寸」缓存。 |
 | 选择人物 | 系统人物分割，本地跑，自动圈出画面里的人。 |
 | 主体抠图 | 前景实例抠图，输出软边 float 蒙版 —— 导出「透明背景抠图」用的就是它。 |
 | 深度涂绘 | 把想虚化的背景涂白、主体留黑，配合「焦外散景」使用。 |
@@ -376,6 +398,9 @@ Vision 配准的帧对齐与质量门（重叠区 NCC 低于 0.7 的帧自动剔
 - **批量导出** —— 套用每张照片各自的副档，也可只导出已标记的照片；输出目录可选固定文件夹或每次指定。
 - **透明背景导出** —— 用「主体抠图」蒙版导出抠图（格式自动设为 PNG 或 TIFF，因为需要 alpha）。
 - **浅色 / 深色自适应界面**，跟随系统外观。
+- **更新提示** —— 启动时向官网查一次最新版本号；有新版就在工具栏应用名旁边出现一个小徽标，
+  点它打开下载页。请求不带任何关于你或本机的信息，也可以关掉（见「概述」）。
+  工具栏「更多」菜单里另有手动「检查更新…」。
 
 ### 快捷键
 
@@ -412,6 +437,7 @@ cd Phos
 
 ```sh
 bash Scripts/test_mask_drag.sh        # 蒙版控制点几何，不需要照片，秒级
+bash Scripts/test_update.sh           # 版本号比较，不联网，毫秒级
 bash Scripts/test_performance.sh      # 渲染、缓存、撤销重做、异步导出
 bash Scripts/test_studio.sh <fixture-image> <output-directory> [render-baseline-directory]
 bash Scripts/test_real_photos.sh <output-directory> <soak-seconds> <photo> [more-photos...]
@@ -439,6 +465,7 @@ bash Scripts/test_workflow.sh <实拍照片> <实拍纸面照片> [其他照片.
 | `Sources/Phos/Inspector.swift` | 调整面板、曲线编辑器、色轮、蒙版面板        |
 | `Sources/Phos/Theme.swift`     | 自适应调色板                   |
 | `Sources/Phos/CLUT.swift`      | 胶片 LUT 读取与烘焙             |
+| `Sources/Phos/Update.swift`    | 唯一的联网行为：向官网查版本号        |
 
 设计上不可变：所有参数序列化到副档，渲染是关于「源图 + 参数」的纯函数。
 

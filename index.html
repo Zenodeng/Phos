@@ -25,7 +25,7 @@
   "operatingSystem": "macOS 15+",
   "applicationCategory": "MultimediaApplication",
   "applicationSubCategory": "RAW 照片编辑器 / Photo Editing",
-  "softwareVersion": "3.2.1",
+  "softwareVersion": "3.2.2",
   "fileSize": "2.48MB",
   "isAccessibleForFree": true,
   "offers": {"@type": "Offer", "price": "0", "priceCurrency": "CNY"},
@@ -221,15 +221,31 @@ a:focus-visible,.btn:focus-visible,button:focus-visible,input:focus-visible{outl
 .hero .subhead{margin-top:20px;animation:slideUp .8s var(--ease) forwards;opacity:0;animation-delay:.3s}
 .hero .lead{margin:18px auto 0;animation:slideUp .8s var(--ease) forwards;opacity:0;animation-delay:.4s}
 .hero .btnrow{animation:slideUp .8s var(--ease) forwards;opacity:0;animation-delay:.5s}
-.hero-shot{margin-top:72px;position:relative;z-index:1;animation:scaleIn 1s var(--ease) forwards;opacity:0;animation-delay:.7s}
+/* 首屏文案块撑满一屏：减去 sticky nav 48px 与 hero 顶部 padding 104px，
+   截图与数字因此落在折叠线以下，要靠下滑才带出来 */
+.hero-intro{
+  min-height:calc(100vh - 152px);
+  min-height:calc(100svh - 152px);
+  display:flex;flex-direction:column;justify-content:center;
+}
+/* 截图与数字的动效本身没变（scaleIn / slideUp / 100ms 递进错峰），
+   只是从「页面加载后定时播」改成「滚到 .hero-reveal 才播」 */
+.hero-shot{margin-top:72px;position:relative;z-index:1;opacity:0}
+.hero-reveal.in .hero-shot{animation:scaleIn 1s var(--ease) forwards}
 .hero-shot img{transition:transform 1.2s cubic-bezier(.16,1,.3,1)}
 .hero-shot:hover img{transform:scale(1.02)}
 .stats{display:flex;flex-wrap:wrap;justify-content:center;gap:20px 56px;padding:60px 0 8px}
-.stat{animation:slideUp .6s var(--ease) forwards;opacity:0}
-.stat:nth-child(1){animation-delay:.85s}
-.stat:nth-child(2){animation-delay:.95s}
-.stat:nth-child(3){animation-delay:1.05s}
-.stat:nth-child(4){animation-delay:1.15s}
+.stat{opacity:0}
+.hero-reveal.in .stat{animation:slideUp .6s var(--ease) forwards}
+/* 起点从原来的 .85s 提前到 .35s：滚动触发后不该再让用户干等近一秒 */
+.hero-reveal.in .stat:nth-child(1){animation-delay:.35s}
+.hero-reveal.in .stat:nth-child(2){animation-delay:.45s}
+.hero-reveal.in .stat:nth-child(3){animation-delay:.55s}
+.hero-reveal.in .stat:nth-child(4){animation-delay:.65s}
+@media (prefers-reduced-motion:reduce){
+  .hero-intro{min-height:auto}
+  .hero-shot,.stat{opacity:1;animation:none}
+}
 .stat b{display:block;font-size:24px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:#fff;transition:transform .3s var(--ease)}
 .stat:hover b{transform:scale(1.08)}
 .stat span{display:block;margin-top:4px;font-size:12px;letter-spacing:-.01em;color:var(--w-56)}
@@ -568,7 +584,8 @@ footer a:hover{color:#fff}
 <main id="top">
 
   <header class="hero dark">
-    <div class="wrap">
+    <!-- 首屏只放文案：截图与数字一律推到折叠线以下 -->
+    <div class="wrap hero-intro">
       <p class="eyebrow">macOS 原生 · Swift · Core Image</p>
       <h1>Phos</h1>
       <p class="subhead">把 RAW 修图做成一件工整的事。</p>
@@ -578,15 +595,18 @@ footer a:hover{color:#fff}
         <a class="btn btn-outline-d" href="https://github.com/Zenodeng/Phos">查看源码</a>
       </div>
     </div>
-    <div class="wide hero-shot rv">
-      <img class="shot" src="images/05-tone-adjustments.jpg" width="1920" height="1207" alt="Phos 主界面：左侧素材浏览器缩略图网格，中间照片画布与直方图，右侧白平衡与影调调整面板">
-    </div>
-    <div class="wrap">
-      <div class="stats">
-        <div class="stat"><b>100%</b><span>本机运行</span></div>
-        <div class="stat"><b>9 种</b><span>局部蒙版</span></div>
-        <div class="stat"><b>64³</b><span>胶片 CLUT</span></div>
-        <div class="stat"><b>MIT</b><span>开源协议</span></div>
+    <!-- 下滑到这里才由 .hero-reveal.in 统一触发：截图放大淡入 → 四个数字依次上浮 -->
+    <div class="hero-reveal">
+      <div class="wide hero-shot">
+        <img class="shot" src="images/05-tone-adjustments.jpg" width="1920" height="1207" alt="Phos 主界面：左侧素材浏览器缩略图网格，中间照片画布与直方图，右侧白平衡与影调调整面板">
+      </div>
+      <div class="wrap">
+        <div class="stats">
+          <div class="stat"><b>100%</b><span>本机运行</span></div>
+          <div class="stat"><b>9 种</b><span>局部蒙版</span></div>
+          <div class="stat"><b>64³</b><span>胶片 CLUT</span></div>
+          <div class="stat"><b>MIT</b><span>开源协议</span></div>
+        </div>
       </div>
     </div>
   </header>
@@ -1065,7 +1085,7 @@ footer a:hover{color:#fff}
         <a class="btn btn-primary" href="download/Phos-macOS-apple-silicon.dmg" download>下载 macOS 版</a>
         <a class="btn btn-outline-l" href="https://github.com/Zenodeng/Phos">在 GitHub 上查看</a>
       </div>
-      <p class="note">需要 macOS 15 或更高版本 · Apple 芯片 · MIT 协议 · 当前版本 v3.2.1（2.48 MB）</p>
+      <p class="note">需要 macOS 15 或更高版本 · Apple 芯片 · MIT 协议 · 当前版本 v3.2.2（2.48 MB）</p>
       <div class="channels">
         <h3>下载渠道 · 慢就换一个</h3>
         <ul>
@@ -1075,7 +1095,7 @@ footer a:hover{color:#fff}
           <li><a href="https://zenodeng.github.io/Phos/download/Phos-macOS-apple-silicon.dmg">GitHub Pages</a><span>备用</span></li>
           <li><a href="https://github.com/Zenodeng/Phos/releases">GitHub Releases</a><span>需能访问 GitHub</span></li>
         </ul>
-        <p class="sum">以上是同一个文件，SHA256 完全一致：<code>522be0c7…81b8</code>（完整值见 <a href="download/SHA256.txt">SHA256.txt</a>）。下载后可在终端执行 <code>shasum -a 256 下载的文件.dmg</code> 核对。</p>
+        <p class="sum">以上是同一个文件，SHA256 完全一致：<code>0dce3f44…39ab</code>（完整值见 <a href="download/SHA256.txt">SHA256.txt</a>）。下载后可在终端执行 <code>shasum -a 256 下载的文件.dmg</code> 核对。</p>
         <p class="sum">习惯用 zip 的话，<a href="download/Phos-macOS-apple-silicon.zip">这里也有一份</a>（内容相同）。</p>
       </div>
     </div>
@@ -1176,7 +1196,12 @@ footer a:hover{color:#fff}
       });
     }, {threshold: 0.5});
 
-    document.querySelectorAll('.stat').forEach(function(el){ statObserver.observe(el); });
+    document.querySelectorAll('.stat').forEach(function(el){
+      /* 首屏下方的四个数字不在这里跑：它们要跟着下滑一起带出来，
+         交给 .hero-reveal 的调度（见文末），否则页面一打开就先演完了 */
+      if (el.closest('.hero-reveal')) return;
+      statObserver.observe(el);
+    });
   }
 
   /* =========================================================
@@ -1767,37 +1792,68 @@ footer a:hover{color:#fff}
     requestAnimationFrame(step);
   }
 
+  /* 单个数字的滚动动画：100% / 9 种走补间，64³ 走步进，MIT 逐字打出 */
+  function runStat(stat){
+    var text = stat.textContent;
+    if (text === '100%') animateNumber(stat, 100, '%');
+    else if (text.includes('种')) animateNumber(stat, 9, ' 种');
+    else if (text === '64³') {
+      var n = 0;
+      var t = setInterval(function(){
+        n += 4;
+        if (n >= 64) { clearInterval(t); stat.textContent = '64³'; }
+        else stat.textContent = n + '³';
+      }, 30);
+    }
+    else if (text === 'MIT') {
+      var chars = ['M', 'I', 'T'];
+      var i = 0;
+      stat.textContent = '';
+      var t = setInterval(function(){
+        if (i < 3) { stat.textContent += chars[i]; i++; }
+        else clearInterval(t);
+      }, 150);
+    }
+  }
+
   var statsObserver = new IntersectionObserver(function(entries){
     entries.forEach(function(en){
       if (en.isIntersecting && !statsAnimated) {
         statsAnimated = true;
-        stats.forEach(function(stat){
-          var text = stat.textContent;
-          if (text === '100%') animateNumber(stat, 100, '%');
-          else if (text.includes('种')) animateNumber(stat, 9, ' 种');
-          else if (text === '64³') {
-            var n = 0;
-            var t = setInterval(function(){
-              n += 4;
-              if (n >= 64) { clearInterval(t); stat.textContent = '64³'; }
-              else stat.textContent = n + '³';
-            }, 30);
-          }
-          else if (text === 'MIT') {
-            var chars = ['M', 'I', 'T'];
-            var i = 0;
-            stat.textContent = '';
-            var t = setInterval(function(){
-              if (i < 3) { stat.textContent += chars[i]; i++; }
-              else clearInterval(t);
-            }, 150);
-          }
-        });
+        stats.forEach(runStat);
       }
     });
   }, {threshold:0.5});
-  var statsSection = document.querySelector('.stats');
+  var statsSection = document.querySelector('.stats:not(.hero-reveal .stats)');
   if (statsSection) statsObserver.observe(statsSection);
+
+  /* ---------- 首屏下方的截图与数字：下滑才带出来 ----------
+     原先截图固定在加载后 .7s、数字 .85s 起播，页面一打开就演完了，
+     用户滚下去看到的是已经演完的静态结果。现在统一由 .hero-reveal 进入视口触发：
+     截图 scaleIn，四个数字沿用原来的滚动动画与 100ms 错峰，
+     延迟与 CSS 上浮动画的 delay 对齐（.35s 起，逐个 +100ms）。 */
+  var heroReveal = document.querySelector('.hero-reveal');
+  if (heroReveal) {
+    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!('IntersectionObserver' in window) || reduceMotion) {
+      heroReveal.classList.add('in');
+    } else {
+      var heroIO = new IntersectionObserver(function(entries){
+        entries.forEach(function(en){
+          if (!en.isIntersecting) return;
+          heroIO.unobserve(en.target);
+          en.target.classList.add('in');
+          var heroStats = en.target.querySelectorAll('.stat b');
+          for (var hi = 0; hi < heroStats.length; hi++) {
+            (function(el, i){
+              setTimeout(function(){ runStat(el); }, 350 + i * 100);
+            })(heroStats[hi], hi);
+          }
+        });
+      }, {threshold:.15});
+      heroIO.observe(heroReveal);
+    }
+  }
 
   /* ---------- 卡片悬停：柔和放大（原来这里是 3D 倾斜，
        倾斜会把子元素带进 3D 空间，文字容易被卡片背景压住，

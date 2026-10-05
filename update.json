@@ -1,7 +1,7 @@
 {
-  "version": "3.2.1",
+  "version": "3.2.2",
   "released": "2026-10-05",
   "page": "https://zenophos.dpdns.org/#install",
   "url": "https://zenophos.dpdns.org/download/Phos-macOS-apple-silicon.dmg",
-  "notes": "修复 DMG 安装窗口里「首次打开必读.txt」挡住标题的问题。应用本身没有改动。"
+  "notes": "修复 1:1 检查模式下看不到渐变蒙版参考线的问题，以及宽幅照片下线性渐变参考线画不到画面边缘的问题。"
 }

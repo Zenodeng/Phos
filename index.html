@@ -196,7 +196,7 @@ a:focus-visible,.btn:focus-visible,button:focus-visible,input:focus-visible{outl
 .stat span{display:block;margin-top:4px;font-size:12px;letter-spacing:-.01em;color:var(--w-56)}
 
 /* ---------- shots ---------- */
-.shot{width:100%;height:auto;border-radius:12px;box-shadow:var(--shadow);will-change:transform;transition:transform 0.1s linear}
+.shot{width:100%;height:auto;border-radius:12px;box-shadow:var(--shadow)}
 .dark .shot{box-shadow:var(--shadow),0 0 0 1px rgba(255,255,255,.08)}
 .light .shot{box-shadow:var(--shadow),0 0 0 1px rgba(0,0,0,.06)}
 
@@ -338,7 +338,7 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;bac
 /* ---------- gallery ---------- */
 .gal{display:flex;flex-direction:column;gap:96px;margin-top:72px}
 figure{margin:0}
-figcaption{margin-top:24px}
+figcaption{margin-top:32px}
 figcaption .t{font-size:21px;font-weight:600;letter-spacing:-.012em}
 figcaption .d{font-size:15px;line-height:1.5;letter-spacing:-.016em;margin-top:8px;max-width:640px}
 .light figcaption .d{color:var(--ink-80)}
@@ -1679,7 +1679,6 @@ footer a:hover{color:#fff}
      getBoundingClientRect() —— 强制同步重排，滚动发涩。
      现在合并成一个，用 rAF 节流。 */
   var heroWrap = document.querySelector('.hero .wrap');
-  var galleryShots = document.querySelectorAll('.gal .shot');
   var scrollTick = false;
 
   function onScrollFrame(){
@@ -1688,7 +1687,6 @@ footer a:hover{color:#fff}
 
     if (reduce) {                     // 关掉动效时清掉可能残留的内联样式
       if (heroWrap) { heroWrap.style.transform = ''; heroWrap.style.opacity = ''; }
-      for (var j = 0; j < galleryShots.length; j++) galleryShots[j].style.transform = '';
       return;
     }
 
@@ -1699,14 +1697,10 @@ footer a:hover{color:#fff}
       heroWrap.style.opacity = (1 - p * 0.55).toFixed(3);
     }
 
-    // 画廊图片：很轻的视差（0.03），够活但不脱离图注
-    for (var i = 0; i < galleryShots.length; i++) {
-      var r = galleryShots[i].getBoundingClientRect();
-      if (r.bottom > 0 && r.top < vh) {
-        galleryShots[i].style.transform =
-          'translateY(' + ((vh - r.top) * 0.03).toFixed(1) + 'px)';
-      }
-    }
+    /* 画廊图片的视差已移除：
+       它按 (视口高 - 图片顶部) × 0.03 下移图片，最多能移 27px，
+       而图注只有 24px 的上边距 —— 图片会盖住下面的文字。
+       而且图片与图注错位本身也不合理，图注应该跟着图走。 */
   }
   function requestScrollFrame(){
     if (scrollTick) return;

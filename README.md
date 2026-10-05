@@ -15,7 +15,7 @@ Older releases may still use the former application and archive names.
 
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-🌐 **Showcase & UI design:** [zenodeng.github.io/Phos](https://zenodeng.github.io/Phos/) · **界面设计展示页**
+🌐 **官网 / Official site:** [zenophos.dpdns.org](https://zenophos.dpdns.org/) · **Showcase & UI design · 界面设计展示页**
 
 ![Phos — 明暗调整：白平衡、基本影调、质感与饱和度、HDR · Light panel](https://zenodeng.github.io/Phos/images/05-tone-adjustments.jpg)
 
@@ -25,8 +25,8 @@ Older releases may still use the former application and archive names.
   <img src="https://zenodeng.github.io/Phos/images/08-radial-gradient-mask.jpg" width="32%" alt="Phos — 径向渐变蒙版：椭圆选区与控制点 · Radial gradient mask">
 </p>
 
-> 明暗调整 · 色彩分级与胶片 CLUT · 线性 / 径向渐变蒙版。更多界面见[设计展示页](https://zenodeng.github.io/Phos/)。
-> Light adjustments · colour grading and film CLUT · linear and radial gradient masks. See the [showcase page](https://zenodeng.github.io/Phos/) for more.
+> 明暗调整 · 色彩分级与胶片 CLUT · 线性 / 径向渐变蒙版。更多界面见[设计展示页](https://zenophos.dpdns.org/)。
+> Light adjustments · colour grading and film CLUT · linear and radial gradient masks. See the [showcase page](https://zenophos.dpdns.org/) for more.
 
 ---
 

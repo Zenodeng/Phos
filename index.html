@@ -28,6 +28,9 @@
   "url": "https://github.com/Zenodeng/Phos"
 }
 </script>
+<script>/* 首屏淡入的前置状态只在「允许动效」时才加。
+   否则关掉动效（prefers-reduced-motion）或禁用 JS 时，body 会永远停在 opacity:0，整页空白。 */
+if(!matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentElement.className+=' anim-on';}</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
@@ -49,6 +52,9 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
   --shadow:0 3px 30px rgba(0,0,0,.22);
   --shadow-lg:0 40px 100px -20px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.07);
   --ease:cubic-bezier(.16,1,.3,1);
+  --ease-in:cubic-bezier(.4,0,.6,1);
+  --ease-out:cubic-bezier(0,0,.2,1);
+  --bounce:cubic-bezier(.34,1.56,.64,1);
 }
 body{
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","PingFang SC","Helvetica Neue",Helvetica,Arial,sans-serif;
@@ -56,6 +62,16 @@ body{
   color:var(--ink);background:#fff;-webkit-font-smoothing:antialiased;
   overflow-x:hidden;
 }
+html.anim-on body{opacity:0;animation:fadeInBody .6s ease forwards}
+/* ---------- keyframes ---------- */
+@keyframes fadeInBody{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(32px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:translateX(0)}}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+@keyframes scaleIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes shimmer{from{background-position:-160% center}to{background-position:260% center}}
+@keyframes barIn{from{transform:scaleY(.1)}to{transform:scaleY(1)}}
 img{max-width:100%;height:auto;display:block}
 a{text-decoration:none;color:inherit}
 .light p a{color:var(--gold-ink);text-decoration:underline;text-underline-offset:3px}
@@ -70,13 +86,22 @@ a{text-decoration:none;color:inherit}
   background:rgba(0,0,0,.72);
   -webkit-backdrop-filter:saturate(180%) blur(20px);
   backdrop-filter:saturate(180%) blur(20px);
-  transition:background-color .3s ease;
+  transition:background-color .3s ease,box-shadow .3s ease;
+  --scroll-width:0%;
 }
+.nav::after{
+  content:'';position:absolute;bottom:0;left:0;height:2px;
+  background:linear-gradient(90deg,var(--gold),var(--gold-hi));
+  width:var(--scroll-width);transition:width .1s linear;
+}
+.nav.scrolled{background:rgba(0,0,0,.88);box-shadow:0 1px 0 rgba(255,255,255,.08)}
 .nav .inner{max-width:1024px;margin:0 auto;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;gap:20px}
 .nav .brand{display:flex;align-items:center;gap:7px;color:#fff;font-size:15px;font-weight:600;letter-spacing:-.01em;flex:none}
 .nav .brand .dot{width:7px;height:7px;border-radius:50%;background:var(--gold);flex:none}
 .nav .links{display:flex;gap:28px;flex:1;justify-content:center}
-.nav .links a{color:var(--w-80);font-size:12px;letter-spacing:-.01em;transition:color .2s ease}
+.nav .links a{color:var(--w-80);font-size:12px;letter-spacing:-.01em;transition:color .2s ease;position:relative}
+.nav .links a::after{content:'';position:absolute;bottom:-4px;left:0;width:100%;height:1px;background:var(--gold);transform:scaleX(0);transform-origin:left;transition:transform .3s var(--ease)}
+.nav .links a:hover::after{transform:scaleX(1)}
 .nav .links a:hover{color:#fff}
 .nav .act{flex:none}
 .nav .act a{color:var(--gold-glow);font-size:12px;letter-spacing:-.01em}
@@ -86,7 +111,14 @@ a{text-decoration:none;color:inherit}
 section{padding:130px 0}
 .dark{background:var(--black);color:#fff}
 .light{background:var(--light);color:var(--ink)}
-.eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px}
+/* 瑞士排版：小标题左对齐 + 序号 + 一条向右延伸的发丝线 */
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:12px}
+.eyebrow .idx{font-family:"SF Mono",ui-monospace,Menlo,Monaco,monospace;font-size:10.5px;font-weight:500;letter-spacing:.02em;opacity:.45;font-variant-numeric:tabular-nums}
+.eyebrow::after{content:'';flex:1;height:1px;background:currentColor;opacity:.2;transform:scaleX(0);transform-origin:left;transition:transform 1.1s var(--ease)}
+.rv.in .eyebrow::after{transform:scaleX(1)}
+.rv.in .eyebrow .idx{animation:slideIn .7s var(--ease) backwards;animation-delay:.12s}
+.hero .eyebrow{justify-content:center}
+.hero .eyebrow::after{display:none}
 .dark .eyebrow{color:var(--gold-glow)}
 .light .eyebrow{color:var(--gold-ink)}
 h1{font-size:clamp(52px,8vw,88px);font-weight:600;line-height:1.03;letter-spacing:-.025em}
@@ -105,11 +137,25 @@ h3{font-size:21px;font-weight:600;line-height:1.19;letter-spacing:-.012em;margin
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   font-size:17px;font-weight:400;line-height:1;letter-spacing:-.022em;
   padding:13px 24px;border-radius:8px;border:1px solid transparent;
-  cursor:pointer;transition:background-color .2s ease,border-color .2s ease,color .2s ease,transform .2s var(--ease);
+  cursor:pointer;transition:background-color .3s var(--ease),border-color .3s var(--ease),color .3s var(--ease),transform .3s var(--ease),box-shadow .3s var(--ease);
+  position:relative;overflow:hidden;
 }
-.btn:active{transform:scale(.975)}
-.btn-primary{background:var(--gold);color:#000}
-.btn-primary:hover{background:var(--gold-hi)}
+.btn::before{
+  content:'';position:absolute;inset:0;background:radial-gradient(circle at center,rgba(255,255,255,.15),transparent);
+  opacity:0;transition:opacity .3s var(--ease);pointer-events:none;
+}
+.btn:hover::before{opacity:1}
+.btn:hover{transform:translateY(-1px)}
+.btn:active{transform:scale(.97) translateY(0)}
+.btn-primary{background:var(--gold);color:#000;box-shadow:0 2px 12px rgba(201,168,118,.3)}
+.btn-primary:hover{background:var(--gold-hi);box-shadow:0 4px 20px rgba(201,168,118,.45)}
+/* 悬停时一道很淡的高光扫过，苹果官网 CTA 的常见处理 */
+.btn-primary::after{
+  content:'';position:absolute;inset:0;pointer-events:none;opacity:0;
+  background:linear-gradient(100deg,transparent 38%,rgba(255,255,255,.6) 50%,transparent 62%);
+  background-size:260% 100%;background-repeat:no-repeat;
+}
+.btn-primary:hover::after{opacity:1;animation:shimmer .85s var(--ease)}
 .btn-outline-d{background:transparent;color:#fff;border-color:var(--w-32)}
 .btn-outline-d:hover{border-color:#fff;background:rgba(255,255,255,.08)}
 .btn-outline-l{background:transparent;color:var(--ink);border-color:rgba(0,0,0,.24)}
@@ -122,22 +168,33 @@ a:focus-visible,.btn:focus-visible,button:focus-visible,input:focus-visible{outl
   content:"";position:absolute;left:50%;top:8%;transform:translateX(-50%);
   width:1100px;height:1100px;border-radius:50%;pointer-events:none;
   background:radial-gradient(circle,rgba(201,168,118,.13),transparent 62%);
-  filter:blur(30px);
+  filter:blur(30px);animation:float 8s ease-in-out infinite;
 }
 .hero .wrap{position:relative;z-index:1}
+.hero .eyebrow{animation:slideUp .8s var(--ease) forwards;opacity:0;animation-delay:.1s}
 .hero h1{
   background:linear-gradient(180deg,#fff 20%,rgba(255,255,255,.62) 100%);
   -webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:slideUp .8s var(--ease) forwards;opacity:0;animation-delay:.2s;
 }
-.hero .subhead{margin-top:20px}
-.hero .lead{margin:18px auto 0}
-.hero-shot{margin-top:72px;position:relative;z-index:1}
+.hero .subhead{margin-top:20px;animation:slideUp .8s var(--ease) forwards;opacity:0;animation-delay:.3s}
+.hero .lead{margin:18px auto 0;animation:slideUp .8s var(--ease) forwards;opacity:0;animation-delay:.4s}
+.hero .btnrow{animation:slideUp .8s var(--ease) forwards;opacity:0;animation-delay:.5s}
+.hero-shot{margin-top:72px;position:relative;z-index:1;animation:scaleIn 1s var(--ease) forwards;opacity:0;animation-delay:.7s}
+.hero-shot img{transition:transform 1.2s cubic-bezier(.16,1,.3,1)}
+.hero-shot:hover img{transform:scale(1.02)}
 .stats{display:flex;flex-wrap:wrap;justify-content:center;gap:20px 56px;padding:60px 0 8px}
-.stat b{display:block;font-size:24px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:#fff}
+.stat{animation:slideUp .6s var(--ease) forwards;opacity:0}
+.stat:nth-child(1){animation-delay:.85s}
+.stat:nth-child(2){animation-delay:.95s}
+.stat:nth-child(3){animation-delay:1.05s}
+.stat:nth-child(4){animation-delay:1.15s}
+.stat b{display:block;font-size:24px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:#fff;transition:transform .3s var(--ease)}
+.stat:hover b{transform:scale(1.08)}
 .stat span{display:block;margin-top:4px;font-size:12px;letter-spacing:-.01em;color:var(--w-56)}
 
 /* ---------- shots ---------- */
-.shot{width:100%;height:auto;border-radius:12px;box-shadow:var(--shadow)}
+.shot{width:100%;height:auto;border-radius:12px;box-shadow:var(--shadow);will-change:transform;transition:transform 0.1s linear}
 .dark .shot{box-shadow:var(--shadow),0 0 0 1px rgba(255,255,255,.08)}
 .light .shot{box-shadow:var(--shadow),0 0 0 1px rgba(0,0,0,.06)}
 
@@ -173,13 +230,16 @@ a:focus-visible,.btn:focus-visible,button:focus-visible,input:focus-visible{outl
 .panel .tabs{display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,.07)}
 .panel .tabs button{
   flex:1;appearance:none;border:0;background:transparent;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:5px;
   color:var(--w-56);font:inherit;font-size:11.5px;letter-spacing:-.01em;
-  padding:14px 4px 12px;border-bottom:2px solid transparent;transition:color .18s ease,border-color .18s ease;
+  padding:11px 4px 10px;border-bottom:2px solid transparent;transition:color .18s ease,border-color .18s ease;
 }
+.panel .tabs button svg{width:15px;height:15px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
 .panel .tabs button[aria-selected="true"]{color:#fff;border-bottom-color:var(--gold)}
+.panel .tabs button[aria-selected="true"] svg{opacity:1}
 .panel .body{padding:18px 18px 22px;flex:1;overflow-y:auto}
 .pane{display:none}
-.pane.on{display:block}
+.pane.on{display:block;animation:fadeInUp .38s var(--ease)}
 
 .ctrl{display:grid;grid-template-columns:52px 1fr 40px;align-items:center;gap:10px;margin-bottom:2px}
 .ctrl label{font-size:11.5px;color:var(--w-56);letter-spacing:-.01em}
@@ -230,19 +290,38 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;bac
 }
 
 .hist{display:flex;align-items:flex-end;gap:1px;height:56px;margin-bottom:6px}
-.hist i{flex:1;background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(255,255,255,.28));border-radius:1px 1px 0 0;transition:height .22s var(--ease)}
+.hist i{flex:1;background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(255,255,255,.28));border-radius:1px 1px 0 0;transition:height .22s var(--ease);transform-origin:bottom}
+/* 演示区进入视口时，直方图逐根长出来 */
+.demo.in .hist i{animation:barIn .5s var(--ease) backwards}
+.demo.in .hist i:nth-child(4n+2){animation-delay:45ms}
+.demo.in .hist i:nth-child(4n+3){animation-delay:90ms}
+.demo.in .hist i:nth-child(4n){animation-delay:135ms}
 .curve-box{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:8px}
 .curve-box svg{display:block;width:100%;height:110px}
 
 /* ---------- tiles ---------- */
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(272px,1fr));gap:20px;margin-top:56px}
-.tile{background:#fff;border-radius:12px;padding:34px 30px}
-.dark .tile{background:#141416;border:1px solid rgba(255,255,255,.07)}
+.tile{
+  background:#fff;border-radius:12px;padding:34px 30px;
+  transition:transform .4s var(--ease),box-shadow .4s var(--ease);
+  transform-style:preserve-3d;
+}
+.tile:hover{transform:translateY(-4px)}
+.dark .tile{
+  background:#141416;border:1px solid rgba(255,255,255,.07);
+  transition:transform .4s var(--ease),box-shadow .4s var(--ease),border-color .4s var(--ease);
+}
+.dark .tile:hover{border-color:rgba(201,168,118,.3);box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.light .tile:hover{box-shadow:0 8px 24px rgba(0,0,0,.08)}
 .tile p{font-size:15px;line-height:1.5;letter-spacing:-.016em}
 .light .tile p{color:var(--ink-80)}
 .dark .tile p{color:var(--w-80)}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
-.chip{font-size:12px;letter-spacing:-.01em;padding:5px 12px;border-radius:980px;font-variant-numeric:tabular-nums}
+.chip{
+  font-size:12px;letter-spacing:-.01em;padding:5px 12px;border-radius:980px;font-variant-numeric:tabular-nums;
+  transition:transform .2s var(--ease);display:inline-block;
+}
+.chip:hover{transform:scale(1.05)}
 .light .chip{background:rgba(201,168,118,.16);color:var(--gold-ink)}
 .dark .chip{background:rgba(201,168,118,.16);color:var(--gold-glow)}
 
@@ -256,9 +335,24 @@ figcaption .d{font-size:15px;line-height:1.5;letter-spacing:-.016em;margin-top:8
 
 /* ---------- features ---------- */
 .feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(288px,1fr));gap:20px;margin-top:56px}
-.feat{background:#fff;border-radius:12px;padding:32px 28px}
-.feat .ico{width:32px;height:32px;border-radius:8px;background:rgba(201,168,118,.18);display:flex;align-items:center;justify-content:center;margin-bottom:18px}
-.feat .ico svg{width:17px;height:17px;stroke:var(--gold-ink);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.feat{
+  background:#fff;border-radius:12px;padding:32px 28px;
+  transition:transform .4s var(--ease),box-shadow .4s var(--ease);
+  transform-style:preserve-3d;
+}
+.feat:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,.08)}
+.feat .ico{
+  width:32px;height:32px;border-radius:8px;background:rgba(201,168,118,.18);
+  display:flex;align-items:center;justify-content:center;margin-bottom:18px;
+  transition:transform .3s var(--bounce),background-color .3s var(--ease);
+}
+.feat:hover .ico{transform:scale(1.1);background:rgba(201,168,118,.26)}
+.feat .ico svg{
+  width:17px;height:17px;stroke:var(--gold-ink);fill:none;stroke-width:1.6;
+  stroke-linecap:round;stroke-linejoin:round;
+  transition:stroke .3s var(--ease);
+}
+.feat:hover .ico svg{stroke:var(--gold)}
 .feat p{font-size:15px;line-height:1.5;letter-spacing:-.016em;color:var(--ink-80)}
 
 /* ---------- mask anatomy ---------- */
@@ -299,12 +393,37 @@ footer a{color:var(--w-80)}
 footer a:hover{color:#fff}
 
 /* ---------- reveal ---------- */
-.rv{opacity:0;transform:translateY(24px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+/* ---------- reveal ---------- */
+.rv{opacity:0;transform:translateY(32px);transition:opacity .9s var(--ease),transform .9s var(--ease)}
 .rv.in{opacity:1;transform:none}
+.rv-stagger{opacity:0;transform:translateY(24px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+.rv-stagger.in{opacity:1;transform:none}
+.tiles .tile.rv-stagger:nth-child(1){transition-delay:.1s}
+.tiles .tile.rv-stagger:nth-child(2){transition-delay:.2s}
+.tiles .tile.rv-stagger:nth-child(3){transition-delay:.3s}
+.feats .feat.rv-stagger:nth-child(1){transition-delay:.1s}
+.feats .feat.rv-stagger:nth-child(2){transition-delay:.2s}
+.feats .feat.rv-stagger:nth-child(3){transition-delay:.3s}
+.feats .feat.rv-stagger:nth-child(4){transition-delay:.1s}
+.feats .feat.rv-stagger:nth-child(5){transition-delay:.2s}
+.feats .feat.rv-stagger:nth-child(6){transition-delay:.3s}
+.feats .feat.rv-stagger:nth-child(4){transition-delay:.4s}
+.feats .feat.rv-stagger:nth-child(5){transition-delay:.5s}
+.feats .feat.rv-stagger:nth-child(6){transition-delay:.6s}
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
-  .rv{opacity:1;transform:none;transition:none}
-  .hist i{transition:none}
+  html.anim-on body{opacity:1;animation:none}
+  .rv,.rv-stagger,.hero .eyebrow,.hero h1,.hero .subhead,.hero .lead,.hero .btnrow,.hero-shot,.stat{
+    opacity:1;transform:none;transition:none;animation:none;
+  }
+  .hist i{transition:none;animation:none;transform:none}
+  .demo.in .hist i{animation:none}
+  .pane.on{animation:none}
+  .rv.in .eyebrow .idx{animation:none}
+  .eyebrow::after{transform:none;transition:none}
+  .hero::after{animation:none}
+  .btn-primary::after{display:none}
+  .btn:hover,.btn:active,.tile:hover,.feat:hover,.chip:hover,.shot:hover img{transform:none}
 }
 
 /* ---------- responsive ---------- */
@@ -379,8 +498,8 @@ footer a:hover{color:#fff}
 
   <!-- ================= 实时试用 ================= -->
   <section id="studio" class="dark demo-intro">
-    <div class="wrap">
-      <p class="eyebrow">试一试</p>
+    <div class="wrap rv">
+      <p class="eyebrow"><span class="idx">01</span>试一试</p>
       <h2>不用下载，先拖两下滑杆。</h2>
       <p class="lead">下面是按 Phos 的渲染顺序做的一个演示：影调、色彩、胶片 CLUT、局部蒙版，参数与真实面板一一对应。滑杆、色调曲线上的圆点、画面上的蒙版控制点，都可以直接拖，画面会实时跟着变。</p>
     </div>
@@ -492,10 +611,14 @@ footer a:hover{color:#fff}
         <!-- 面板 -->
         <div class="panel">
           <div class="tabs" role="tablist">
-            <button type="button" role="tab" aria-selected="true" data-pane="p-light">明暗</button>
-            <button type="button" role="tab" aria-selected="false" data-pane="p-color">色彩</button>
-            <button type="button" role="tab" aria-selected="false" data-pane="p-film">胶片</button>
-            <button type="button" role="tab" aria-selected="false" data-pane="p-mask">蒙版</button>
+            <button type="button" role="tab" aria-selected="true" data-pane="p-light">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.1"/><path d="M8 1.2v1.5M8 13.3v1.5M1.2 8h1.5M13.3 8h1.5M3.2 3.2l1.1 1.1M11.7 11.7l1.1 1.1M12.8 3.2l-1.1 1.1M4.3 11.7l-1.1 1.1"/></svg>明暗</button>
+            <button type="button" role="tab" aria-selected="false" data-pane="p-color">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 4.4h12.8M1.6 8h12.8M1.6 11.6h12.8"/><circle cx="5.4" cy="4.4" r="1.7"/><circle cx="10.6" cy="8" r="1.7"/><circle cx="6.6" cy="11.6" r="1.7"/></svg>色彩</button>
+            <button type="button" role="tab" aria-selected="false" data-pane="p-film">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.6" y="2.6" width="12.8" height="10.8" rx="1.6"/><path d="M1.6 6.2h12.8M1.6 9.8h12.8M5.2 2.6v10.8M10.8 2.6v10.8"/></svg>胶片</button>
+            <button type="button" role="tab" aria-selected="false" data-pane="p-mask">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.6" stroke-dasharray="2.3 2.1"/><circle cx="8" cy="8" r="2.1"/></svg>蒙版</button>
           </div>
 
           <div class="body">
@@ -581,8 +704,8 @@ footer a:hover{color:#fff}
 
   <!-- ================= 界面演示 ================= -->
   <section id="gallery" class="light">
-    <div class="wrap">
-      <p class="eyebrow">界面演示</p>
+    <div class="wrap rv">
+      <p class="eyebrow"><span class="idx">02</span>界面演示</p>
       <h2>看得见的工作流。</h2>
       <p class="lead">四张真实界面截图，对应 Phos 现有的功能，没有虚构的能力。三栏布局：素材浏览、画布与直方图、检视器。</p>
     </div>
@@ -622,22 +745,22 @@ footer a:hover{color:#fff}
 
   <!-- ================= 设计语言 ================= -->
   <section id="design" class="dark">
-    <div class="wrap">
-      <p class="eyebrow">设计语言</p>
+    <div class="wrap rv">
+      <p class="eyebrow"><span class="idx">03</span>设计语言</p>
       <h2>石墨 × 香槟金。</h2>
       <p class="lead">界面以中性石墨灰面板打底，香槟金只点在「选中」与「编辑态」两处，其余全部克制。工整来自严格网格：固定行高节奏、等宽数字对齐、发丝分隔线。</p>
       <div class="tiles">
-        <div class="tile rv">
+        <div class="tile rv-stagger">
           <h3>克制的金色</h3>
           <p>金色不装饰，只表达状态：选中环、滑杆填充、胶片卡、导出主按钮。看到金色，就是在编辑。</p>
           <div class="chips"><span class="chip">#C9A876</span><span class="chip">仅选中 / 编辑态</span></div>
         </div>
-        <div class="tile rv">
+        <div class="tile rv-stagger">
           <h3>严格网格</h3>
           <p>26 / 27 / 34 px 固定行高节奏，16 px 统一内边距，数值列右对齐等宽。密度高而不乱。</p>
           <div class="chips"><span class="chip">tabular-nums</span><span class="chip">hairline</span></div>
         </div>
-        <div class="tile rv">
+        <div class="tile rv-stagger">
           <h3>蒙版可视化</h3>
           <p>参考线是 1 px 白色虚线，控制点用颜色区分职责：线性渐变端点为青、中心为白、旋转柄为琥珀；径向渐变为黄。看到颜色就知道能拖什么。</p>
           <div class="chips"><span class="chip">color-coded handles</span></div>
@@ -698,37 +821,37 @@ footer a:hover{color:#fff}
 
   <!-- ================= 功能 ================= -->
   <section id="features" class="light">
-    <div class="wrap">
-      <p class="eyebrow">功能</p>
+    <div class="wrap rv">
+      <p class="eyebrow"><span class="idx">04</span>功能</p>
       <h2>把高频能力做全做透。</h2>
       <p class="lead">不堆砌功能。所有调整写入原图旁的副档，原始文件永不修改，随时可以退回原点。</p>
       <div class="feats">
-        <div class="feat rv">
+        <div class="feat rv-stagger">
           <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M4 15l4-4 4 4 3-3 5 5"/></svg></div>
           <h3>RAW 解码</h3>
           <p>ARW / CR3 / NEF 等主流 RAW，另支持 HEIF / HEIC / HIF、JPEG、PNG、TIFF、AVIF。</p>
         </div>
-        <div class="feat rv">
+        <div class="feat rv-stagger">
           <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16"/></svg></div>
           <h3>影调与色彩</h3>
           <p>曝光、对比、高光、阴影、白色与黑色、纹理 / 清晰度 / 去朦胧、白平衡灰点吸管、HDR；五通道色调曲线、HSL 混色、颜色分级、黑白、校准。</p>
         </div>
-        <div class="feat rv">
+        <div class="feat rv-stagger">
           <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="7" cy="18" r="2"/></svg></div>
           <h3>胶片 CLUT 模拟</h3>
           <p>HALD CLUT 加载，含 Kodak 2383 / 2393 印片模拟，64³ 立方体重采样，强度可调。</p>
         </div>
-        <div class="feat rv">
+        <div class="feat rv-stagger">
           <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18"/></svg></div>
           <h3>局部蒙版</h3>
           <p>线性与径向渐变、画笔、颜色范围、亮度范围、选择主体、选择人物、主体抠图、深度涂绘，共九种。每个蒙版带独立调整栈，可反转、复制、删除。</p>
         </div>
-        <div class="feat rv">
+        <div class="feat rv-stagger">
           <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg></div>
           <h3>批量工作流</h3>
           <p>多选同步调整、恢复快照、命名预设、命名快照，以及多重曝光合成。</p>
         </div>
-        <div class="feat rv">
+        <div class="feat rv-stagger">
           <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></svg></div>
           <h3>专业导出</h3>
           <p>8 位与 16 位 TIFF 多色域、长边缩放、文字与图片水印九宫格叠加、固定导出目录。</p>
@@ -739,8 +862,8 @@ footer a:hover{color:#fff}
 
   <!-- ================= 安装 ================= -->
   <section id="install" class="dark">
-    <div class="wrap">
-      <p class="eyebrow">安装</p>
+    <div class="wrap rv">
+      <p class="eyebrow"><span class="idx">05</span>安装</p>
       <h2>四步就能开始修图。</h2>
       <p class="lead">Phos 目前没有做 Apple 公证，所以首次打开需要手动放行一次，之后不会再问。这是 macOS 对所有未公证应用的统一处理，不是 Phos 独有的问题。</p>
     </div>
@@ -789,8 +912,8 @@ footer a:hover{color:#fff}
 
   <!-- ================= 下载 ================= -->
   <section class="dl light">
-    <div class="wrap center">
-      <p class="eyebrow">开始使用</p>
+    <div class="wrap center rv">
+      <p class="eyebrow"><span class="idx">06</span>开始使用</p>
       <h2>免费，开源，不联网。</h2>
       <p class="lead">没有账号，没有订阅，没有云端上传。你的照片始终留在自己的 Mac 上。</p>
       <div class="btnrow">
@@ -827,21 +950,92 @@ footer a:hover{color:#fff}
 
   /* ---------- 滚动入场 ---------- */
   var rv = document.querySelectorAll('.rv');
+  var rvStagger = document.querySelectorAll('.rv-stagger');
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
   if (!('IntersectionObserver' in window) || reduce) {
     rv.forEach(function(el){ el.classList.add('in'); });
+    rvStagger.forEach(function(el){ el.classList.add('in'); });
   } else {
     var io = new IntersectionObserver(function(entries){
       entries.forEach(function(en){
         if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
       });
     }, {rootMargin:'0px 0px -12% 0px', threshold:.08});
-    rv.forEach(function(el, i){ el.style.transitionDelay = (Math.min(i % 4, 3) * 60) + 'ms'; io.observe(el); });
+
+    rv.forEach(function(el){ io.observe(el); });
+    rvStagger.forEach(function(el){ io.observe(el); });
+  }
+
+  /* ---------- 导航栏滚动响应 ---------- */
+  var nav = document.querySelector('.nav');
+  var lastScroll = 0;
+  window.addEventListener('scroll', function(){
+    var scroll = window.pageYOffset;
+    if (scroll > 80) nav.classList.add('scrolled');
+    else nav.classList.remove('scrolled');
+
+    // 更新滚动进度条
+    var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    var progress = (scroll / docHeight) * 100;
+    document.documentElement.style.setProperty('--scroll-width', progress + '%');
+
+    lastScroll = scroll;
+  }, {passive:true});
+
+  /* ---------- 数字滚动动画 ---------- */
+  function animateCount(el, target, duration) {
+    var start = 0;
+    var startTime = null;
+    var isPercent = target === 100;
+    var suffix = el.textContent.replace(/[\d.]/g, '').trim();
+
+    function step(timestamp) {
+      if (!startTime) startTime = timestamp;
+      var progress = Math.min((timestamp - startTime) / duration, 1);
+      var eased = 1 - Math.pow(1 - progress, 3); // easeOut cubic
+      var current = Math.floor(eased * target);
+      el.textContent = (isPercent ? current + '%' : current + (suffix ? ' ' + suffix : ''));
+      if (progress < 1) requestAnimationFrame(step);
+    }
+
+    requestAnimationFrame(step);
+  }
+
+  if (!reduce) {
+    var statObserver = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if (en.isIntersecting) {
+          var b = en.target.querySelector('b');
+          var text = b.textContent.trim();
+          if (text === '100%') animateCount(b, 100, 1200);
+          else if (text.includes('种')) animateCount(b, 9, 800);
+          else if (text === '64³') {
+            var num = {val: 0};
+            var start = performance.now();
+            function anim() {
+              var elapsed = performance.now() - start;
+              if (elapsed < 1000) {
+                num.val = Math.floor((elapsed / 1000) * 64);
+                b.textContent = num.val + '³';
+                requestAnimationFrame(anim);
+              } else {
+                b.textContent = '64³';
+              }
+            }
+            anim();
+          }
+          statObserver.unobserve(en.target);
+        }
+      });
+    }, {threshold: 0.5});
+
+    document.querySelectorAll('.stat').forEach(function(el){ statObserver.observe(el); });
   }
 
   /* =========================================================
      实时演示
-     渲染顺序：影调 → 色彩 → 胶片 → 蒙版，与 Phos 一致
+     渲染顺序:影调 → 色彩 → 胶片 → 蒙版，与 Phos 一致
      ========================================================= */
   var stage = document.getElementById('stage');
   if (!stage) return;
@@ -1407,6 +1601,133 @@ footer a:hover{color:#fff}
   drawCurve();
   render();
   window.addEventListener('resize', updateMask);
+
+  /* ---------- 数字滚动动画 ---------- */
+  var stats = document.querySelectorAll('.stat b');
+  var statsAnimated = false;
+  function animateNumber(el, target, suffix) {
+    var start = 0;
+    var duration = 2000;
+    var startTime = null;
+    function easeOutExpo(t) { return t === 1 ? 1 : 1 - Math.pow(2, -10 * t); }
+    function step(timestamp) {
+      if (!startTime) startTime = timestamp;
+      var progress = Math.min((timestamp - startTime) / duration, 1);
+      var current = Math.floor(start + (target - start) * easeOutExpo(progress));
+      el.textContent = current + suffix;
+      if (progress < 1) requestAnimationFrame(step);
+      else el.textContent = target + suffix;
+    }
+    requestAnimationFrame(step);
+  }
+
+  var statsObserver = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (en.isIntersecting && !statsAnimated) {
+        statsAnimated = true;
+        stats.forEach(function(stat){
+          var text = stat.textContent;
+          if (text === '100%') animateNumber(stat, 100, '%');
+          else if (text.includes('种')) animateNumber(stat, 9, ' 种');
+          else if (text === '64³') {
+            var n = 0;
+            var t = setInterval(function(){
+              n += 4;
+              if (n >= 64) { clearInterval(t); stat.textContent = '64³'; }
+              else stat.textContent = n + '³';
+            }, 30);
+          }
+          else if (text === 'MIT') {
+            var chars = ['M', 'I', 'T'];
+            var i = 0;
+            stat.textContent = '';
+            var t = setInterval(function(){
+              if (i < 3) { stat.textContent += chars[i]; i++; }
+              else clearInterval(t);
+            }, 150);
+          }
+        });
+      }
+    });
+  }, {threshold:0.5});
+  var statsSection = document.querySelector('.stats');
+  if (statsSection) statsObserver.observe(statsSection);
+
+  /* ---------- 卡片 3D 倾斜 ----------
+     ⚠️ .tile / .feat 的 CSS 里带着 transition:transform .4s，
+        直接在 mousemove 里写 transform 会被这条过渡拖糊。
+        所以倾斜期间临时去掉 transform 过渡，离开时再恢复。 */
+  var tiles = document.querySelectorAll('.tile, .feat');
+  tiles.forEach(function(tile){
+    var raf = 0, nx = 0, ny = 0;
+    function applyTilt(){
+      raf = 0;
+      tile.style.transform = 'perspective(900px) rotateX(' + ny.toFixed(2) + 'deg) rotateY(' +
+                             nx.toFixed(2) + 'deg) translateY(-4px)';
+    }
+    tile.addEventListener('mouseenter', function(){
+      if (reduce) return;
+      tile.style.willChange = 'transform';
+      tile.style.transition = 'box-shadow .4s var(--ease)';
+    });
+    tile.addEventListener('mousemove', function(e){
+      if (reduce) return;
+      var rect = tile.getBoundingClientRect();
+      nx = ((e.clientX - rect.left) / rect.width - 0.5) * 7;
+      ny = ((e.clientY - rect.top) / rect.height - 0.5) * -7;
+      if (!raf) raf = requestAnimationFrame(applyTilt);
+    });
+    tile.addEventListener('mouseleave', function(){
+      if (raf) { cancelAnimationFrame(raf); raf = 0; }
+      tile.style.transform = '';
+      tile.style.transition = '';
+      tile.style.willChange = '';
+    });
+  });
+
+  /* ---------- 滚动动效 ----------
+     原先有三个独立的 scroll 监听，而且每滚一帧就对每张 .shot 调一次
+     getBoundingClientRect() —— 强制同步重排，滚动发涩。
+     现在合并成一个，用 rAF 节流。 */
+  var heroWrap = document.querySelector('.hero .wrap');
+  var galleryShots = document.querySelectorAll('.gal .shot');
+  var scrollTick = false;
+
+  function onScrollFrame(){
+    scrollTick = false;
+    var y = window.pageYOffset, vh = window.innerHeight;
+
+    if (reduce) {                     // 关掉动效时清掉可能残留的内联样式
+      if (heroWrap) { heroWrap.style.transform = ''; heroWrap.style.opacity = ''; }
+      for (var j = 0; j < galleryShots.length; j++) galleryShots[j].style.transform = '';
+      return;
+    }
+
+    // Hero：轻微下移 + 淡出，但保留下限，不要整块消失
+    if (heroWrap) {
+      var p = Math.min(y / vh, 1);
+      heroWrap.style.transform = 'translateY(' + (y * 0.15).toFixed(1) + 'px)';
+      heroWrap.style.opacity = (1 - p * 0.55).toFixed(3);
+    }
+
+    // 画廊图片：很轻的视差（0.03），够活但不脱离图注
+    for (var i = 0; i < galleryShots.length; i++) {
+      var r = galleryShots[i].getBoundingClientRect();
+      if (r.bottom > 0 && r.top < vh) {
+        galleryShots[i].style.transform =
+          'translateY(' + ((vh - r.top) * 0.03).toFixed(1) + 'px)';
+      }
+    }
+  }
+  function requestScrollFrame(){
+    if (scrollTick) return;
+    scrollTick = true;
+    requestAnimationFrame(onScrollFrame);
+  }
+  window.addEventListener('scroll', requestScrollFrame, {passive:true});
+  window.addEventListener('resize', requestScrollFrame, {passive:true});
+  requestScrollFrame();
+
 })();
 </script>
 </body>

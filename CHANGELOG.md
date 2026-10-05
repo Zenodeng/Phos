@@ -2,6 +2,21 @@
 
 本项目遵循语义化版本。日期为发布日（Asia/Shanghai）。
 
+## [3.2.1] — 2026-10-05
+
+修复 DMG 安装窗口里「首次打开必读.txt」挡住标题的问题。
+Fixes the read-me file overlapping the title in the DMG install window.
+
+### 2026-10-05 DMG 窗口布局修复 / DMG Window Layout Fix
+
+- **`.DS_Store` 里图标位置的 y 是从窗口顶部往下算的**，此前按 CoreGraphics 的习惯
+  （从底部往上）计算，把「首次打开必读.txt」放到了标题位置上，正好压住 Phos 标题与副标题。
+- 窗口从 660×420 改为 **660×460**，必读文件移到两个图标下方的独立一行。
+- 背景图版面重排：标题、副标题、拖拽提示统一上移，下方整块留给必读文件；
+  箭头位置不变，仍与两个图标对齐。
+- `Scripts/dmg/settings.py` 与 `Tools/DMGBackground.swift` 都补了坐标系注释。
+- **应用本身没有任何改动**，只是安装包外观修正。
+
 ## [3.2.0] — 2026-10-05
 
 新增启动时的更新提示；安装包从 zip 改为 DMG（zip 仍然一并发布）。

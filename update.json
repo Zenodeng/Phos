@@ -1,7 +1,7 @@
 {
-  "version": "3.2.0",
+  "version": "3.2.1",
   "released": "2026-10-05",
   "page": "https://zenophos.dpdns.org/#install",
   "url": "https://zenophos.dpdns.org/download/Phos-macOS-apple-silicon.dmg",
-  "notes": "新增启动时的更新提示；安装包改为 DMG（打开后拖到「应用程序」即可）。"
+  "notes": "修复 DMG 安装窗口里「首次打开必读.txt」挡住标题的问题。应用本身没有改动。"
 }

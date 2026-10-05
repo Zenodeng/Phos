@@ -304,7 +304,12 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;bac
 .tile{
   background:#fff;border-radius:12px;padding:34px 30px;
   transition:transform .4s var(--ease),box-shadow .4s var(--ease);
-  transform-style:preserve-3d;
+  /* 不要用 transform-style:preserve-3d：
+     它会把 h3 / p / chips 拆成独立图层放进 3D 空间，
+     倾斜时 z 序会错乱，部分文字被卡片背景盖住。
+     这里没有任何子元素做 translateZ，preserve-3d 没有意义。
+     overflow:hidden 顺带让圆角正确裁切内容。 */
+  overflow:hidden;
 }
 .tile:hover{transform:translateY(-4px)}
 .dark .tile{
@@ -338,7 +343,8 @@ figcaption .d{font-size:15px;line-height:1.5;letter-spacing:-.016em;margin-top:8
 .feat{
   background:#fff;border-radius:12px;padding:32px 28px;
   transition:transform .4s var(--ease),box-shadow .4s var(--ease);
-  transform-style:preserve-3d;
+  /* 同 .tile：去掉 preserve-3d，避免倾斜时子元素 z 序错乱压住文字 */
+  overflow:hidden;
 }
 .feat:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,.08)}
 .feat .ico{

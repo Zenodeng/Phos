@@ -197,6 +197,11 @@ a:focus-visible,.btn:focus-visible,button:focus-visible,input:focus-visible{outl
 
 /* ---------- shots ---------- */
 .shot{width:100%;height:auto;border-radius:12px;box-shadow:var(--shadow)}
+/* 界面演示的四张图是懒加载的，直接出现会“啪”一下。
+   加载完成后淡入。.anim-on 只由 JS 加 ——
+   禁用 JS 或开启减弱动效时没有这个类，图片始终可见。 */
+html.anim-on .gal .shot{opacity:0;transition:opacity .7s var(--ease)}
+html.anim-on .gal .shot.is-loaded{opacity:1}
 .dark .shot{box-shadow:var(--shadow),0 0 0 1px rgba(255,255,255,.08)}
 .light .shot{box-shadow:var(--shadow),0 0 0 1px rgba(0,0,0,.06)}
 
@@ -410,10 +415,25 @@ footer a:hover{color:#fff}
 
 /* ---------- reveal ---------- */
 /* ---------- reveal ---------- */
-.rv{opacity:0;transform:translateY(32px);transition:opacity .9s var(--ease),transform .9s var(--ease)}
-.rv.in{opacity:1;transform:none}
-.rv-stagger{opacity:0;transform:translateY(24px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
-.rv-stagger.in{opacity:1;transform:none}
+/* 滚动揭示一律用 translate 属性，不用 transform。
+   原因：.rv-stagger.in{transform:none} 与 .tile:hover{transform:scale(…)}
+   特异性相同（都是 0,2,0），而它写在后面 —— 会把卡片的悬停放大整个盖掉。
+   换成 translate 后两者作用于不同属性，永不冲突。 */
+.rv{opacity:0;translate:0 32px;transition:opacity .9s var(--ease),translate .9s var(--ease),scale .9s var(--ease)}
+.rv.in{opacity:1;translate:0 0}
+.rv-stagger{opacity:0;translate:0 24px;transition:opacity .7s var(--ease),translate .7s var(--ease)}
+.rv-stagger.in{opacity:1;translate:0 0}
+
+/* 界面演示的四张图：除了上浮，还从 98.5% 轻微放大归位，比纯位移更有“落定”感 */
+.gal figure.rv{scale:.985}
+.gal figure.rv.in{scale:1}
+
+/* 区块引言里的三个元素错峰上浮（父级 .rv 已负责淡入，这里只补位移） */
+.rv.in > .eyebrow,.rv.in > h2,.rv.in > .lead{animation:introRise .8s var(--ease) backwards}
+.rv.in > .eyebrow{animation-delay:.04s}
+.rv.in > h2{animation-delay:.12s}
+.rv.in > .lead{animation-delay:.20s}
+@keyframes introRise{from{translate:0 14px;opacity:0}to{translate:0 0;opacity:1}}
 .tiles .tile.rv-stagger:nth-child(1){transition-delay:.1s}
 .tiles .tile.rv-stagger:nth-child(2){transition-delay:.2s}
 .tiles .tile.rv-stagger:nth-child(3){transition-delay:.3s}
@@ -430,8 +450,11 @@ footer a:hover{color:#fff}
   html{scroll-behavior:auto}
   html.anim-on body{opacity:1;animation:none}
   .rv,.rv-stagger,.hero .eyebrow,.hero h1,.hero .subhead,.hero .lead,.hero .btnrow,.hero-shot,.stat{
-    opacity:1;transform:none;transition:none;animation:none;
+    opacity:1;transform:none;translate:none;scale:none;transition:none;animation:none;
   }
+  .rv.in > .eyebrow,.rv.in > h2,.rv.in > .lead{animation:none;translate:none;opacity:1}
+  .gal figure.rv{scale:none}
+  html.anim-on .gal .shot{opacity:1;transition:none}
   .hist i{transition:none;animation:none;transform:none}
   .demo.in .hist i{animation:none}
   .pane.on{animation:none}
@@ -1673,6 +1696,21 @@ footer a:hover{color:#fff}
   /* ---------- 卡片悬停：柔和放大（原来这里是 3D 倾斜，
        倾斜会把子元素带进 3D 空间，文字容易被卡片背景压住，
        已改为纯 CSS 的呼吸式放大，见 .tile:hover / .feat:hover）---------- */
+
+  /* ---------- 界面演示：图片加载完成后淡入 ----------
+     懒加载的图如果直接出现会“啪”一下，很生硬。
+     失败也要显示，别把位置留白。 */
+  var galShots = document.querySelectorAll('.gal .shot');
+  for (var gi = 0; gi < galShots.length; gi++) {
+    (function(img){
+      function show(){ img.classList.add('is-loaded'); }
+      if (img.complete && img.naturalWidth) show();
+      else {
+        img.addEventListener('load',  show, {once:true});
+        img.addEventListener('error', show, {once:true});
+      }
+    })(galShots[gi]);
+  }
 
   /* ---------- 滚动动效 ----------
      原先有三个独立的 scroll 监听，而且每滚一帧就对每张 .shot 调一次

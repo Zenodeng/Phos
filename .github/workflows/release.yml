@@ -25,16 +25,29 @@ jobs:
           ./Scripts/package_app.sh
           ls -R Phos.app/Contents | head -30
 
-      - name: Zip + checksum
+      # 装进独立 venv 再挂到 PATH，避免污染 runner 的 Python
+      - name: Install dmgbuild
         run: |
+          python3 -m venv "$RUNNER_TEMP/dmgvenv"
+          "$RUNNER_TEMP/dmgvenv/bin/pip" install -q --upgrade pip
+          "$RUNNER_TEMP/dmgvenv/bin/pip" install -q dmgbuild
+          echo "$RUNNER_TEMP/dmgvenv/bin" >> "$GITHUB_PATH"
+
+      # DMG 是主推格式：带背景图、「拖到应用程序」引导和「首次打开必读.txt」。
+      # zip 保留一份做备选（有人习惯直接解压，也方便脚本化下载）。
+      - name: Package DMG + zip
+        run: |
+          chmod +x Scripts/make_dmg.sh
+          ./Scripts/make_dmg.sh
           zip -qyr Phos-macOS-apple-silicon.zip Phos.app
-          shasum -a 256 Phos-macOS-apple-silicon.zip > SHA256.txt
+          shasum -a 256 Phos-macOS-apple-silicon.dmg Phos-macOS-apple-silicon.zip > SHA256.txt
           cat SHA256.txt
 
       - uses: actions/upload-artifact@v4
         with:
           name: Phos-macOS-apple-silicon
           path: |
+            Phos-macOS-apple-silicon.dmg
             Phos-macOS-apple-silicon.zip
             SHA256.txt
 
@@ -43,5 +56,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
+            Phos-macOS-apple-silicon.dmg
             Phos-macOS-apple-silicon.zip
             SHA256.txt

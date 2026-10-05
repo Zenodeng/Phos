@@ -4,6 +4,20 @@
 
 ## [Unreleased]
 
+### 2026-10-05 安装包改为 DMG / DMG Distribution
+
+- **发布物从 zip 改为 DMG**：带背景图、指向「应用程序」的箭头，以及一份说明 Gatekeeper
+  步骤的 `首次打开必读.txt`。zip 仍然一并发布，留给习惯解压或要脚本化下载的人。
+- 窗口布局用 [`dmgbuild`](https://github.com/dmgbuild/dmgbuild) 写 `.DS_Store`，
+  **不用 Finder AppleScript** —— 后者需要图形会话与「自动化」权限，无头环境与 CI 上不可靠。
+- 背景图是**多分辨率 TIFF**（660×420@72dpi + 1320×840@144dpi），由 `tiffutil -cathidpicheck`
+  合成，Finder 在 Retina 上会自动挑 2x 那一档，不会发虚。
+- 新增 `Scripts/make_dmg.sh`、`Scripts/dmg/`（布局配置、说明文件、背景图）、
+  `Tools/DMGBackground.swift`（背景图生成器）。
+- CI：新增 dmgbuild 安装步骤，同时产出 `.dmg` 与 `.zip`，SHA256 覆盖两者。
+- **注意**：DMG 不会减轻 Gatekeeper 拦截。未公证的 DMG 能正常打开挂载，但拖出来的 app
+  首次启动仍会被拦，那一步只有公证能消掉。
+
 ### 2026-10-05 更新提示 / Update Check
 
 - **启动时检查新版本**：向官网取一次 `update.json`，只比较版本号。有新版时工具栏应用名旁边

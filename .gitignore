@@ -9,7 +9,11 @@ DerivedData/
 # 打包产物
 *.app/
 *.zip
+*.dmg
 SHA256.txt
+
+# DMG 背景图由 make_dmg.sh 用 tiffutil 从 background.png / @2x 现场合成，不入库
+Scripts/dmg/background.tiff
 
 # macOS / 编辑器
 .DS_Store

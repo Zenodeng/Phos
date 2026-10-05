@@ -15,12 +15,21 @@ import UniformTypeIdentifiers
 /// 单文件编译时不能写 `@main`（会与顶层代码冲突），所以入口放在文件末尾。
 struct DMGBackground {
     static let width: CGFloat = 660
-    static let height: CGFloat = 420
+    static let height: CGFloat = 460
+
+    // 坐标以「左下角」为原点（CoreGraphics 的约定）。
+    // 注意 .DS_Store 里的 Iloc 用的是「从窗口顶部往下」的 y，两者要换算，
+    // 换算关系见 settings.py 的注释。
+    //
+    // 版面自上而下：标题 / 副标题 / 拖拽提示 → 两个图标 + 箭头 → 必读文件。
+    static let titleBaseline: CGFloat = 388
+    static let subtitleBaseline: CGFloat = 358
+    static let hintBaseline: CGFloat = 330
+    static let arrowY: CGFloat = 255
 
     static let gold = CGColor(red: 0.788, green: 0.659, blue: 0.463, alpha: 1)   // #C9A876
     static let ink = CGColor(red: 0.078, green: 0.082, blue: 0.094, alpha: 1)    // #141518
     static let dim = CGColor(red: 0.541, green: 0.553, blue: 0.580, alpha: 1)    // #8A8D94
-    static let faint = CGColor(red: 0.337, green: 0.345, blue: 0.365, alpha: 1)  // #565860
 
     static func font(_ size: CGFloat, _ weight: NSFont.Weight) -> CTFont {
         NSFont.systemFont(ofSize: size, weight: weight) as CTFont
@@ -67,12 +76,15 @@ struct DMGBackground {
 
         // 品牌
         draw("Phos", font: font(34, .semibold), color: gold,
-             centerX: width / 2, baseline: 344, in: ctx)
+             centerX: width / 2, baseline: titleBaseline, in: ctx)
         draw("macOS 原生 RAW 照片编辑器", font: font(12.5, .regular), color: dim,
-             centerX: width / 2, baseline: 318, in: ctx)
+             centerX: width / 2, baseline: subtitleBaseline, in: ctx)
+        // 提示挪到上面，把下方整块留给「首次打开必读」那个文件
+        draw("把 Phos 拖到右侧的「应用程序」文件夹", font: font(12.5, .medium), color: dim,
+             centerX: width / 2, baseline: hintBaseline, in: ctx)
 
-        // 两个图标之间的引导箭头（图标中心 y = 205）
-        let y: CGFloat = 205
+        // 两个图标之间的引导箭头
+        let y = arrowY
         ctx.setStrokeColor(gold)
         ctx.setLineWidth(2)
         ctx.setLineCap(.round)
@@ -84,13 +96,6 @@ struct DMGBackground {
         ctx.addLine(to: CGPoint(x: 392, y: y))
         ctx.addLine(to: CGPoint(x: 374, y: y - 11))
         ctx.strokePath()
-
-        // 底部提示
-        draw("把 Phos 拖到右侧的「应用程序」文件夹", font: font(12.5, .medium), color: dim,
-             centerX: width / 2, baseline: 74, in: ctx)
-        draw("首次打开前，请先看一眼窗口里的「首次打开必读.txt」",
-             font: font(11, .regular), color: faint,
-             centerX: width / 2, baseline: 52, in: ctx)
 
         return ctx.makeImage()
     }

@@ -25,8 +25,8 @@ symlinks = {"Applications": "/Applications"}
 # 直接给 PNG 的话 dmgbuild 会转成单分辨率 TIFF，Retina 上会发虚。
 background = os.environ.get("DMG_BACKGROUND", os.path.join(assets, "background.tiff"))
 
-# 窗口：内容区 660×420，与背景图一致
-window_rect = ((260, 200), (660, 420))
+# 窗口：内容区 660×460，与背景图一致（Tools/DMGBackground.swift 里的 height）
+window_rect = ((260, 180), (660, 460))
 default_view = "icon-view"
 
 show_status_bar = False
@@ -38,9 +38,14 @@ show_sidebar = False
 icon_size = 96
 text_size = 12
 
-# 图标位置用「窗口左下角为原点」的坐标，与背景图上画的位置对应
+# ⚠️ 图标位置的 y 是「从窗口顶部往下」算的，和背景图（CoreGraphics，从底部往上）相反。
+# 之前按从底部算，把「首次打开必读.txt」放到了 (330, 96) —— 结果它跑到标题上去了。
+#
+# 版面自上而下：标题 / 副标题 / 拖拽提示（背景图上画好）→ 两个图标 → 必读文件。
+# 背景图里的箭头画在 arrowY = 255（从底部算），换算成从顶部算是 460-255 = 205，
+# 所以两个图标的 y 用 205，正好压在箭头两端。
 icon_locations = {
     "Phos.app": (165, 205),
     "Applications": (495, 205),
-    "首次打开必读.txt": (330, 96),
+    "首次打开必读.txt": (330, 345),
 }

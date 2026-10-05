@@ -411,6 +411,13 @@ struct CanvasPane: View {
     @State private var painting = false
     @State private var sampled = false
 
+    /// 当前可以在画布上直接拖控制点的蒙版：位置调整模式、非裁剪、非对比、非白平衡取样。
+    /// 适合窗口与 1:1 两个分支共用，避免两边条件写歪。
+    private var editableMask: Mask? {
+        guard !s.cropMode, !s.showBefore, !s.whiteBalancePicker, s.maskTool == .position else { return nil }
+        return s.maskDraft ?? s.selectedMask.flatMap { id in s.params.masks.first(where: { $0.id == id }) }
+    }
+
     var body: some View {
         GeometryReader { geo in
             let img = (s.showBefore ? s.beforeImage : s.preview)
@@ -425,11 +432,18 @@ struct CanvasPane: View {
             ZStack {
                 StudioStyle.canvas
                 if s.oneToOne, let cg = img {
-                    // 1:1：按屏幕像素原样摆，外面套滚动视图，检查锐度用
+                    // 1:1：按屏幕像素原样摆，外面套滚动视图，检查锐度用。
+                    // 蒙版参数是归一化的，所以这里直接按图像像素尺寸当 frame —— 与适合窗口分支同一套坐标语义。
                     ScrollView([.horizontal, .vertical]) {
                         Image(decorative: cg, scale: 1)
                             .frame(width: CGFloat(cg.width), height: CGFloat(cg.height))
                             .overlay { selectionOverlay(width: CGFloat(cg.width), height: CGFloat(cg.height)) }
+                            .overlay(alignment: .topLeading) {
+                                if let m = editableMask {
+                                    MaskOverlay(mask: m, frame: CGRect(
+                                        x: 0, y: 0, width: cg.width, height: cg.height))
+                                }
+                            }
                             .gesture(canvasGesture(frame: CGRect(x: 0, y: 0, width: cg.width, height: cg.height),
                                                    pixelView: true), including: s.selectedMask != nil || s.whiteBalancePicker ? .all : .subviews)
                     }
@@ -440,8 +454,7 @@ struct CanvasPane: View {
                         .frame(width: fit.width * scale, height: fit.height * scale)
                         .overlay { selectionOverlay(width: dispRect.width, height: dispRect.height) }
                         .overlay(alignment: .topLeading) {
-                            if !s.cropMode, !s.showBefore, !s.whiteBalancePicker, s.maskTool == .position,
-                               let m = s.maskDraft ?? s.selectedMask.flatMap({ id in s.params.masks.first(where: { $0.id == id }) }) {
+                            if let m = editableMask {
                                 // overlay 的本地原点就是图片左上角，frame 必须从 0 起
                                 MaskOverlay(mask: m, frame: CGRect(
                                     x: 0, y: 0, width: dispRect.width, height: dispRect.height))
@@ -682,14 +695,17 @@ struct MaskOverlay: View {
         let dx = p1.x - p0.x, dy = p1.y - p0.y
         let len = max(hypot(dx, dy), 1)
         let nx = -dy / len, ny = dx / len
+        // 参考线沿法线双向延伸的长度。原先取画面高度，宽幅照片（长边 2200、高很小）时
+        // 不够长，三条线画不到画面边缘；取对角线长度在任何画幅下都覆盖得住。
+        let reach: CGFloat = hypot(frame.width, frame.height)
         return ZStack {
             Path { path in
-                path.move(to: CGPoint(x: p0.x - nx * frame.height, y: p0.y - ny * frame.height))
-                path.addLine(to: CGPoint(x: p0.x + nx * frame.height, y: p0.y + ny * frame.height))
-                path.move(to: CGPoint(x: c.x - nx * frame.height, y: c.y - ny * frame.height))
-                path.addLine(to: CGPoint(x: c.x + nx * frame.height, y: c.y + ny * frame.height))
-                path.move(to: CGPoint(x: p1.x - nx * frame.height, y: p1.y - ny * frame.height))
-                path.addLine(to: CGPoint(x: p1.x + nx * frame.height, y: p1.y + ny * frame.height))
+                path.move(to: CGPoint(x: p0.x - nx * reach, y: p0.y - ny * reach))
+                path.addLine(to: CGPoint(x: p0.x + nx * reach, y: p0.y + ny * reach))
+                path.move(to: CGPoint(x: c.x - nx * reach, y: c.y - ny * reach))
+                path.addLine(to: CGPoint(x: c.x + nx * reach, y: c.y + ny * reach))
+                path.move(to: CGPoint(x: p1.x - nx * reach, y: p1.y - ny * reach))
+                path.addLine(to: CGPoint(x: p1.x + nx * reach, y: p1.y + ny * reach))
             }
             .stroke(Color.white.opacity(0.78), style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
             Handle(position: p0, color: .cyan, onMove: { start, end in

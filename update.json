@@ -1,7 +1,7 @@
 {
-  "version": "3.1.1",
+  "version": "3.2.0",
   "released": "2026-10-05",
   "page": "https://zenophos.dpdns.org/#install",
-  "url": "https://zenophos.dpdns.org/download/Phos-macOS-apple-silicon.zip",
-  "notes": "修复径向蒙版旋转柄方向反了的问题。"
+  "url": "https://zenophos.dpdns.org/download/Phos-macOS-apple-silicon.dmg",
+  "notes": "新增启动时的更新提示；安装包改为 DMG（打开后拖到「应用程序」即可）。"
 }

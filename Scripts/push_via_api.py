@@ -2,7 +2,7 @@
 """github.com 被代理拦截时，用 Git Data API 把当前工作树推成一个新 commit（走 api.github.com）。
 保留远端已有历史：新 commit 的 parent = 远端 main 的 HEAD。
 """
-import base64, json, os, subprocess, sys, tempfile
+import base64, json, os, subprocess, sys, tempfile, time
 
 TOKEN = os.environ["GH_TOKEN"]
 OWNER, REPO = os.environ.get("GH_OWNER", "Zenodeng"), os.environ.get("GH_REPO", "Phos")
@@ -11,23 +11,36 @@ API = "https://api.github.com"
 ROOT = os.path.dirname(os.path.abspath(__file__)) + "/.."
 ROOT = os.path.abspath(ROOT)
 
-def api(method, path, payload=None, quiet=False):
-    cmd = ["curl", "-sS", "--max-time", "60", "-X", method,
-           "-H", f"Authorization: Bearer {TOKEN}",
-           "-H", "Accept: application/vnd.github+json", f"{API}{path}"]
-    tmp = None
-    if payload is not None:
-        tmp = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
-        json.dump(payload, tmp); tmp.close()
-        cmd += ["--data-binary", "@" + tmp.name]
-    r = subprocess.run(cmd, capture_output=True, text=True)
-    try:
-        return json.loads(r.stdout or "{}")
-    except json.JSONDecodeError:
-        return {"_raw": r.stdout[:300]}
+def api(method, path, payload=None, quiet=False, retry_key=None, retries=5):
+    """retry_key：返回值里出现该键才算成功，否则重试。
+
+    本机代理不稳，blob 上传会随机返回空响应体（形如 {}）——
+    失败的文件每次都不一样，属瞬时故障。不加重试的话整批推送会中途失败。
+    """
+    last = {}
+    for attempt in range(retries):
+        cmd = ["curl", "-sS", "--max-time", "60", "-X", method,
+               "-H", f"Authorization: Bearer {TOKEN}",
+               "-H", "Accept: application/vnd.github+json", f"{API}{path}"]
+        tmp = None
+        if payload is not None:
+            tmp = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+            json.dump(payload, tmp); tmp.close()
+            cmd += ["--data-binary", "@" + tmp.name]
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            last = json.loads(r.stdout or "{}")
+        except json.JSONDecodeError:
+            last = {"_raw": r.stdout[:300]}
+        if retry_key is None or retry_key in last:
+            return last
+        if attempt < retries - 1:
+            print(f"    重试 {attempt + 1}/{retries - 1}: {path.split('/')[-1]}")
+            time.sleep(1.2 * (attempt + 1))
+    return last
 
 # 1) 远端当前 HEAD
-ref = api("GET", f"/repos/{OWNER}/{REPO}/git/ref/heads/main")
+ref = api("GET", f"/repos/{OWNER}/{REPO}/git/ref/heads/main", retry_key="object")
 parent = ref.get("object", {}).get("sha")
 if not parent:
     print("取远端 HEAD 失败:", str(ref)[:200]); sys.exit(1)
@@ -45,7 +58,8 @@ for rel in files:
     p = os.path.join(ROOT, rel)
     data = open(p, "rb").read()
     b = api("POST", f"/repos/{OWNER}/{REPO}/git/blobs",
-            {"content": base64.b64encode(data).decode(), "encoding": "base64"})
+            {"content": base64.b64encode(data).decode(), "encoding": "base64"},
+            retry_key="sha")
     if "sha" not in b:
         print("  blob 失败:", rel, str(b)[:160]); sys.exit(1)
     mode = "100755" if os.access(p, os.X_OK) else "100644"
@@ -53,20 +67,20 @@ for rel in files:
 print(f"  {len(tree)} 个 blob 完成")
 
 # 3) tree（带 base_tree：删除/改名也能被正确反映）
-t = api("POST", f"/repos/{OWNER}/{REPO}/git/trees", {"base_tree": base_tree, "tree": tree})
+t = api("POST", f"/repos/{OWNER}/{REPO}/git/trees", {"base_tree": base_tree, "tree": tree}, retry_key="sha")
 if "sha" not in t:
     print("tree 失败:", str(t)[:220]); sys.exit(1)
 print("tree:", t["sha"][:10])
 
 # 4) commit
 c = api("POST", f"/repos/{OWNER}/{REPO}/git/commits",
-        {"message": MSG, "tree": t["sha"], "parents": [parent]})
+        {"message": MSG, "tree": t["sha"], "parents": [parent]}, retry_key="sha")
 if "sha" not in c:
     print("commit 失败:", str(c)[:220]); sys.exit(1)
 print("commit:", c["sha"][:10])
 
 # 5) 更新分支
-r = api("PATCH", f"/repos/{OWNER}/{REPO}/git/refs/heads/main", {"sha": c["sha"]})
+r = api("PATCH", f"/repos/{OWNER}/{REPO}/git/refs/heads/main", {"sha": c["sha"]}, retry_key="object")
 print("更新 main:", "OK" if r.get("object") else str(r)[:200])
 print("NEW_SHA=" + c["sha"])
 
@@ -76,7 +90,7 @@ TAG = os.environ.get("GH_TAG")
 if TAG:
     t = api("POST", f"/repos/{OWNER}/{REPO}/git/tags",
             {"tag": TAG, "message": os.environ.get("GH_TAG_MSG", TAG),
-             "object": c["sha"], "type": "commit"})
+             "object": c["sha"], "type": "commit"}, retry_key="sha")
     if "sha" not in t:
         print("建标签对象失败:", str(t)[:220]); sys.exit(1)
     ref = api("POST", f"/repos/{OWNER}/{REPO}/git/refs",

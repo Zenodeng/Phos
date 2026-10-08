@@ -1,7 +1,7 @@
 {
-  "version": "3.2.2",
-  "released": "2026-10-05",
+  "version": "3.2.3",
+  "released": "2026-10-08",
   "page": "https://zenophos.dpdns.org/#install",
   "url": "https://zenophos.dpdns.org/download/Phos-macOS-apple-silicon.dmg",
-  "notes": "修复 1:1 检查模式下看不到渐变蒙版参考线的问题，以及宽幅照片下线性渐变参考线画不到画面边缘的问题。"
+  "notes": "对比度手感调整：「对比」滑块中段更精细，靠近零位不容易一拖就过；同时把对比度的引擎力度收柔，同一个数值下的画面更舒服。"
 }

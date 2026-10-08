@@ -6,6 +6,11 @@ func bind(_ kp: WritableKeyPath<EditParams, Double>, _ s: AppState) -> Binding<D
     Binding(get: { s.params[keyPath: kp] }, set: { s.set(kp, $0) })
 }
 
+/// 「对比」滑块的响应指数：>1 时中段更精细 —— 靠近零位每拖一像素走过的数值更小，
+/// 不容易一拖就过；两端仍能到达 ±100。数值本身的意义不变（引擎映射没动）。
+/// 想让手感更钝就调大，想更接近线性就调小。
+let contrastResponse = 1.8
+
 enum InspectorCategory: String, CaseIterable {
     case light = "明暗", color = "色彩", detail = "细节", geometry = "变换", masks = "蒙版"
     var symbol: String {
@@ -128,7 +133,7 @@ struct InspectorPane: View {
                 }
                 GroupBox(title: "基本") {
                     SliderRow(label: "曝光", value: bind(\.exposure, s), range: -5...5) { s.endEdit() }
-                    SliderRow(label: "对比", value: bind(\.contrast, s)) { s.endEdit() }
+                    SliderRow(label: "对比", value: bind(\.contrast, s), response: contrastResponse) { s.endEdit() }
                     SliderRow(label: "高光", value: bind(\.highlights, s)) { s.endEdit() }
                     SliderRow(label: "阴影", value: bind(\.shadows, s)) { s.endEdit() }
                     SliderRow(label: "白色", value: bind(\.whites, s)) { s.endEdit() }
@@ -913,7 +918,8 @@ struct MaskPane: View {
                                 set: { var x = m; x.adjust.exposure = $0; s.updateMaskLive(x) }), range: -4...4) { s.endEdit() }
                             SliderRow(label: "对比", value: Binding(
                                 get: { m.adjust.contrast },
-                                set: { var x = m; x.adjust.contrast = $0; s.updateMaskLive(x) })) { s.endEdit() }
+                                set: { var x = m; x.adjust.contrast = $0; s.updateMaskLive(x) }),
+                                response: contrastResponse) { s.endEdit() }
                             SliderRow(label: "饱和", value: Binding(
                                 get: { m.adjust.saturation },
                                 set: { var x = m; x.adjust.saturation = $0; s.updateMaskLive(x) })) { s.endEdit() }

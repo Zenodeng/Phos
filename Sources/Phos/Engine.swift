@@ -19,6 +19,12 @@ enum Engine {
 
     static let srgb: CGColorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
 
+    /// 「对比」数值 → CIColorControls 对比系数：`1 + 数值 / contrastScale`。
+    /// 数值 ±100 对应 1 ± 100/contrastScale。调大 = 同一数值下画面更柔。
+    /// 2026-10-08 由 200 收到 260（反馈：对比度容易调得太猛）。
+    /// 注意：改这个会让已存旁档的观感变化，渲染回归的 tone 基准需要重烤。
+    static let contrastScale = 260.0
+
     // MARK: - 解码
     static let rawSet: Set<String> = ["arw", "cr2", "cr3", "nef", "raf", "orf", "rw2",
                                       "dng", "pef", "erf", "sr2", "srf"]
@@ -136,7 +142,7 @@ enum Engine {
         if p.contrast != 0 || p.saturation != 0 || p.vibrance != 0 {
             img = img.applyingFilter("CIVibrance", parameters: ["inputAmount": NSNumber(value: p.vibrance / 100)])
             img = img.applyingFilter("CIColorControls", parameters: [
-                kCIInputContrastKey: NSNumber(value: 1 + p.contrast / 200),
+                kCIInputContrastKey: NSNumber(value: 1 + p.contrast / contrastScale),
                 kCIInputSaturationKey: NSNumber(value: 1 + p.saturation / 200)
             ])
         }
@@ -382,7 +388,7 @@ enum Engine {
             }
             if a.contrast != 0 || a.saturation != 0 {
                 adj = adj.applyingFilter("CIColorControls", parameters: [
-                    kCIInputContrastKey: NSNumber(value: 1 + a.contrast / 200),
+                    kCIInputContrastKey: NSNumber(value: 1 + a.contrast / contrastScale),
                     kCIInputSaturationKey: NSNumber(value: 1 + a.saturation / 200)
                 ])
             }

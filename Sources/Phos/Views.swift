@@ -19,6 +19,9 @@ struct SliderRow: View {
     let label: String
     @Binding var value: Double
     var range: ClosedRange<Double> = -100...100
+    /// 响应曲线指数。>1 时中段更精细：靠近零位每拖一像素走过的数值更小，
+    /// 两端仍然能到达量程极限。1 = 线性（默认）。
+    var response: Double = 1
     var onEdit: () -> Void = {}
 
     /// 双极滑块（范围跨 0）显示中心零位标记
@@ -30,6 +33,46 @@ struct SliderRow: View {
         if span >= 50 { return String(format: "%.0f", value) }
         if span > 5   { return String(format: "%.1f", value) }
         return String(format: "%.2f", value)
+    }
+
+    // MARK: 数值 ↔ 滑块位置（0…1）
+    // 双极滑块以零位为中心对称弯曲；非双极从量程下端开始弯曲。
+    // 位置和数值必须互为逆运算，否则拖动时数值会跳。
+
+    private func position(for v: Double) -> Double {
+        let span = range.upperBound - range.lowerBound
+        guard span > 0 else { return 0 }
+        if response == 1 { return (v - range.lowerBound) / span }
+        if bipolar {
+            let m = max(abs(range.lowerBound), abs(range.upperBound))
+            guard m > 0 else { return 0.5 }
+            let s = min(max(v / m, -1), 1)
+            let curved = (s < 0 ? -1 : 1) * pow(abs(s), 1 / response)
+            return (curved + 1) / 2
+        }
+        let t = min(max((v - range.lowerBound) / span, 0), 1)
+        return pow(t, 1 / response)
+    }
+
+    private func value(at p: Double) -> Double {
+        let span = range.upperBound - range.lowerBound
+        let u = min(max(p, 0), 1)
+        if response == 1 { return range.lowerBound + u * span }
+        if bipolar {
+            let m = max(abs(range.lowerBound), abs(range.upperBound))
+            let s = (u - 0.5) * 2
+            let curved = (s < 0 ? -1 : 1) * pow(abs(s), response)
+            return curved * m
+        }
+        return range.lowerBound + pow(u, response) * span
+    }
+
+    private var sliderRange: ClosedRange<Double> { response == 1 ? range : 0...1 }
+
+    /// response == 1 时直接绑原值，避免来回换算引入浮点误差
+    private var sliderBinding: Binding<Double> {
+        guard response != 1 else { return $value }
+        return Binding(get: { position(for: value) }, set: { value = value(at: $0) })
     }
 
     // 数值直接输入
@@ -46,7 +89,7 @@ struct SliderRow: View {
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.secondary)
             ZStack {
-                Slider(value: $value, in: range) { editing in if !editing { onEdit() } }
+                Slider(value: sliderBinding, in: sliderRange) { editing in if !editing { onEdit() } }
                     .controlSize(.small)
                 if bipolar {
                     Capsule()

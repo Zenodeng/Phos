@@ -423,5 +423,82 @@ extension AppState {
             status = "已按灰点校正白平衡"
         }
     }
+
+    // MARK: - 自动影调
+
+    /// 一键自动：识别场景 + 分析画面，把建议的影调参数套上去。
+    /// 结果走 commit 进历史栈，随时可以撤销。
+    ///
+    /// - Parameter forcedScene: 传了就跳过识别，直接按指定题材走。
+    ///   UI 上那个场景菜单用它 —— 识别错了用户能自己纠正。
+    func runAutoTone(forcedScene: PhotoScene? = nil) {
+        guard let source, !autoRunning, !syncRunning else { return }
+        let captured = params, photoID = current?.id
+        // 再点一次「自动」时先把上一次自动加的量减回去。
+        // apply 是增量语义，不减掉的话第二次的结果会叠在第一次之上，越按越狠。
+        // 只减「自动自己加的那部分」，所以中途手动改过的滑块不受影响。
+        var start = captured
+        if let previous = autoSolution, autoStrength > 0.001 {
+            start = AutoTone.apply(previous, to: captured, strength: -autoStrength)
+        }
+        autoRunning = true
+        status = forcedScene == nil ? "正在识别场景并分析画面…" : "正在分析画面…"
+        Task {
+            let outcome = await Task.detached(priority: .userInitiated) {
+                autoreleasepool { () -> (AutoTone.Solution, SceneGuess) in
+                    let guess = forcedScene.map { SceneGuess(scene: $0, confidence: 1) }
+                        ?? SceneClassifier.classify(source)
+                    return (AutoTone.analyze(source, params: captured, scene: guess), guess)
+                }
+            }.value
+            autoRunning = false
+            // 分析期间用户切了照片就丢弃结果
+            guard photoID == current?.id else { return }
+            let (solution, guess) = outcome
+            guard !solution.isNeutral else {
+                clearAutoTone()
+                autoScene = guess
+                status = guess.scene == .document
+                    ? "识别为\(guess.scene.label)，这类画面不需要自动修图"
+                    : "画面已经很均衡，自动没有需要动的地方"
+                return
+            }
+            autoSolution = solution
+            autoScene = guess
+            autoStrength = 1
+            commit(AutoTone.apply(solution, to: start, strength: 1))
+            if solution.highlightMaskExposure < 0 {
+                status = "已按「\(guess.scene.label)」自动调整，并加了「\(AutoTone.autoMaskName)」局部蒙版压亮区"
+            } else {
+                status = "已按「\(guess.scene.label)」自动调整，可拖动强度滑杆微调"
+            }
+        }
+    }
+
+    /// 强度滑杆：按**增量**套用，不是「从快照重算」。
+    /// 这样中途手动改过别的滑块也不会被覆盖 —— 拖回 0% 只是把自动加的那部分减掉。
+    /// 拖动时只刷新预览，松手才进历史栈，和普通滑块一个手感。
+    func setAutoStrength(_ value: Double, persist: Bool) {
+        guard let solution = autoSolution else { return }
+        let k = min(max(value, 0), 1)
+        let delta = k - autoStrength
+        autoStrength = k
+        guard abs(delta) > 1e-9 else { return }
+        let next = AutoTone.apply(solution, to: params, strength: delta)
+        if persist {
+            commit(next)
+        } else {
+            params = next
+            render()
+        }
+    }
+
+    /// 放弃「自动」这个状态本身（切图、换文件夹时调用）。
+    /// 注意：画面上已经落下的参数不动 —— 撤销栈里还留着，用户想退可以自己退。
+    func clearAutoTone() {
+        autoSolution = nil
+        autoScene = nil
+        autoStrength = 1
+    }
 }
 #endif

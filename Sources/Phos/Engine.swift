@@ -470,10 +470,17 @@ enum Engine {
         f.setValue(data, forKey: "inputCubeData")
         f.setValue(src, forKey: kCIInputImageKey)
         guard let o = f.outputImage else { return CIImage(color: .black).cropped(to: extent) }
+        // 三个通道原样透传，只把权重写进 alpha。
+        //
+        // 原来这里三个通道都写成 (1,1,1)，也就是 R_out = G_out = B_out = R+G+B。
+        // 立方体输出的权重本来是 w，这一加变成了 3w，而 CIBlendWithMask 取的是
+        // 蒙版的亮度 —— 等于把蒙版强度整体放大三倍。
+        // 实测：一个 -0.7 EV 的亮度范围蒙版把白衬衫从 221 直接压到 3（反解出的等效权重 2.6），
+        // 而不是按 -0.7 EV 该有的 ×0.615。
         let w = o.applyingFilter("CIColorMatrix", parameters: [
-            "inputRVector": CIVector(x: 1, y: 1, z: 1, w: 0),
-            "inputGVector": CIVector(x: 1, y: 1, z: 1, w: 0),
-            "inputBVector": CIVector(x: 1, y: 1, z: 1, w: 0),
+            "inputRVector": CIVector(x: 1, y: 0, z: 0, w: 0),
+            "inputGVector": CIVector(x: 0, y: 1, z: 0, w: 0),
+            "inputBVector": CIVector(x: 0, y: 0, z: 1, w: 0),
             "inputAVector": CIVector(x: 1, y: 0, z: 0, w: 0)
         ])
         return w.cropped(to: extent)

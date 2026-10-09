@@ -74,6 +74,8 @@ struct StudioToolbar: View {
                 if p.runModal() == .OK, let url = p.url { s.openFolder(url) }
             }
             ToolButton(systemImage: "crop", title: "裁剪", active: s.cropMode, disabled: s.source == nil) { s.toggleCropMode() }
+            ToolButton(systemImage: "sparkles", title: "自动影调（强度滑杆在右侧检查器）",
+                       disabled: s.source == nil || s.autoRunning || s.syncRunning) { s.runAutoTone() }
             StudioHistoryButtons(history: s.history)
             Text(s.current?.url.lastPathComponent ?? "Phos Studio").font(.system(size: 12, weight: .medium))
                 .lineLimit(1).truncationMode(.middle).frame(minWidth: 60, maxWidth: .infinity)

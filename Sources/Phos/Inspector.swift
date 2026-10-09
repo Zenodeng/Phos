@@ -42,6 +42,102 @@ extension EnvironmentValues {
     }
 }
 
+// MARK: - 自动影调
+//
+// 一键自动 + 强度滑杆。滑杆按增量调，所以拖回 0% 等于把自动加的那部分减掉，
+// 中途手动改过的滑块不会被覆盖（见 AppState.setAutoStrength）。
+private struct AutoToneRow: View {
+    @EnvironmentObject var s: AppState
+
+    private var strengthBinding: Binding<Double> {
+        Binding(get: { s.autoStrength }, set: { s.setAutoStrength($0, persist: false) })
+    }
+    private var busy: Bool { s.autoRunning }
+    private var blocked: Bool { s.source == nil || busy || s.cropMode || s.syncRunning }
+
+    var body: some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 4) {
+                Button { s.runAutoTone() } label: {
+                    HStack(spacing: 5) {
+                        if busy {
+                            ProgressView().controlSize(.small).scaleEffect(0.62).frame(width: 13, height: 13)
+                        } else {
+                            Image(systemName: "sparkles").font(.system(size: 11.5))
+                        }
+                        Text(busy ? "分析中…" : "自动").font(.system(size: 11.5, weight: .medium))
+                    }
+                    .frame(maxWidth: .infinity).frame(height: 26)
+                    .foregroundStyle(blocked ? Color.secondary.opacity(0.5) : StudioStyle.accent)
+                    .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(StudioStyle.accent.opacity(blocked ? 0.05 : 0.12)))
+                    .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .strokeBorder(StudioStyle.accent.opacity(blocked ? 0.15 : 0.35), lineWidth: 0.5))
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(blocked)
+                .help("按画面直方图自动给出曝光、对比、高光阴影、去朦胧、鲜艳度与白平衡")
+
+                if s.autoSolution != nil || s.autoScene != nil {
+                    ToolButton(systemImage: "arrow.uturn.backward", title: "撤销自动调整") {
+                        s.setAutoStrength(0, persist: true)
+                        s.clearAutoTone()
+                    }
+                }
+            }
+            if let guess = s.autoScene {
+                HStack(spacing: 8) {
+                    Text("场景")
+                        .frame(width: 58, alignment: .leading)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    // 识别错了可以自己换一个重跑 —— 不让「魔法」不可控
+                    Menu {
+                        ForEach(PhotoScene.allCases) { scene in
+                            Button(scene.label) { s.runAutoTone(forcedScene: scene) }
+                        }
+                    } label: {
+                        HStack(spacing: 3) {
+                            Text(guess.scene.label).font(.system(size: 11, weight: .medium))
+                            Image(systemName: "chevron.down").font(.system(size: 8, weight: .semibold))
+                        }
+                        .foregroundStyle(StudioStyle.accent)
+                    }
+                    .menuStyle(.borderlessButton).fixedSize()
+                    .disabled(s.autoRunning)
+                    .help("识别有误？从这里选一个题材重新自动")
+                    Text("\(Int((guess.confidence * 100).rounded()))%")
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 0)
+                    Text(guess.scene.hint)
+                        .font(.system(size: 10)).foregroundStyle(.tertiary)
+                        .lineLimit(1).truncationMode(.tail)
+                }
+                .frame(minHeight: 24)
+            }
+            if s.autoSolution != nil {
+                HStack(spacing: 10) {
+                    Text("自动强度")
+                        .frame(width: 58, alignment: .leading)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    Slider(value: strengthBinding, in: 0...1) { editing in
+                        if !editing { s.setAutoStrength(s.autoStrength, persist: true) }
+                    }.controlSize(.small)
+                    Text("\(Int((s.autoStrength * 100).rounded()))%")
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundStyle(StudioStyle.accent)
+                        .frame(width: 52, alignment: .trailing)
+                }
+                .frame(minHeight: 28)
+            }
+        }
+        .padding(.bottom, 2)
+    }
+}
+
 // MARK: - 分组容器
 struct GroupBox<Content: View>: View {
     let title: String
@@ -132,6 +228,7 @@ struct InspectorPane: View {
                     SliderRow(label: "色调", value: bind(\.tint, s)) { s.endEdit() }
                 }
                 GroupBox(title: "基本") {
+                    AutoToneRow()
                     SliderRow(label: "曝光", value: bind(\.exposure, s), range: -5...5) { s.endEdit() }
                     SliderRow(label: "对比", value: bind(\.contrast, s), response: contrastResponse) { s.endEdit() }
                     SliderRow(label: "高光", value: bind(\.highlights, s)) { s.endEdit() }
@@ -689,7 +786,7 @@ struct ClutPicker: View {
                 TextField("搜索胶片…", text: $q).textFieldStyle(.roundedBorder).controlSize(.small)
                 Button("清除") { s.set(\.clutName, ""); s.endEdit() }.controlSize(.small)
                 Button("刷新") { s.cluts.invalidate(); s.endEdit() }.controlSize(.small)
-                    .help("重新扫描 HaldCLUT 目录：往 ~/Documents/RawTherapee/HaldCLUT 里放了新 LUT 后点这里")
+                    .help("重新扫描 HaldCLUT 目录：往 ~/Documents/RawTherapee/HaldCLUT 里放了新 LUT 后点这里（HALD 的 PNG/TIF 与 .cube 都认）")
             }
             let all = s.cluts.list()
             // 不再截断到前 60 个：LUT 超过 300 个时，新放进去的会排在后头，不搜索就永远看不到

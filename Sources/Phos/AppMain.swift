@@ -45,6 +45,12 @@ final class AppState: ObservableObject {
     @Published var workflowError: String?
     @Published var whiteBalancePicker = false
     @Published var whiteBalanceRunning = false
+    // 自动影调：分析一次拿到 solution，强度滑杆按增量在此之上加减
+    @Published var autoRunning = false
+    @Published var autoStrength: Double = 1
+    @Published var autoSolution: AutoTone.Solution?
+    /// 识别到的场景。留着给 UI 显示，用户不认同可以直接从菜单里换一个重跑。
+    @Published var autoScene: SceneGuess?
     @Published var showMaskOverlay = false {
         didSet { if oldValue != showMaskOverlay { previewQueue.invalidate(); render() } }
     }
@@ -237,6 +243,7 @@ final class AppState: ObservableObject {
         snapshots = []
         selectedMask = nil
         whiteBalancePicker = false
+        clearAutoTone()
         sourceCache.removeAll()
         folder = url
         status = "正在读取文件夹…"
@@ -306,6 +313,7 @@ final class AppState: ObservableObject {
         previewing = true
         hasDisparity = false
         whiteBalancePicker = false
+        clearAutoTone()
         sidecarReadFailed = false
         do {
             let sc = try SidecarStore.read(for: u)

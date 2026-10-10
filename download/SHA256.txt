@@ -1,2 +1,2 @@
-2ffc4a59d98f707ac111c7a8301717a6a54eae35884f35d41c05147751e608a6  Phos-macOS-apple-silicon.dmg
-95de94ca06fa933a4e5660eef75a306b6a420b9643a81abe9f8451a089d53b0b  Phos-macOS-apple-silicon.zip
+b20b89f2d92b17fd30f26bfd0d5f10223275beb5787cc9ed84e759476bef6be4  Phos-macOS-apple-silicon.dmg
+9082ba9fb8eb759159be93c2401c24132899747ba0c2ce269091f17af341f926  Phos-macOS-apple-silicon.zip

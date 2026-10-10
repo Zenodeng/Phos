@@ -1,7 +1,7 @@
 {
-  "version": "3.2.3",
-  "released": "2026-10-08",
+  "version": "3.2.4",
+  "released": "2026-10-09",
   "page": "https://zenophos.dpdns.org/#install",
   "url": "https://zenophos.dpdns.org/download/Phos-macOS-apple-silicon.dmg",
-  "notes": "对比度手感调整：「对比」滑块中段更精细，靠近零位不容易一拖就过；同时把对比度的引擎力度收柔，同一个数值下的画面更舒服。"
+  "notes": "新增一键「自动」影调：按画面直方图求解一组参数，配 0–100% 强度滑杆，能识别人像 / 风光 / 夜景等题材换策略，过曝时自动加一张压高光蒙版。LUT 现在原生支持 .cube 文件。另修复两个问题：范围蒙版强度被放大 3 倍、自动白平衡在有色场景下偏色。"
 }

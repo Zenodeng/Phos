@@ -25,7 +25,7 @@
   "operatingSystem": "macOS 26+",
   "applicationCategory": "MultimediaApplication",
   "applicationSubCategory": "RAW 照片编辑器 / Photo Editing",
-  "softwareVersion": "4.0.0",
+  "softwareVersion": "4.0.1",
   "fileSize": "7.17MB",
   "isAccessibleForFree": true,
   "offers": {"@type": "Offer", "price": "0", "priceCurrency": "CNY"},
@@ -1120,7 +1120,7 @@ footer a:hover{color:#fff}
         <a class="btn btn-primary" href="download/Phos-macOS-apple-silicon.dmg" download>下载 macOS 版</a>
         <a class="btn btn-outline-l" href="https://github.com/Zenodeng/Phos">在 GitHub 上查看</a>
       </div>
-      <p class="note">需要 macOS 26.0 或更高版本 · Apple 芯片 · MIT 协议 · 当前版本 v4.0.0（7.17 MB）</p>
+      <p class="note">需要 macOS 26.0 或更高版本 · Apple 芯片 · MIT 协议 · 当前版本 v4.0.1（7.17 MB）</p>
       <div class="channels">
         <h3>下载渠道 · 慢就换一个</h3>
         <ul>
@@ -1130,7 +1130,7 @@ footer a:hover{color:#fff}
           <li><a href="https://zenodeng.github.io/Phos/download/Phos-macOS-apple-silicon.dmg">GitHub Pages</a><span>备用</span></li>
           <li><a href="https://github.com/Zenodeng/Phos/releases">GitHub Releases</a><span>需能访问 GitHub</span></li>
         </ul>
-        <p class="sum">以上是同一个文件，SHA256 完全一致：<code>6de7c0fc…2853</code>（完整值见 <a href="download/SHA256.txt">SHA256.txt</a>）。下载后可在终端执行 <code>shasum -a 256 下载的文件.dmg</code> 核对。</p>
+        <p class="sum">以上是同一个文件，SHA256 完全一致：<code>d679a8f2…e30b</code>（完整值见 <a href="download/SHA256.txt">SHA256.txt</a>）。下载后可在终端执行 <code>shasum -a 256 下载的文件.dmg</code> 核对。</p>
         <p class="sum">习惯用 zip 的话，<a href="download/Phos-macOS-apple-silicon.zip">这里也有一份</a>（内容相同）。</p>
       </div>
 
@@ -1155,13 +1155,14 @@ footer a:hover{color:#fff}
         <h3 style="margin-top:36px">三步装好</h3>
         <ol style="margin-top:12px;padding-left:22px;list-style:decimal;font-size:13px;line-height:1.85;letter-spacing:-.012em;color:var(--ink-64)">
           <li style="display:list-item;border:0;padding:0;margin-bottom:12px"><strong>装 Python 3.11。</strong>从上面的链接下载安装包，双击装完。终端里执行 <code>python3.11 --version</code> 能打印出版本号，就说明装好了。</li>
-          <li style="display:list-item;border:0;padding:0;margin-bottom:12px"><strong>解压，双击「安装模型.command」。</strong>如果 macOS 提示「无法验证开发者」，<strong>右键点这个文件 →「打开」→ 再点一次「打开」</strong>。会弹出一个终端窗口开始安装。</li>
+          <li style="display:list-item;border:0;padding:0;margin-bottom:12px"><strong>解压，双击「安装模型.command」。</strong>如果 macOS 提示「无法验证开发者」，<strong>右键点这个文件 →「打开」→ 再点一次「打开」</strong>。会弹出一个终端窗口开始安装。<br><strong>国内网络连不上 Hugging Face 的话，改双击「国内网络安装.command」</strong>，见下一节。</li>
           <li style="display:list-item;border:0;padding:0"><strong>等它跑完。</strong>先装固定版本的 MLX 依赖，再从 Hugging Face 下载模型（约 3.1 GB，看网速），最后逐个文件校验 SHA256。看到「安装并校验完成」就是好了。</li>
         </ol>
 
         <h3 style="margin-top:36px">国内网络怎么装</h3>
-        <p class="sum" style="margin-top:12px">安装脚本默认从 <code>huggingface.co</code> 拉模型、从 <code>pypi.org</code> 拉依赖。<strong>这两个地址在部分网络下会连不上或极慢</strong>，尤其是 Hugging Face。不用代理也能装：把下载源换成国内镜像即可。</p>
-        <p class="sum" style="margin-top:12px">解压后在该文件夹里打开终端（在文件夹上右键 →「服务」→「新建位于文件夹位置的终端窗口」），粘贴执行：</p>
+        <p class="sum" style="margin-top:12px">安装脚本默认从 <code>huggingface.co</code> 拉模型、从 <code>pypi.org</code> 拉依赖。<strong>这两个地址在部分网络下会连不上或极慢</strong>，尤其是 Hugging Face。不用代理也能装。</p>
+        <p class="sum" style="margin-top:12px"><strong>最简单的办法：解压后双击「国内网络安装.command」</strong>（4.0.1 起随包提供）。它会把两个下载源换成 hf-mirror 与清华 PyPI 镜像，其余流程和普通安装完全一样，不需要碰终端。</p>
+        <p class="sum" style="margin-top:12px">想手动跑、或者想自己指定别的镜像，就在解压后的文件夹里打开终端（文件夹上右键 →「服务」→「新建位于文件夹位置的终端窗口」），粘贴执行：</p>
         <pre style="margin:12px 0 0;padding:14px 16px;background:rgba(0,0,0,.055);border-radius:10px;overflow-x:auto;font-size:12px;line-height:1.75"><code style="background:none;padding:0;font-size:12px;word-break:normal;white-space:pre">HF_ENDPOINT=https://hf-mirror.com \
 PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple \
 python3.11 install_model.py</code></pre>

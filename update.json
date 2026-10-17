@@ -1,8 +1,8 @@
 {
-  "version": "4.0.0",
+  "version": "4.0.1",
   "released": "2026-10-17",
   "page": "https://zenophos.dpdns.org/#install",
   "url": "https://zenophos.dpdns.org/download/Phos-macOS-apple-silicon.dmg",
   "minOS": "26.0",
-  "notes": "4.0：全新工作区，A 列表 / B 胶片双布局，工具条与检查器重排，换新图标；新增本地 AI 修图（微调实验版，随应用附带 1.3 MB 适配器），加强了裁切与蒙版方案的校验。注意：本版最低要求 macOS 26.0，旧系统请勿更新。AI 模型仍需单独安装，不装也能用全部常规编辑功能。"
+  "notes": "4.0.1：可选模型安装包新增「国内网络安装.command」——不用代理、不用开终端，双击即可用国内镜像下载模型。主程序本身没有改动，已经在用 4.0.0 的话不必特意更新。注意：本版最低要求 macOS 26.0。"
 }

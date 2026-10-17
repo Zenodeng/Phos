@@ -11,38 +11,20 @@ APP_PATH="${APP_PATH:-/Applications/Phos.app}"
 LOCAL_APP="$SCRIPT_DIR/Phos.app"
 BIN="$SCRIPT_DIR/build/Phos"
 STAGE="$SCRIPT_DIR/build/Phos.app.stage"
-MIN_MACOS="15.0"
+MIN_MACOS="26.0"
 mkdir -p "$SCRIPT_DIR/build"
 
-# xcrun 返回的 SDK 可能比当前 Swift 编译器新；按顺序尝试可用 SDK。
-CANDIDATES="${RF_SDK:-}"
-CANDIDATES="$CANDIDATES $(xcrun --show-sdk-path 2>/dev/null || true)"
-for f in /Library/Developer/CommandLineTools/SDKs/MacOSX*.sdk; do
-    CANDIDATES="$CANDIDATES $f"
-done
-
 BUILD_LOG="$SCRIPT_DIR/build/build.log"
-BUILT=0
-for SDK in $CANDIDATES; do
-    [ -d "$SDK" ] || continue
-    # 用版本不匹配的 SDK 试编译会刷一大段报错，先收进日志；
-    # 只有全部 SDK 都失败时才把它打出来，避免误以为构建挂了。
-    if swiftc -O -sdk "$SDK" -target "arm64-apple-macosx$MIN_MACOS" \
-        Sources/Phos/*.swift -o "$BIN" >"$BUILD_LOG" 2>&1; then
-        echo "使用 SDK: $SDK"
-        WARNS=$(grep -c "warning:" "$BUILD_LOG" || true)
-        if [ "$WARNS" -gt 0 ]; then
-            echo "编译警告 $WARNS 条（完整输出见 build/build.log）"
-        fi
-        BUILT=1
-        break
-    fi
-done
-if [ "$BUILT" != "1" ]; then
-    echo "所有 SDK 都编译失败，最后一次编译输出：" >&2
+. ./Scripts/ui_compile_flags.sh
+phos_ui_compile_flags "${RF_SDK:-}" "arm64-apple-macosx$MIN_MACOS" "$SCRIPT_DIR/build/ui-capabilities.json"
+SDK="$PHOS_BUILD_SDK"
+if ! swiftc -O $PHOS_UI_SWIFT_FLAGS $PHOS_UI_LINK_FLAGS -sdk "$SDK" -target "$PHOS_BUILD_TARGET" \
+    Sources/Phos/*.swift -o "$BIN" >"$BUILD_LOG" 2>&1; then
     cat "$BUILD_LOG" >&2
     exit 1
 fi
+phos_verify_ui_binary "$BIN" "$SCRIPT_DIR/build/binary-verification.json"
+echo "使用 SDK: ${SDK}（编译与链接 ${PHOS_BUILD_SDK_VERSION}）"
 
 # 先在暂存目录里组装并签名，再整体替换目标 app。
 # 这样即使目标 app 正在运行，也不会因为覆盖运行中的可执行文件（ETXTBSY）而中途失败。
@@ -50,7 +32,7 @@ fi
 mkdir -p "$STAGE/Contents/MacOS" "$STAGE/Contents/Resources"
 cp "$BIN" "$STAGE/Contents/MacOS/Phos"
 cp Info.plist "$STAGE/Contents/Info.plist"
-cp Resources/AppIcon.icns "$STAGE/Contents/Resources/AppIcon.icns"
+sh Scripts/package_icon.sh "$STAGE/Contents/Resources"
 chmod +x "$STAGE/Contents/MacOS/Phos"
 xattr -dr com.apple.quarantine "$STAGE" 2>/dev/null || true
 SIGN_LOG="$SCRIPT_DIR/build/codesign.log"
@@ -59,12 +41,12 @@ if ! codesign --force --deep --sign - "$STAGE" >"$SIGN_LOG" 2>&1; then
     echo "代码签名失败：$STAGE" >&2
     exit 1
 fi
+phos_verify_ui_bundle "$STAGE" "$SCRIPT_DIR/build/bundle-verification.json"
 
 install_app() {
     target="$1"
-    mkdir -p "$(dirname "$target")"
-    /bin/rm -rf "$target"
-    /bin/cp -R "$STAGE" "$target"
+    python3 Scripts/install_local_app.py "$STAGE" "$target" \
+        --report "$SCRIPT_DIR/build/install-verification.json"
 }
 
 install_app "$APP_PATH"

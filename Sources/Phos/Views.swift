@@ -15,164 +15,143 @@ extension AppState {
 }
 
 // MARK: - 通用滑块行
+enum SliderRoundTripPolicy {
+    /// A native slider can echo a few ULPs of normalization noise while refreshing.
+    /// It is not an edit and must not change the stored photo parameters.
+    static func isEdit(_ proposed: Double, current: Double, range: ClosedRange<Double>) -> Bool {
+        guard proposed.isFinite, current.isFinite else { return false }
+        let tolerance = 8 * max(max(current.ulp, proposed.ulp), (range.upperBound - range.lowerBound).ulp)
+        return abs(proposed - current) > tolerance
+    }
+}
+
 struct SliderRow: View {
+    @EnvironmentObject private var photoState: AppState
     let label: String
     @Binding var value: Double
     var range: ClosedRange<Double> = -100...100
-    /// 响应曲线指数。>1 时中段更精细：靠近零位每拖一像素走过的数值更小，
-    /// 两端仍然能到达量程极限。1 = 线性（默认）。
     var response: Double = 1
+    var defaultValue: Double = 0
+    var unit = ""
+    var decimals: Int? = nil
+    var step: Double = 1
+    var photoScoped = true
     var onEdit: () -> Void = {}
-
-    /// 双极滑块（范围跨 0）显示中心零位标记
-    private var bipolar: Bool { range.lowerBound < 0 && range.upperBound > 0 }
-
-    /// 按量程决定小数位：大量程取整，小量程保留 1~2 位
-    private var text: String {
-        let span = range.upperBound - range.lowerBound
-        if span >= 50 { return String(format: "%.0f", value) }
-        if span > 5   { return String(format: "%.1f", value) }
-        return String(format: "%.2f", value)
-    }
-
-    // MARK: 数值 ↔ 滑块位置（0…1）
-    // 双极滑块以零位为中心对称弯曲；非双极从量程下端开始弯曲。
-    // 位置和数值必须互为逆运算，否则拖动时数值会跳。
-
-    private func position(for v: Double) -> Double {
-        let span = range.upperBound - range.lowerBound
-        guard span > 0 else { return 0 }
-        if response == 1 { return (v - range.lowerBound) / span }
-        if bipolar {
-            let m = max(abs(range.lowerBound), abs(range.upperBound))
-            guard m > 0 else { return 0.5 }
-            let s = min(max(v / m, -1), 1)
-            let curved = (s < 0 ? -1 : 1) * pow(abs(s), 1 / response)
-            return (curved + 1) / 2
-        }
-        let t = min(max((v - range.lowerBound) / span, 0), 1)
-        return pow(t, 1 / response)
-    }
-
-    private func value(at p: Double) -> Double {
-        let span = range.upperBound - range.lowerBound
-        let u = min(max(p, 0), 1)
-        if response == 1 { return range.lowerBound + u * span }
-        if bipolar {
-            let m = max(abs(range.lowerBound), abs(range.upperBound))
-            let s = (u - 0.5) * 2
-            let curved = (s < 0 ? -1 : 1) * pow(abs(s), response)
-            return curved * m
-        }
-        return range.lowerBound + pow(u, response) * span
-    }
-
-    private var sliderRange: ClosedRange<Double> { response == 1 ? range : 0...1 }
-
-    /// response == 1 时直接绑原值，避免来回换算引入浮点误差
-    private var sliderBinding: Binding<Double> {
-        guard response != 1 else { return $value }
-        return Binding(get: { position(for: value) }, set: { value = value(at: $0) })
-    }
-
-    // 数值直接输入
-    @State private var editing = false
     @State private var draft = ""
-    @FocusState private var fieldFocused: Bool
-    @State private var valueHover = false
-    @State private var didCommitInput = false
-
+    @State private var initialDraft = ""
+    @State private var invalid = false
+    @State private var inputToken: ParameterEditCoordinator.Token?
+    @State private var sliderToken: ParameterEditCoordinator.Token?
+    @State private var localStart: Double = 0
+    @State private var sliderActive = false
+    @State private var sliderCancelled = false
+    @State private var numericActive = false
+    @FocusState private var focused: Bool
+    private var precision: Int { decimals ?? (range.upperBound - range.lowerBound >= 50 ? 0 : 2) }
+    private var formatted: String { String(format:"%.*f",precision,value) }
+    private var modified: Bool { value != defaultValue }
+    private var bipolar: Bool { range.lowerBound < 0 && range.upperBound > 0 }
+    private func position(_ v: Double) -> Double {
+        let span = range.upperBound - range.lowerBound
+        if response == 1 { return (v-range.lowerBound)/span }
+        if bipolar {
+            let n = min(max(v/max(abs(range.lowerBound),abs(range.upperBound)),-1),1)
+            return ((n < 0 ? -1 : 1)*pow(abs(n),1/response)+1)/2
+        }
+        return pow(min(max((v-range.lowerBound)/span,0),1),1/response)
+    }
+    private func actual(_ position: Double) -> Double {
+        let u = min(max(position,0),1), span = range.upperBound-range.lowerBound
+        if response == 1 { return range.lowerBound+u*span }
+        if bipolar { let n = (u-0.5)*2; return (n < 0 ? -1 : 1)*pow(abs(n),response)*max(abs(range.lowerBound),abs(range.upperBound)) }
+        return range.lowerBound+pow(u,response)*span
+    }
+    private var sliderBinding: Binding<Double> {
+        Binding(get:{ position(value) },set:{ next in
+            guard !sliderCancelled else { return }
+            if photoScoped, let sliderToken, !photoState.parameterEdits.valid(sliderToken) { sliderCancelled = true; return }
+            let candidate = actual(next)
+            guard SliderRoundTripPolicy.isEdit(candidate,current:value,range:range) else { return }
+            beginSlider(); value = candidate
+        })
+    }
     var body: some View {
-        HStack(spacing: 10) {
-            Text(label)
-                .frame(width: 58, alignment: .leading)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary)
-            ZStack {
-                Slider(value: sliderBinding, in: sliderRange) { editing in if !editing { onEdit() } }
-                    .controlSize(.small)
-                if bipolar {
-                    Capsule()
-                        .fill(Color.primary.opacity(0.3))
-                        .frame(width: 2, height: 7)
-                        .allowsHitTesting(false)
-                }
-            }
-            valueField
-                .frame(width: 52, alignment: .trailing)
+        VStack(spacing:0) {
+            HStack(spacing:6) {
+                Text(label).font(.system(size:12)).foregroundStyle(WorkspaceTokens.primaryText)
+                    .lineLimit(1).help(label)
+                if modified { Circle().fill(WorkspaceTokens.accent).frame(width:3,height:3).accessibilityLabel("已修改") }
+                Spacer(minLength:4)
+                if !unit.isEmpty { Text(unit).font(.system(size:10)).foregroundStyle(WorkspaceTokens.secondaryText) }
+                TextField(label,text:$draft)
+                    .textFieldStyle(.plain).multilineTextAlignment(.trailing)
+                    .font(.system(size:11,design:.monospaced)).monospacedDigit()
+                    .foregroundStyle(invalid ? WorkspaceTokens.error : WorkspaceTokens.primaryText)
+                    .padding(.horizontal,6).frame(width:62,height:22)
+                    .background(WorkspaceTokens.readoutColor,in:RoundedRectangle(cornerRadius:5))
+                    .overlay(RoundedRectangle(cornerRadius:5).strokeBorder(invalid ? WorkspaceTokens.error : focused ? WorkspaceTokens.accent : WorkspaceTokens.hairline,lineWidth:focused || invalid ? 1.5 : 0.5).allowsHitTesting(false))
+                    .focused($focused).onSubmit { commitInput(leaving:false) }
+                    .onExitCommand { cancelInput() }
+                    .onChange(of:focused) { _, active in if active { startInput() } else { commitInput(leaving:true) } }
+                    .accessibilityLabel(label+"数值").accessibilityHint(invalid ? "请输入有效数字" : "Enter确认，Esc取消")
+                    .help("输入数值，Enter确认，Esc取消；范围 \(range.lowerBound) 至 \(range.upperBound)")
+            }.frame(height:24)
+            ZStack(alignment:.leading) {
+                Slider(value:sliderBinding,in:0...1) { editing in
+                    if editing { sliderCancelled = false; beginSlider() }
+                    else { if sliderActive { finishSlider() }; sliderCancelled = false }
+                }.controlSize(.mini).tint(WorkspaceTokens.accent).accessibilityLabel(label+"滑杆")
+                GeometryReader { g in
+                    Rectangle().fill(WorkspaceTokens.secondaryText.opacity(0.5)).frame(width:1,height:4)
+                        .position(x:6+CGFloat(position(defaultValue))*(g.size.width-12),y:g.size.height/2)
+                }.allowsHitTesting(false)
+            }.frame(height:18)
+            if invalid { Text("请输入有效数字").font(.system(size:10)).foregroundStyle(WorkspaceTokens.error).frame(maxWidth:.infinity,alignment:.trailing) }
+        }.frame(minHeight:44)
+        .onAppear { draft = formatted }
+        .onChange(of:value) { _, _ in if !focused { draft = formatted } }
+        .onChange(of:photoState.parameterInputGeneration) { _, _ in resetInput() }
+        .onExitCommand {
+            if numericActive { cancelInput() }
+            else if sliderToken != nil { photoState.parameterEdits.invalidate(); sliderToken = nil }
         }
-        .frame(minHeight: 28)
+        .contextMenu { Button("复位"+label) { photoState.parameterEdits.invalidate(); if value != defaultValue { value = defaultValue; onEdit() } }.disabled(!modified) }
     }
-
-    @ViewBuilder
-    private var valueField: some View {
-        if editing {
-            TextField("", text: $draft)
-                .textFieldStyle(.roundedBorder)
-                .controlSize(.small)
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
-                .multilineTextAlignment(.trailing)
-                .focused($fieldFocused)
-                .onSubmit(commitInput)
-                .onExitCommand { cancelInput() }
-                .onAppear { fieldFocused = true }
-                .onChange(of: fieldFocused) { focused in
-                    // 点到别处（失焦）等同确认
-                    if !focused { commitInput() }
-                }
-        } else {
-            Text(text)
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
-                .foregroundStyle(valueHover ? Color.primary : StudioStyle.accent)
-                .padding(.horizontal, 4).padding(.vertical, 1)
-                .background(
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(valueHover ? Color(nsColor: .rfPill) : .clear)
-                )
-                .contentShape(Rectangle())
-                .help("单击直接输入数值（最多两位小数，范围 \(format(range.lowerBound)) ~ \(format(range.upperBound))）")
-                .onHover { valueHover = $0 }
-                .onTapGesture { startInput() }
-        }
-    }
-
-    private func format(_ v: Double) -> String {
-        var s = String(format: "%.2f", v)
-        if s.contains(".") {
-            while s.last == "0" { s.removeLast() }
-            if s.last == "." { s.removeLast() }
-        }
-        return s
-    }
-
     private func startInput() {
-        draft = format(value)
-        didCommitInput = false
-        editing = true
+        initialDraft = String(value); draft = initialDraft; invalid = false; numericActive = true
+        if photoScoped { inputToken = photoState.parameterEdits.begin(finish:{ commitInput(leaving:true) },cancel:{ resetInput() }) }
     }
-
+    private func commitInput(leaving: Bool) {
+        guard numericActive else { return }
+        if photoScoped && !photoState.parameterEdits.valid(inputToken) { resetInput(); return }
+        guard draft != initialDraft else { finishInput(); return }
+        guard let parsed = ParameterInputPolicy.value(draft,in:range) else {
+            invalid = true
+            if leaving { cancelInput() }
+            return
+        }
+        if photoScoped { _ = photoState.parameterEdits.complete(inputToken) }
+        numericActive = false
+        if parsed != value { value = parsed; onEdit() }
+        resetInput()
+    }
+    private func finishInput() {
+        if photoScoped { _ = photoState.parameterEdits.complete(inputToken) }
+        resetInput()
+    }
+    private func resetInput() { if sliderActive { sliderCancelled = true }; numericActive = false; inputToken = nil; sliderToken = nil; sliderActive = false; invalid = false; draft = formatted; focused = false }
     private func cancelInput() {
-        editing = false
-        draft = ""
+        if photoScoped && photoState.parameterEdits.valid(inputToken) { photoState.parameterEdits.invalidate() }
+        resetInput()
     }
-
-    private func commitInput() {
-        guard editing else { return }
-        guard !didCommitInput else { return }
-        didCommitInput = true
-        var raw = draft.trimmingCharacters(in: .whitespaces)
-        // 兼容中文输入法里的逗号小数点，如 1,5
-        if raw.contains("."), !raw.contains(",") { } else if raw.contains(",") {
-            raw = raw.replacingOccurrences(of: ",", with: ".")
-        }
-        if let v = Double(raw), v.isFinite {
-            // 最多两位小数 + 夹到合法范围
-            let rounded = (v * 100).rounded() / 100
-            let clamped = min(max(rounded, range.lowerBound), range.upperBound)
-            value = clamped
-            onEdit()
-        }
-        cancelInput()
+    private func beginSlider() {
+        guard !sliderActive else { return }
+        sliderActive = true; localStart = value
+        if photoScoped { sliderToken = photoState.parameterEdits.begin() }
+    }
+    private func finishSlider() {
+        if photoScoped { guard photoState.parameterEdits.complete(sliderToken) else { sliderToken = nil; return } }
+        sliderToken = nil; sliderActive = false; if value != localStart { onEdit() }
     }
 }
 
@@ -441,9 +420,9 @@ struct ThumbCell: View {
 // MARK: - 画布
 struct CanvasPane: View {
     @EnvironmentObject var s: AppState
-    @State private var scale: CGFloat = 1
+    @ObservedObject var session: WorkspaceSessionState = WorkspaceSessionState(persist: false)
+    @State private var canvasSize: CGSize = .zero
     @State private var gestureScale: CGFloat?
-    @State private var offset: CGSize = .zero
     @State private var panOrigin: CGSize?
     @State private var maskOrigin: Mask?
     @State private var maskGestureStart: CGPoint?
@@ -461,97 +440,111 @@ struct CanvasPane: View {
         return s.maskDraft ?? s.selectedMask.flatMap { id in s.params.masks.first(where: { $0.id == id }) }
     }
 
+    private var preciseTool: Bool { s.cropMode || s.whiteBalancePicker || s.selectedMask != nil || s.maskDrawingKind != nil }
+    private func layout(_ size: CGSize) -> WorkspaceLayout {
+        WorkspaceLayout.resolve(size: size, topInset: session.topInset, browserVisible: session.browserVisible,
+                                inspectorVisible: session.inspectorVisible, mode: session.mode,
+                                browserWidth: session.browserWidth, inspectorWidth: session.inspectorWidth)
+    }
+    private func imageRect(_ frame: PreviewFrame?, layout: WorkspaceLayout) -> CGRect {
+        guard let frame else { return .zero }
+        var safe = layout.safeCanvas
+        if s.cropMode { safe.origin.y += 42; safe.size.height = max(1, safe.height - 42) }
+        if preciseTool { return DisplayTransform.rect(bitmap: frame.bitmapSize, in: safe, fill: false) }
+        if session.viewport.mode == .manual {
+            let factor = session.viewport.screenPixelsPerEditedPixel / max(session.backingScale, 1)
+            let size = CGSize(width: frame.editedExtent.width * factor, height: frame.editedExtent.height * factor)
+            let center = session.viewport.editedImageCenter
+            return CGRect(x: safe.midX - center.x * size.width, y: safe.midY - (1 - center.y) * size.height,
+                          width: size.width, height: size.height)
+        }
+        return DisplayTransform.rect(bitmap: frame.bitmapSize, in: session.usesFill ? layout.canvas : safe, fill: session.usesFill)
+    }
+    private var frame: PreviewFrame? {
+        guard let frame = s.displayFrame, frame.key.photoID == s.current?.id else { return nil }
+        let purpose: PreviewPurpose = s.showBefore ? .beforeOriginal : s.cropMode ? .cropReference : .edited
+        return frame.key.purpose == purpose ? frame : nil
+    }
     var body: some View {
         GeometryReader { geo in
-            let img = (s.showBefore ? s.beforeImage : s.preview)
-            let fit = fitRect(img: img, in: geo.size)
-            // 预览图在画布上的真实显示矩形：
-            // ZStack 里带显式 frame 的子视图默认居中，再叠 offset ——
-            // 之前叠加层用 fit.midX - geo.w/2 当原点（恒为 0），少了居中那一半，整体错位半幅
-            let dispRect = CGRect(
-                x: (geo.size.width - fit.width * scale) / 2 + offset.width,
-                y: (geo.size.height - fit.height * scale) / 2 + offset.height,
-                width: fit.width * scale, height: fit.height * scale)
-            ZStack {
+            let shell = layout(geo.size)
+            let displayed = frame
+            let rect = imageRect(displayed, layout: shell)
+            let pixelReady = s.oneToOne && displayed?.fullResolution == true
+            ZStack(alignment: .topLeading) {
                 StudioStyle.canvas
-                if s.oneToOne, let cg = img {
-                    // 1:1：按屏幕像素原样摆，外面套滚动视图，检查锐度用。
-                    // 蒙版参数是归一化的，所以这里直接按图像像素尺寸当 frame —— 与适合窗口分支同一套坐标语义。
+                if let displayed, pixelReady {
+                    let pixelSize = CGSize(width: CGFloat(displayed.image.width) / max(session.backingScale, 1),
+                                           height: CGFloat(displayed.image.height) / max(session.backingScale, 1))
                     ScrollView([.horizontal, .vertical]) {
-                        Image(decorative: cg, scale: 1)
-                            .frame(width: CGFloat(cg.width), height: CGFloat(cg.height))
-                            .overlay { selectionOverlay(width: CGFloat(cg.width), height: CGFloat(cg.height)) }
+                        Image(decorative: displayed.image, scale: 1).resizable()
+                            .frame(width: pixelSize.width, height: pixelSize.height)
+                            .overlay { selectionOverlay(width: pixelSize.width, height: pixelSize.height) }
                             .overlay(alignment: .topLeading) {
-                                if let m = editableMask {
-                                    MaskOverlay(mask: m, frame: CGRect(
-                                        x: 0, y: 0, width: cg.width, height: cg.height))
-                                }
+                                if let mask = editableMask { MaskOverlay(mask: mask, frame: CGRect(origin: .zero, size: pixelSize)) }
                             }
-                            .gesture(canvasGesture(frame: CGRect(x: 0, y: 0, width: cg.width, height: cg.height),
-                                                   pixelView: true), including: s.selectedMask != nil || s.whiteBalancePicker ? .all : .subviews)
+                            .gesture(canvasGesture(frame: CGRect(origin: .zero, size: pixelSize), pixelView: true),
+                                     including: s.selectedMask != nil || s.whiteBalancePicker ? .all : .subviews)
                     }
-                } else {
-                if let cg = img {
-                    Image(decorative: cg, scale: 1)
-                        .resizable()
-                        .frame(width: fit.width * scale, height: fit.height * scale)
-                        .overlay { selectionOverlay(width: dispRect.width, height: dispRect.height) }
+                    .frame(width: shell.safeCanvas.width, height: shell.safeCanvas.height)
+                    .offset(x: shell.safeCanvas.minX, y: shell.safeCanvas.minY)
+                } else if let displayed {
+                    Image(decorative: displayed.image, scale: 1).resizable()
+                        .frame(width: rect.width, height: rect.height)
+                        .overlay { selectionOverlay(width: rect.width, height: rect.height) }
                         .overlay(alignment: .topLeading) {
-                            if let m = editableMask {
-                                // overlay 的本地原点就是图片左上角，frame 必须从 0 起
-                                MaskOverlay(mask: m, frame: CGRect(
-                                    x: 0, y: 0, width: dispRect.width, height: dispRect.height))
-                            }
+                            if let mask = editableMask { MaskOverlay(mask: mask, frame: CGRect(origin: .zero, size: rect.size)) }
                         }
-                        .offset(x: fit.midX - geo.size.width / 2 + offset.width,
-                                y: fit.midY - geo.size.height / 2 + offset.height)
+                        .position(x: rect.midX, y: rect.midY)
                 } else {
-                    VStack(spacing: 10) {
-                        Image(systemName: "photo.on.rectangle.angled")
-                            .font(.system(size: 40, weight: .light))
-                            .foregroundStyle(.white.opacity(0.35))
-                        Text("打开一个文件夹开始")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.7))
-                        Text("支持 RAW · HEIF/HEIC · JPEG · PNG · TIFF · AVIF")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.white.opacity(0.35))
+                    VStack(spacing: 12) {
+                        if s.previewing || s.folderLoading { ProgressView().controlSize(.small) }
+                        else { Image(systemName: s.current == nil ? "photo.on.rectangle.angled" : "exclamationmark.triangle").font(.system(size: 32, weight: .light)) }
+                        Text(s.previewing ? "正在准备照片…" : s.current == nil ? "打开文件夹开始编辑" : s.status).font(.system(size: 13))
+                        if s.current == nil { Text("RAW · HEIF · JPEG · PNG · TIFF · AVIF").font(.system(size: 11)).foregroundStyle(.secondary) }
                     }
+                    .frame(width: shell.safeCanvas.width, height: shell.safeCanvas.height)
+                    .position(x: shell.safeCanvas.midX, y: shell.safeCanvas.midY)
                 }
+                if s.cropMode, displayed != nil, !pixelReady {
+                    CropOverlay(frame: rect)
+                    CropBar().frame(width: shell.safeCanvas.width, height: shell.safeCanvas.height)
+                        .offset(x: shell.safeCanvas.minX, y: shell.safeCanvas.minY)
+                }
+                if s.oneToOne && !pixelReady && displayed != nil {
+                    Label("正在准备完整像素…", systemImage: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 11)).padding(8).background(.regularMaterial, in: Capsule())
+                        .position(x: shell.safeCanvas.midX, y: shell.safeCanvas.minY + 20)
                 }
             }
+            .frame(width: geo.size.width, height: geo.size.height)
             .contentShape(Rectangle())
-            .gesture(canvasGesture(frame: dispRect), including: s.oneToOne ? .subviews : .all)
-            .simultaneousGesture(MagnificationGesture().onChanged { v in
-                if gestureScale == nil { gestureScale = scale }
-                scale = min(max((gestureScale ?? 1) * v, 0.2), 8)
+            .gesture(canvasGesture(frame: rect), including: pixelReady ? .subviews : .all)
+            .simultaneousGesture(MagnificationGesture().onChanged { value in
+                guard let displayed, !preciseTool, !s.oneToOne else { return }
+                let transform = DisplayTransform(frame: displayed, imageRect: rect, backingScale: session.backingScale)
+                if gestureScale == nil {
+                    gestureScale = transform.screenPixelsPerEditedPixel
+                    session.viewport.editedImageCenter = transform.normalizedPoint(CGPoint(x: shell.safeCanvas.midX, y: shell.safeCanvas.midY), requireInside: false) ?? CGPoint(x: 0.5, y: 0.5)
+                }
+                session.viewport.mode = .manual
+                session.viewport.screenPixelsPerEditedPixel = min(max((gestureScale ?? 1) * value, 0.02), 16)
             }.onEnded { _ in gestureScale = nil })
-            .onChange(of: s.currentIndex) { scale = 1; offset = .zero }
-            .onChange(of: s.canvasResetID) { _, _ in scale = 1; offset = .zero; gestureScale = nil }
-            // 裁剪模式：叠加裁剪框（作为画布兄弟视图，需要真实显示矩形）
-            if s.cropMode, img != nil, !s.oneToOne {
-                CropOverlay(frame: dispRect)
-                CropBar()
-            }
+            .onAppear { canvasSize = geo.size }
+            .onChange(of: geo.size) { _, size in canvasSize = size }
+            .onChange(of: s.current?.id) { _, _ in session.viewport.editedImageCenter = CGPoint(x: 0.5, y: 0.5); panOrigin = nil }
+            .onChange(of: s.canvasResetID) { _, _ in session.viewport.editedImageCenter = CGPoint(x: 0.5, y: 0.5); gestureScale = nil }
         }
     }
 
     @ViewBuilder
     func selectionOverlay(width: CGFloat, height: CGFloat) -> some View {
-        if s.showMaskOverlay, !s.showBefore, !s.cropMode, let mask = s.maskPreviewImage {
+        if s.showMaskOverlay, !s.showBefore, !s.cropMode,
+           s.previewFrame?.maskID == (s.maskDraft?.id ?? s.selectedMask), let mask = s.previewFrame?.mask {
             Color.red.opacity(0.45)
                 .mask(Image(decorative: mask, scale: 1).resizable().luminanceToAlpha())
-                .frame(width: width, height: height)
-                .allowsHitTesting(false)
+                .frame(width: width, height: height).allowsHitTesting(false)
         }
-    }
-
-    func fitRect(img: CGImage?, in size: CGSize) -> CGRect {
-        guard let cg = img else { return .zero }
-        let iw = CGFloat(cg.width), ih = CGFloat(cg.height)
-        let sc = min(size.width / iw, size.height / ih)
-        let w = iw * sc, h = ih * sc
-        return CGRect(x: (size.width - w) / 2, y: (size.height - h) / 2, width: w, height: h)
     }
 
     /// 只挂一个拖拽手势，内部按当前状态分流 —— 以前挂了三个 gesture，
@@ -595,9 +588,18 @@ struct CanvasPane: View {
                         break        // AI 蒙版不需要手绘
                     }
                 } else {
-                    if panOrigin == nil { panOrigin = offset }
-                    offset = CGSize(width: (panOrigin?.width ?? 0) + v.translation.width,
-                                    height: (panOrigin?.height ?? 0) + v.translation.height)
+                    guard let displayed = self.frame else { return }
+                    if panOrigin == nil { panOrigin = CGSize(width: frame.minX, height: frame.minY) }
+                    let moved = CGRect(x: (panOrigin?.width ?? 0) + v.translation.width,
+                                       y: (panOrigin?.height ?? 0) + v.translation.height,
+                                       width: frame.width, height: frame.height)
+                    let transform = DisplayTransform(frame: displayed, imageRect: moved, backingScale: session.backingScale)
+                    // The safe viewport is anchored at the same edited-image point in either layout.
+                    let shell = layout(canvasSize)
+                    let anchor = CGPoint(x: shell.safeCanvas.midX, y: shell.safeCanvas.midY)
+                    session.viewport.editedImageCenter = transform.normalizedPoint(anchor, requireInside: false) ?? CGPoint(x: 0.5, y: 0.5)
+                    session.viewport.screenPixelsPerEditedPixel = transform.screenPixelsPerEditedPixel
+                    session.viewport.mode = .manual
                 }
             }
             .onEnded { value in
@@ -887,7 +889,7 @@ struct HistogramView: View {
                 var p = Path()
                 let n = v.count
                 for i in 0..<n {
-                    let x = Double(i) / Double(n - 1) * size.width
+                    let x = Double(i) / Double(max(1,n - 1)) * size.width
                     let y = size.height - Double(v[i]) / Double(maxV) * size.height
                     if i == 0 { p.move(to: CGPoint(x: x, y: size.height)) }
                     p.addLine(to: CGPoint(x: x, y: y))
@@ -896,12 +898,12 @@ struct HistogramView: View {
                 p.closeSubpath()
                 return p
             }
-            ctx.fill(path(bins.l), with: .color(.white.opacity(0.22)))
+            ctx.fill(path(bins.l), with: .color(WorkspaceTokens.secondaryText.opacity(0.24)))
             ctx.fill(path(bins.r), with: .color(.red.opacity(0.45)))
             ctx.fill(path(bins.g), with: .color(.green.opacity(0.45)))
             ctx.fill(path(bins.b), with: .color(.blue.opacity(0.45)))
         }
-        .background(Color(white: 0.10))
+        .background(WorkspaceTokens.chartColor)
         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous)
             .stroke(Color(nsColor: .rfCardBorder), lineWidth: 0.5))
@@ -1144,6 +1146,9 @@ struct MergeSheet: View {
     @State private var selected: Set<UUID> = []
     /// 从文件夹外另外添加的文件
     @State private var external: [URL] = []
+    @State private var mergeMode:MergeMode = .fusion
+    @State private var alignEnabled = true
+    @State private var alignMethod:AlignMethod = .translation
 
     /// 最终合成顺序：文件夹照片按列表顺序，外部文件追加在后
     var list: [URL] {
@@ -1165,13 +1170,13 @@ struct MergeSheet: View {
 
             // 合成方式
             VStack(alignment: .leading, spacing: 6) {
-                Picker("方式", selection: $s.mergeMode) {
+                Picker("方式", selection: $mergeMode) {
                     ForEach(MergeMode.allCases, id: \.self) { m in Text(m.label).tag(m) }
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .disabled(s.mergeRunning)
-                Text(s.mergeMode.hint)
+                Text(mergeMode.hint)
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1180,12 +1185,12 @@ struct MergeSheet: View {
             // 对齐选项
             VStack(alignment: .leading, spacing: 6) {
                 Toggle("先对齐帧（重叠区 NCC < 0.7 的帧自动剔除）", isOn: Binding(
-                    get: { s.alignEnabled || s.mergeMode == .denoise },
-                    set: { s.alignEnabled = $0 }))
+                    get: { alignEnabled || mergeMode == .denoise },
+                    set: { alignEnabled = $0 }))
                     .font(.system(size: 10.5))
-                    .disabled(s.mergeMode == .denoise || s.mergeRunning)
-                if s.alignEnabled || s.mergeMode == .denoise {
-                    Picker("对齐方式", selection: $s.alignMethod) {
+                    .disabled(mergeMode == .denoise || s.mergeRunning)
+                if alignEnabled || mergeMode == .denoise {
+                    Picker("对齐方式", selection: $alignMethod) {
                         ForEach(AlignMethod.allCases, id: \.self) { m in
                             Text(m.label).tag(m)
                         }
@@ -1280,6 +1285,7 @@ struct MergeSheet: View {
                     .disabled(s.mergeRunning)
                 Button {
                     let urls = list
+                    s.mergeMode = mergeMode; s.alignEnabled = alignEnabled; s.alignMethod = alignMethod
                     Task { await s.mergeExposures(urls) }
                 } label: {
                     Label("开始合成", systemImage: "play.fill")
@@ -1290,8 +1296,9 @@ struct MergeSheet: View {
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .padding(20).frame(width: 470)
+        .padding(20).frame(width: 470).background(Color(nsColor:WorkspaceTokens.panel))
         .onAppear {
+            mergeMode = s.mergeMode; alignEnabled = s.alignEnabled; alignMethod = s.alignMethod
             // 默认带上之前已标记的照片
             selected = Set(s.items.filter { $0.picked }.map { $0.id })
         }

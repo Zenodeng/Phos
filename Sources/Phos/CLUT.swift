@@ -17,7 +17,12 @@ import CoreGraphics
 //   strength 直接烘进立方体（以恒等映射为基准插值），省一次混合。
 
 final class CLUTLibrary: ObservableObject {
-    static let shared = CLUTLibrary()
+    // CLUTLibrary 内部所有状态（BoundedCache、listCache）都用 NSLock 自保护，
+    // 且 Engine 渲染管线在非 MainActor 上下文访问 shared，所以不能在类上加 @MainActor。
+    // 这里用 Swift 6 引入的 nonisolated(unsafe) 精确标记：跳过编译器的全局静态字段并发检查，
+    // 把安全责任交给类内部的锁。**不要**改成 @unchecked Sendable 在类上——那是更宽松的承诺，
+    // 而我们这里只是声明静态字段的安全性，不覆盖整个类。
+    nonisolated(unsafe) static let shared = CLUTLibrary()
 
     var root: URL {
         let configured = UserDefaults.standard.string(forKey: "clutDirectory") ?? ""

@@ -1,0 +1,110 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "id": "skimage-astronaut",
+      "name": "Astronaut / NASA",
+      "kind": "photo",
+      "filename": "astronaut.png",
+      "url": "https://raw.githubusercontent.com/scikit-image/scikit-image/v0.25.2/skimage/data/astronaut.png",
+      "license": "public-domain",
+      "licenseEvidence": "https://scikit-image.org/docs/0.25.x/api/skimage.data.html#skimage.data.astronaut",
+      "credit": "NASA / Eileen Collins photograph",
+      "use": "pipeline-fixture",
+      "releaseEligible": true,
+      "researchEligible": true
+    },
+    {
+      "id": "skimage-coffee",
+      "name": "Coffee / Rachel Michetti",
+      "kind": "photo",
+      "filename": "coffee.png",
+      "url": "https://raw.githubusercontent.com/scikit-image/scikit-image/v0.25.2/skimage/data/coffee.png",
+      "license": "CC0-1.0",
+      "licenseEvidence": "https://scikit-image.org/docs/0.25.x/api/skimage.data.html#skimage.data.coffee",
+      "credit": "Rachel Michetti / Pikolo Espresso Bar",
+      "use": "pipeline-fixture",
+      "releaseEligible": true,
+      "researchEligible": true
+    },
+    {
+      "id": "skimage-chelsea",
+      "name": "Chelsea / Stefan van der Walt",
+      "kind": "photo",
+      "filename": "chelsea.png",
+      "url": "https://raw.githubusercontent.com/scikit-image/scikit-image/v0.25.2/skimage/data/chelsea.png",
+      "license": "CC0-1.0",
+      "licenseEvidence": "https://scikit-image.org/docs/0.25.x/api/skimage.data.html#skimage.data.chelsea",
+      "credit": "Stefan van der Walt",
+      "use": "pipeline-fixture",
+      "releaseEligible": true,
+      "researchEligible": true
+    },
+    {
+      "id": "skimage-rocket",
+      "name": "DSCOVR launch / SpaceX",
+      "kind": "photo",
+      "filename": "rocket.jpg",
+      "url": "https://raw.githubusercontent.com/scikit-image/scikit-image/v0.25.2/skimage/data/rocket.jpg",
+      "license": "public-domain",
+      "licenseEvidence": "https://scikit-image.org/docs/0.25.x/api/skimage.data.html#skimage.data.rocket",
+      "credit": "SpaceX",
+      "use": "pipeline-fixture",
+      "releaseEligible": true,
+      "researchEligible": true
+    },
+    {
+      "id": "fivek",
+      "name": "MIT-Adobe FiveK",
+      "kind": "dataset",
+      "license": "research-only",
+      "licenseEvidence": "https://data.csail.mit.edu/graphics/fivek/legal/LicenseAdobe.txt",
+      "additionalLicenseEvidence": "https://data.csail.mit.edu/graphics/fivek/legal/LicenseAdobeMIT.txt",
+      "url": "https://people.csail.mit.edu/vladb/photoadjust/",
+      "use": "research-quarantine",
+      "releaseEligible": false,
+      "status": "metadata-only",
+      "reason": "Both official image licenses restrict use to research not directed toward commercial advantage. No photos acquired.",
+      "researchEligible": true
+    },
+    {
+      "id": "ppr10k",
+      "name": "PPR10K",
+      "kind": "dataset",
+      "license": "noncommercial-research-only",
+      "licenseEvidence": "https://github.com/csjliang/PPR10K#agreement",
+      "url": "https://github.com/csjliang/PPR10K",
+      "use": "research-quarantine",
+      "releaseEligible": false,
+      "status": "metadata-only",
+      "reason": "Dataset and derived data are restricted; Apache code license does not grant image rights. No photos acquired.",
+      "researchEligible": true
+    },
+    {
+      "id": "gier",
+      "name": "GIER",
+      "kind": "dataset",
+      "license": "unresolved-image-rights",
+      "licenseEvidence": "https://sites.google.com/view/gierdataset/home",
+      "url": "https://sites.google.com/view/gierdataset/home",
+      "use": "quarantine",
+      "releaseEligible": false,
+      "status": "metadata-only",
+      "reason": "Source/target, instructions and masks available; underlying crawled-image rights need separate confirmation.",
+      "researchEligible": false
+    },
+    {
+      "id": "gaic",
+      "name": "GAIC / GAICD",
+      "kind": "dataset",
+      "license": "unverified-dataset-terms",
+      "licenseEvidence": "https://github.com/HuiZeng/Grid-Anchor-based-Image-Cropping",
+      "url": "https://github.com/HuiZeng/Grid-Anchor-based-Image-Cropping",
+      "use": "quarantine",
+      "releaseEligible": false,
+      "status": "metadata-only",
+      "reason": "Candidate crop ratings useful; code availability alone does not establish image/data permission.",
+      "researchEligible": false
+    }
+  ]
+}

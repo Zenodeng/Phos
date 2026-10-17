@@ -4,6 +4,7 @@ struct SyncSheet: View {
     @EnvironmentObject var s: AppState
     @Environment(\.dismiss) var dismiss
     @State private var useCopied = false
+    @State private var groups = EditGroup.defaults
 
     private var targets: [URL] {
         s.items.filter { s.selectedPhotos.contains($0.id) && (useCopied || $0.id != s.current?.id) }.map(\.url)
@@ -20,8 +21,8 @@ struct SyncSheet: View {
             Divider()
             ForEach(EditGroup.allCases) { group in
                 Toggle(group.label, isOn: Binding(
-                    get: { s.syncGroups.contains(group) },
-                    set: { if $0 { s.syncGroups.insert(group) } else { s.syncGroups.remove(group) } }
+                    get: { groups.contains(group) },
+                    set: { if $0 { groups.insert(group) } else { groups.remove(group) } }
                 ))
             }
             Divider()
@@ -31,77 +32,69 @@ struct SyncSheet: View {
                 Button("取消", role: .cancel) { dismiss() }.keyboardShortcut(.cancelAction)
                 Button("同步") {
                     let params = useCopied ? s.copiedParams! : s.params
-                    let urls = targets, groups = s.syncGroups
-                    Task { await s.synchronize(params, to: urls, groups: groups) }
+                    let urls = targets, selectedGroups = groups
+                    s.syncGroups = selectedGroups
+                    Task { await s.synchronize(params, to: urls, groups: selectedGroups) }
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent)
-                .disabled(targets.isEmpty || s.syncGroups.isEmpty || s.source == nil || s.syncRunning)
+                .disabled(targets.isEmpty || groups.isEmpty || s.source == nil || s.syncRunning)
             }
-        }.padding(22).frame(width: 420)
+        }.padding(20).frame(width: 420).background(Color(nsColor:WorkspaceTokens.panel))
+            .onAppear { groups = s.syncGroups }
     }
 }
 
 struct SnapshotSheet: View {
     @EnvironmentObject var s: AppState
-    @Environment(\.dismiss) var dismiss
+    @Environment(\.dismiss) private var dismiss
+    @State private var drafts:[EditSnapshot] = []
     @State private var name = ""
-    @State private var renaming: UUID?
-    @State private var renamed = ""
-    @State private var deleting: UUID?
+    @State private var photoID:UUID?
+    @State private var error:String?
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("命名快照").font(.headline)
+        VStack(alignment:.leading,spacing:14) {
+            Text("命名快照").font(.system(size:17,weight:.semibold))
+            Text("保存调整的不同版本，原始照片始终保留").font(.caption).foregroundStyle(WorkspaceTokens.secondaryText)
             HStack {
-                TextField("快照名称", text: $name)
-                    .onSubmit { save() }
-                Button(action: save) { Image(systemName: "plus") }
-                    .help("保存当前调整为快照")
-                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || s.source == nil)
+                TextField("快照名称",text:$name).textFieldStyle(.roundedBorder).onSubmit { add() }
+                Button("添加") { add() }.disabled(name.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty || s.source == nil)
             }
-            List {
-                ForEach(s.snapshots) { snapshot in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(snapshot.name).lineLimit(1)
-                            Text(snapshot.created.formatted(date: .abbreviated, time: .standard))
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Button { s.restoreSnapshot(snapshot.id); dismiss() } label: {
-                            Image(systemName: "arrow.uturn.backward")
-                        }.help("恢复此快照")
-                        Button { renaming = snapshot.id; renamed = snapshot.name } label: {
-                            Image(systemName: "pencil")
-                        }.help("重命名快照")
-                        Button { deleting = snapshot.id } label: {
-                            Image(systemName: "trash")
-                        }.help("删除快照")
-                    }.buttonStyle(.borderless).padding(.vertical, 3)
+            ScrollView {
+                VStack(spacing:8) {
+                    ForEach($drafts) { $snapshot in
+                        HStack {
+                            VStack(alignment:.leading,spacing:4) {
+                                TextField("名称",text:$snapshot.name).textFieldStyle(.roundedBorder).accessibilityLabel("快照名称")
+                                Text(snapshot.created.formatted(date:.abbreviated,time:.shortened)).font(.caption).foregroundStyle(WorkspaceTokens.secondaryText)
+                            }
+                            Button("恢复") { if persist() { s.commit(snapshot.params); dismiss() } }
+                                .disabled(snapshot.name.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty)
+                            Button { drafts.removeAll { $0.id == snapshot.id } } label: { Image(systemName:"trash") }.help("移除快照").accessibilityLabel("移除快照")
+                        }.padding(8).background(WorkspaceTokens.readoutColor,in:RoundedRectangle(cornerRadius:8))
+                    }
+                    if drafts.isEmpty { Text("暂无快照").foregroundStyle(WorkspaceTokens.secondaryText).padding(.vertical,50) }
                 }
-            }.frame(height: 280)
-                .overlay { if s.snapshots.isEmpty { Text("暂无快照").foregroundStyle(.secondary) } }
-            HStack { Spacer(); Button("完成") { dismiss() }.keyboardShortcut(.cancelAction) }
-        }.padding(22).frame(width: 460)
-            .alert("重命名快照", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
-                TextField("名称", text: $renamed)
-                Button("取消", role: .cancel) { renaming = nil }
-                Button("保存") {
-                    if let id = renaming { s.renameSnapshot(id, name: renamed) }
-                    renaming = nil
-                }
+            }.frame(height:260)
+            if let error { Text(error).font(.caption).foregroundStyle(WorkspaceTokens.error) }
+            HStack {
+                Button("取消",role:.cancel) { dismiss() }.keyboardShortcut(.cancelAction); Spacer()
+                Button("保存") { if persist() { dismiss() } }.keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent)
+                    .disabled(drafts.contains { $0.name.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty })
             }
-            .alert("删除这个快照？", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })) {
-                Button("取消", role: .cancel) { deleting = nil }
-                Button("删除", role: .destructive) {
-                    if let id = deleting { s.deleteSnapshot(id) }
-                    deleting = nil
-                }
-            }
+        }.padding(20).frame(width:450).background(Color(nsColor:WorkspaceTokens.panel))
+            .onAppear { drafts = s.snapshots; photoID = s.current?.id }
     }
-    private func save() {
-        s.createSnapshot(name: name)
-        name = ""
+    private func add() {
+        let trimmed = name.trimmingCharacters(in:.whitespacesAndNewlines)
+        guard !trimmed.isEmpty, s.source != nil else { return }
+        drafts.append(EditSnapshot(name:String(trimmed.prefix(120)),params:s.params)); name = ""
+    }
+    private func persist() -> Bool {
+        guard photoID == s.current?.id else { error = "照片已改变，请重新打开快照"; return false }
+        let previous = s.snapshots; s.snapshots = drafts
+        if !s.saveCurrent() { s.snapshots = previous; error = "快照保存失败，原记录已保留"; return false }
+        return true
     }
 }
 
@@ -136,8 +129,8 @@ struct MaskEditingControls: View {
                 }.labelsHidden().pickerStyle(.segmented).frame(width: 112)
             }
             if s.maskTool != .position {
-                SliderRow(label: "笔刷", value: $s.brushRadius, range: 0.005...0.3)
-                SliderRow(label: "软边", value: $s.brushFeather, range: 0...1)
+                SliderRow(label: "笔刷", value: $s.brushRadius, range: 0.005...0.3, defaultValue:0.05, photoScoped:false)
+                SliderRow(label: "软边", value: $s.brushFeather, range: 0...1, defaultValue:0.5, photoScoped:false)
             }
         }.font(.system(size: 11))
     }

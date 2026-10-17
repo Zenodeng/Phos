@@ -336,7 +336,7 @@ extension Engine {
     }
 }
 
-#if !PHOS_TESTING
+#if !PHOS_TESTING || PHOS_APP_TESTING
 @MainActor
 extension AppState {
     func recomputeMask(_ id: UUID) {

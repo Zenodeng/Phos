@@ -8,6 +8,10 @@
 	<string>Phos</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
+	<!-- AppIcon.icon 编译后的 Assets.car 包含 macOS 双外观图标。
+	     旧系统回退到 AppIcon.icns，运行中的 Dock 图标由 AppIcon.swift 更新。 -->
+	<key>CFBundleIconName</key>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.zeno.phos</string>
 	<key>CFBundleInfoDictionaryVersion</key>
@@ -17,13 +21,13 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>3.2.4</string>
+	<string>3.2.5</string>
 	<key>CFBundleVersion</key>
-	<string>3.2.4</string>
+	<string>3.2.5</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.photography</string>
 	<key>LSMinimumSystemVersion</key>
-	<string>15.0</string>
+	<string>26.0</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>

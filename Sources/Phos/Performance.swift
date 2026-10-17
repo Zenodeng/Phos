@@ -49,8 +49,9 @@ final class BoundedCache<Key: Hashable, Value>: @unchecked Sendable {
 }
 
 /// A running operation is never duplicated; incoming work replaces the pending job.
+/// Swift 6 严格并发要求 Output 跨 actor 边界传值，因此 Input/Output 都必须 Sendable。
 @MainActor
-final class LatestWorkQueue<Input, Output> {
+final class LatestWorkQueue<Input: Sendable, Output: Sendable> {
     private let priority: TaskPriority
     private let operation: @Sendable (Input) -> Output
     private let completion: (Input, Output) -> Void

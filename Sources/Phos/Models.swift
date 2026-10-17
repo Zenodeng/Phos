@@ -574,10 +574,14 @@ enum ExportPaths {
     private static let legacySuite = "com.zeno.rawforge"
 
     static var configured: String {
+        #if PHOS_QA
+        return QAWorkspace.exports.path
+        #else
         if let current = UserDefaults.standard.string(forKey: key), !current.isEmpty {
             return current
         }
         return UserDefaults(suiteName: legacySuite)?.string(forKey: key) ?? ""
+        #endif
     }
 
     static var defaultDir: URL {
@@ -655,6 +659,9 @@ enum SidecarStore {
     static func load(for url: URL) -> Sidecar? { try? read(for: url) }
 
     static func write(_ s: Sidecar, for imageURL: URL) throws {
+        #if PHOS_QA
+        try QAWorkspace.scope.requireWritableImage(imageURL)
+        #endif
         // Never silently overwrite a damaged edit file.
         _ = try read(for: imageURL)
         let dest = url(for: imageURL)

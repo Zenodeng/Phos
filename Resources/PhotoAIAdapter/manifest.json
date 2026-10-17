@@ -1,0 +1,8 @@
+{
+  "name": "Phos operation LoRA pilot 20261017",
+  "baseRepo": "mlx-community/Qwen3-VL-4B-Instruct-4bit",
+  "baseRevision": "2fd8dacbdb8f1e54b8c005f081ec5bf79c56376b",
+  "baseConfigSHA256": "07406d087dfb8a8849427a4da81bc9edd1dd942e518493629b5a983169b47820",
+  "adapterSHA256": "9311d57db7b28b48c1c38a56c73f274b0674313860dc180b51a3032a1914737a",
+  "experimental": true
+}

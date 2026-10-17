@@ -1,8 +1,13 @@
 // 水印自测：验证 ①长边缩放正确（旧代码会缩两次）②文字水印落在预期区域
 // ③图片水印 + 旋转 + 居中 ④不透明度生效。不参与 App 构建，单独编译。
-//   swiftc -O -sdk <SDK> -target arm64-apple-macosx15.0 \
-//     -D PHOS_TESTING Sources/Phos/*.swift \
+// 在仓库根目录使用与正式 UI 相同的 SDK、API 门禁及链接版本：
+//   . ./Scripts/ui_compile_flags.sh
+//   phos_ui_compile_flags "${RF_SDK:-}" arm64-apple-macosx26.0 /tmp/rfwm-build.json
+//   swiftc -O $PHOS_UI_SWIFT_FLAGS $PHOS_UI_LINK_FLAGS \
+//     -sdk "$PHOS_BUILD_SDK" -target "$PHOS_BUILD_TARGET" \
+//     -D PHOS_TESTING -D PHOS_APP_TESTING Sources/Phos/*.swift \
 //     Tools/WMTest.swift -o /tmp/rfwmtest_bin
+//   phos_verify_ui_binary /tmp/rfwmtest_bin /tmp/rfwm-build-verification.json
 import Foundation
 import CoreImage
 import AppKit

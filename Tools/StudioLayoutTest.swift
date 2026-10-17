@@ -73,8 +73,7 @@ struct StudioLayoutTest {
         state.folder = URL(fileURLWithPath: "/test/Studio layout fixtures")
         state.source = image
         state.sourceSize = image.extent.size
-        state.preview = cg
-        state.hist = Engine.histogram(image)
+        state.installPreviewFixture(cg, extent: image.extent)
         state.history.push(state.params)
 
         let history = History()

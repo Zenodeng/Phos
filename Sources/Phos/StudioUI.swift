@@ -1,12 +1,12 @@
 import AppKit
 import SwiftUI
 
-// Neutral surfaces follow the HTML reference; gold is reserved for selection and edits.
+// Shared legacy content uses the workspace's system accent during its staged migration.
 enum StudioStyle {
     static let panel = Color(nsColor: .rfDynamic(light: NSColor(white: 0.965, alpha: 1), dark: NSColor(white: 0.075, alpha: 1)))
     static let surface = Color(nsColor: .rfDynamic(light: .white, dark: NSColor(white: 0.105, alpha: 1)))
     static let canvas = Color(nsColor: .rfDynamic(light: NSColor(white: 0.89, alpha: 1), dark: NSColor(white: 0.035, alpha: 1)))
-    static let accent = Color(nsColor: .rfDynamic(light: NSColor(red: 0.58, green: 0.42, blue: 0.20, alpha: 1), dark: NSColor(red: 0.79, green: 0.66, blue: 0.46, alpha: 1)))
+    static let accent = WorkspaceTokens.accent
     static let line = Color.primary.opacity(0.10)
 }
 
@@ -147,6 +147,7 @@ private struct UpdateBadge: View {
 
 struct StudioBrowser: View {
     @EnvironmentObject var s: AppState
+    var transparent = false
     private var visible: [Int] { s.visiblePhotoIndices }
     var body: some View {
         VStack(spacing: 0) {
@@ -203,7 +204,7 @@ struct StudioBrowser: View {
                 Spacer()
                 ToolButton(systemImage: "arrow.triangle.2.circlepath", title: "同步所选照片", disabled: s.selectedPhotos.isEmpty || s.source == nil) { s.showSync = true }
             }.padding(.horizontal, 10).frame(height: 40)
-        }.background(StudioStyle.panel).clipped()
+        }.background(transparent ? Color.clear : StudioStyle.panel).clipped()
     }
     private func toggle(_ id: UUID) {
         if s.selectedPhotos.contains(id) { s.selectedPhotos.remove(id) } else { s.selectedPhotos.insert(id) }

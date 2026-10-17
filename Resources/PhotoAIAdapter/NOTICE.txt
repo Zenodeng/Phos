@@ -1,0 +1,5 @@
+Base model: Qwen/Qwen3-VL-4B-Instruct (Qwen Team), Apache-2.0.
+MLX quantization: mlx-community/Qwen3-VL-4B-Instruct-4bit, revision 2fd8dacbdb8f1e54b8c005f081ec5bf79c56376b.
+Source: https://huggingface.co/mlx-community/Qwen3-VL-4B-Instruct-4bit
+Modified by Phos: language-layer LoRA trained on controlled Phos editing operations, 2026-10-17. Base and vision parameters remain frozen.
+This is an experimental derivative adapter, not an official Qwen release.

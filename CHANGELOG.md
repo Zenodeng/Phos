@@ -2,6 +2,67 @@
 
 本项目遵循语义化版本。日期为发布日（Asia/Shanghai）。
 
+## [3.2.5] — 2026-10-17
+
+### 新工作区界面 / Workspace Shell
+
+主窗口由原来的 `StudioMainWindow` 换成 `WorkspaceWindow → WorkspaceHost`，
+A 列表 / B 胶片两种布局共用同一份 `AppState`。
+
+- 顶部工具容器 36pt、按钮命中框 28pt，与系统交通灯共用 y=30 中线；
+  A 列表默认 212pt（196–260 可调），B 胶片容器 122pt，检查器默认 330pt（300–364 可调）。
+- 每窗口独立的 UI session、Environment、选片控制器与 Sheet 路由；
+  导出 / 批量 / 合成 / 同步 / 快照 / 错误 / 更新统一由窗口级 Router 串行呈现。
+- 大面板保持 matte，小工具组用 `NSGlassEffectView.regular`；换材料不重挂内容，
+  隐藏面板保留 firstResponder 与草稿。
+- 原有高级功能全部保留，检查器的旧控件分批迁移。
+- 新应用图标（浅色 / 深色两套），随系统外观切换。
+
+### 本地 AI 修图：微调实验版
+
+- 默认推理改为**原版 Qwen3-VL-4B-Instruct 社区 MLX 4bit 底模 + 100 步小型 LoRA 适配器**。
+  适配器约 1.3 MB，随应用 `Contents/Resources/PhotoAIAdapter` 分发。
+- 启动服务传 `--adapter-path`，每次图片请求再显式传 `adapter_path`，
+  避免误用同端口上已有的原版模型会话；启动与请求都会校验适配器权重 SHA256
+  与底模配置 SHA256，不匹配直接报错。
+- **全局参数保护**：用户明确要求保留的滑杆会从 schema 允许写入的字段里移除，
+  解码后再复核一次；同时支持「全局 + 局部」混合要求，不一概禁止全局调整。
+- **精确百分比裁切**：「仅裁去左右各 5%、保留完整高度」这类无歧义要求由代码计算有效范围，
+  不再交给模型估算。
+- **自动裁切校验**：先验证范围、尺寸与保留面积，非法方案反馈给模型重试一次；
+  两次都失败则不应用。
+- 保留既有的蒙版选区与明暗方向纠正、真实渲染后的方向验证、预览确认与撤销。
+- AI 面板标注「微调实验版」，自动裁切标为实验性。
+
+> ⚠️ 这不代表一般自动构图、所有照片的局部调整、视觉细节理解已经可靠。
+> 微调版的验证是「8 张照片 + 黑图 + 重复图共 10 次请求，主要场景正常，细节仍有误判」，
+> 不是完整正确率评测，不能据此推断普遍提升。
+
+### 可选模型组件 / Optional model installer
+
+- 新增 `Phos-Optional-Model-Installer.zip`（约 8 KB），**只含安装脚本、依赖清单与哈希清单**，
+  不含 3.1 GB 底模、Python venv、训练数据或任何照片。
+- 从 PyPI 安装固定版本的 MLX 运行依赖，从 Hugging Face 拉固定 revision 的底模并逐个校验文件。
+- 默认环境 `~/Library/Application Support/Phos/MLX`；也可在 AI 修图中另选文件夹。
+- 底模 `mlx-community/Qwen3-VL-4B-Instruct-4bit` 的 **Apache-2.0 许可与来源归属**随适配器目录保留
+  （`BASE-MODEL-LICENSE.txt` / `NOTICE.txt`）。Phos 的学术用途声明不能取代第三方授权。
+
+### 构建与发布
+
+- 最低系统与部署目标均为 **macOS 26**，需要 SDK ≥ 26.0（`Scripts/ui_build_policy.py` 硬性校验）。
+- CI runner 从 `macos-15` 换成 **`macos-26`** —— 前者只有 SDK 15，必然构建失败。
+- 新增 `Scripts/make_model_installer.sh`；可选安装包由 CI 产出并一并附在 Release 上。
+- 主程序体积从约 2.4 MB 增到约 7.3 MB，主要是新的图标资源（`Assets.car` 3.4 MB）与适配器。
+
+### 已知限制
+
+- AI 属实验性：图片细节、局部调整与自动构图都可能误判，务必先看预览。
+- 未安装模型也可正常使用全部常规编辑功能。
+- 新电脑从零安装模型（全新 venv + 首次联网下载）**尚未完整验证**；
+  需要 arm64 Python 3.11，首次安装要联网。
+- 测试机为 16 GB 统一内存，8 GB 未验证。
+- 仍是 ad-hoc 本地签名，**未做 Apple 公证**。
+
 ## [3.2.4] — 2026-10-09
 
 ### LUT：原生支持 .cube 3D LUT

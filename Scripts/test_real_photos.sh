@@ -14,10 +14,12 @@ for photo in "$@"; do
     PHOTOS+=("$(cd "$(dirname "$photo")" && pwd)/$(basename "$photo")")
 done
 cd "$(dirname "$0")/.."
-SDK="${RF_SDK:-/Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk}"
-[[ -d "$SDK" ]] || SDK="$(xcrun --show-sdk-path)"
 BUILD="$(mktemp -d "${TMPDIR:-/tmp}/rawforge-real.XXXXXX")"
-swiftc -O -suppress-warnings -D PHOS_TESTING -sdk "$SDK" \
-    -target arm64-apple-macosx15.0 -module-cache-path "$BUILD/cache" \
+. ./Scripts/ui_compile_flags.sh
+phos_ui_compile_flags "${RF_SDK:-}" "arm64-apple-macosx26.0" "$OUTPUT/ui-capabilities.json"
+SDK="$PHOS_BUILD_SDK"
+swiftc $PHOS_UI_SWIFT_FLAGS $PHOS_UI_LINK_FLAGS -O -suppress-warnings -D PHOS_TESTING -D PHOS_APP_TESTING -sdk "$SDK" \
+    -target "$PHOS_BUILD_TARGET" -module-cache-path "$BUILD/cache" \
     Sources/Phos/*.swift Tools/RealPhotoTest.swift -o "$BUILD/real-photo"
+phos_verify_ui_binary "$BUILD/real-photo" "$OUTPUT/binary-verification.json"
 "$BUILD/real-photo" "$OUTPUT" "$SECONDS_TO_RUN" "${PHOTOS[@]}" | tee "$OUTPUT/real-photo.log"

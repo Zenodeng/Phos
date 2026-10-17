@@ -7,7 +7,9 @@ on:
 
 jobs:
   build:
-    runs-on: macos-15
+    # 3.2.5 起最低系统与部署目标都是 macOS 26，需要 SDK ≥ 26.0
+    # （Scripts/ui_build_policy.py 会硬性校验）。macos-15 镜像只有 SDK 15，构建必然失败。
+    runs-on: macos-26
     permissions:
       contents: write
     steps:
@@ -39,8 +41,17 @@ jobs:
         run: |
           chmod +x Scripts/make_dmg.sh
           ./Scripts/make_dmg.sh
-          zip -qyr Phos-macOS-apple-silicon.zip Phos.app
+          zip -qyrX Phos-macOS-apple-silicon.zip Phos.app
           shasum -a 256 Phos-macOS-apple-silicon.dmg Phos-macOS-apple-silicon.zip > SHA256.txt
+          cat SHA256.txt
+
+      # 可选模型安装包：只有脚本与依赖/哈希清单，不含 3.1GB 底模，也不含任何照片。
+      # 单独发布，装不装都不影响常规编辑功能。
+      - name: Package optional model installer
+        run: |
+          chmod +x Scripts/make_model_installer.sh
+          ./Scripts/make_model_installer.sh
+          shasum -a 256 Phos-Optional-Model-Installer.zip >> SHA256.txt
           cat SHA256.txt
 
       - uses: actions/upload-artifact@v4
@@ -49,6 +60,7 @@ jobs:
           path: |
             Phos-macOS-apple-silicon.dmg
             Phos-macOS-apple-silicon.zip
+            Phos-Optional-Model-Installer.zip
             SHA256.txt
 
       - name: Release
@@ -58,4 +70,5 @@ jobs:
           files: |
             Phos-macOS-apple-silicon.dmg
             Phos-macOS-apple-silicon.zip
+            Phos-Optional-Model-Installer.zip
             SHA256.txt

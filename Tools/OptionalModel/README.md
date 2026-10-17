@@ -12,7 +12,8 @@
 ## 新用户安装
 
 1. 安装arm64 Python3.11（https://www.python.org/downloads/macos/）。
-2. 解压本包，双击“安装模型.command”。首次需联网，脚本从Python软件源安装固定运行依赖，从Hugging Face拉取固定模型版本，校验17个文件SHA256。
+2. 解压本包，双击“安装模型.command”。首次需联网，脚本从Python软件源安装固定运行依赖，从Hugging Face拉取固定模型版本，校验16个文件SHA256。
+   国内网络连不上 Hugging Face 时，改双击“国内网络安装.command”：它把下载源换成 hf-mirror 与清华 PyPI 镜像，流程与校验完全一致。
 3. 默认安装到 `~/Library/Application Support/Phos/MLX`。Phos会使用默认位置；自定义目录在“AI修图 → 选择模型环境”选择包含 `.venv` 和 `model` 的外层文件夹。
 4. 安装完毕后推理使用本机服务，无需把照片发送到云端。
 

@@ -20,11 +20,12 @@ STAGE="$(mktemp -d "${TMPDIR:-/tmp}/phos-model-installer.XXXXXX")"
 trap 'rm -rf "$STAGE"' EXIT HUP INT TERM
 
 mkdir -p "$STAGE/Phos-Optional-Model"
-for FILE in README.md install_model.py model-manifest.json requirements.lock.txt "安装模型.command"; do
+for FILE in README.md install_model.py model-manifest.json requirements.lock.txt \
+            "安装模型.command" "国内网络安装.command"; do
     [ -f "$SRC/$FILE" ] || { echo "缺少 $SRC/$FILE" >&2; exit 1; }
     cp "$SRC/$FILE" "$STAGE/Phos-Optional-Model/$FILE"
 done
-chmod +x "$STAGE/Phos-Optional-Model/安装模型.command"
+chmod +x "$STAGE/Phos-Optional-Model/安装模型.command" "$STAGE/Phos-Optional-Model/国内网络安装.command"
 
 # 输出路径转成绝对路径，才能在暂存目录里打包
 case "$OUT" in

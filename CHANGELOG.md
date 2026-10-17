@@ -2,6 +2,27 @@
 
 本项目遵循语义化版本。日期为发布日（Asia/Shanghai）。
 
+## [4.0.1] — 2026-10-17
+
+### 可选模型安装包：新增「国内网络安装.command」
+
+Hugging Face 在部分网络下不可达（实测连试三次均无法建立连接），
+原来只能开终端手敲环境变量才能装模型。安装包里现在多一个双击脚本，自动带上国内镜像。
+
+- `国内网络安装.command`：设置 `HF_ENDPOINT=https://hf-mirror.com` 与
+  `PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple` 后，调用同一个 `install_model.py`。
+- **镜像只换下载源，不改变校验**：模型文件仍按 `model-manifest.json` 逐个比对 SHA256，
+  内容不对会直接报错停下，不会装进坏文件。
+- 实测：用同一机制从 hf-mirror 拉 `config.json`，下载成功且哈希与清单完全一致
+  （`07406d08…b47820`）。
+- 找不到 Python 3.11 时，脚本会提示改用华为云镜像下载。
+
+**主程序没有任何改动**，只是安装包内容变化。已经在用 4.0.0 的话不必特意更新。
+
+### 顺带修正
+
+`Tools/OptionalModel/README.md` 里写的「校验 17 个文件」与清单实际条目数（16）不符，已改正。
+
 ## [4.0.0] — 2026-10-17
 
 ### 新工作区界面 / Workspace Shell

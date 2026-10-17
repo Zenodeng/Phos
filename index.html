@@ -1159,6 +1159,15 @@ footer a:hover{color:#fff}
           <li style="display:list-item;border:0;padding:0"><strong>等它跑完。</strong>先装固定版本的 MLX 依赖，再从 Hugging Face 下载模型（约 3.1 GB，看网速），最后逐个文件校验 SHA256。看到「安装并校验完成」就是好了。</li>
         </ol>
 
+        <h3 style="margin-top:36px">国内网络怎么装</h3>
+        <p class="sum" style="margin-top:12px">安装脚本默认从 <code>huggingface.co</code> 拉模型、从 <code>pypi.org</code> 拉依赖。<strong>这两个地址在部分网络下会连不上或极慢</strong>，尤其是 Hugging Face。不用代理也能装：把下载源换成国内镜像即可。</p>
+        <p class="sum" style="margin-top:12px">解压后在该文件夹里打开终端（在文件夹上右键 →「服务」→「新建位于文件夹位置的终端窗口」），粘贴执行：</p>
+        <pre style="margin:12px 0 0;padding:14px 16px;background:rgba(0,0,0,.055);border-radius:10px;overflow-x:auto;font-size:12px;line-height:1.75"><code style="background:none;padding:0;font-size:12px;word-break:normal;white-space:pre">HF_ENDPOINT=https://hf-mirror.com \
+PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple \
+python3.11 install_model.py</code></pre>
+        <p class="sum" style="margin-top:12px"><strong>镜像只影响从哪里下载，不改变校验</strong>：模型文件仍会按清单逐个比对 SHA256，镜像上的文件只要有一个字节不对就会报错停下，不会装进坏文件。想先确认镜像通不通，直接打开 <a href="https://hf-mirror.com/mlx-community/Qwen3-VL-4B-Instruct-4bit" target="_blank" rel="noopener">hf-mirror.com 上的模型页</a> 看看。</p>
+        <p class="sum" style="margin-top:12px">Python 安装包从 python.org 下得慢的话，可以用华为云镜像：<a href="https://mirrors.huaweicloud.com/python/" target="_blank" rel="noopener">mirrors.huaweicloud.com/python</a>，挑 3.11.x 的 macOS universal2 安装包。</p>
+
         <h3 style="margin-top:36px">装完怎么用</h3>
         <p class="sum" style="margin-top:12px">默认装在 <code>~/Library/Application Support/Phos/MLX</code>，Phos 会自动找到它 —— 打开任意照片，在调整面板顶部点「AI 修图」就能用，不需要再做配置。</p>
         <p class="sum" style="margin-top:12px">想装到别处：终端执行 <code>python3.11 install_model.py --environment /绝对路径/新的Phos-MLX</code>，装完后在应用里走「AI 修图 → 选择模型环境」，选那个<strong>同时包含 <code>.venv</code> 和 <code>model</code> 的外层文件夹</strong>。</p>
@@ -1188,7 +1197,7 @@ footer a:hover{color:#fff}
           </details>
         </div>
 
-        <p class="sum" style="margin-top:24px">底模是 <code>mlx-community/Qwen3-VL-4B-Instruct-4bit</code>（固定版本 <code>2fd8dacb…</code>），许可为 <strong>Apache-2.0</strong>，来源说明与许可原文随应用内 <code>PhotoAIAdapter</code> 目录一并保留。Phos 的学术用途声明不改变第三方模型的授权条件。</p>
+        <p class="sum" style="margin-top:24px">底模是 <a href="https://huggingface.co/mlx-community/Qwen3-VL-4B-Instruct-4bit" target="_blank" rel="noopener"><code>mlx-community/Qwen3-VL-4B-Instruct-4bit</code></a>（固定版本 <code>2fd8dacb…</code>；国内镜像见 <a href="https://hf-mirror.com/mlx-community/Qwen3-VL-4B-Instruct-4bit" target="_blank" rel="noopener">hf-mirror</a>），许可为 <strong>Apache-2.0</strong>，来源说明与许可原文随应用内 <code>PhotoAIAdapter</code> 目录一并保留。Phos 的学术用途声明不改变第三方模型的授权条件。</p>
       </div>
     </div>
   </section>

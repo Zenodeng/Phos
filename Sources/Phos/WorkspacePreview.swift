@@ -3,7 +3,7 @@ import CoreImage
 import CryptoKit
 
 /// Every displayed result carries its own geometry and all of its related pixels.
-enum PreviewPurpose: String, Codable, Sendable { case edited, cropReference, beforeOriginal }
+enum PreviewPurpose: String, Codable, Sendable { case edited, cropReference, beforeOriginal, beforeGeometry }
 struct PreviewFrameKey: Equatable, Sendable {
     let photoID: UUID
     let revision: UInt64

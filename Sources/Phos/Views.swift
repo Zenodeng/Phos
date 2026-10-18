@@ -9,6 +9,7 @@ extension AppState {
         render()
     }
     func endEdit() {
+        guard cropSession == nil else { return }
         history.push(params)
         saveCurrent()
     }
@@ -432,6 +433,8 @@ struct CanvasPane: View {
     @State private var lastBrush: CGPoint?
     @State private var painting = false
     @State private var sampled = false
+    @State private var maskToken: ParameterEditCoordinator.Token?
+    @State private var originalViewport = CanvasViewport()
 
     /// 当前可以在画布上直接拖控制点的蒙版：位置调整模式、非裁剪、非对比、非白平衡取样。
     /// 适合窗口与 1:1 两个分支共用，避免两边条件写歪。
@@ -450,11 +453,16 @@ struct CanvasPane: View {
         guard let frame else { return .zero }
         var safe = layout.safeCanvas
         if s.cropMode { safe.origin.y += 42; safe.size.height = max(1, safe.height - 42) }
-        if preciseTool { return DisplayTransform.rect(bitmap: frame.bitmapSize, in: safe, fill: false) }
-        if session.viewport.mode == .manual {
-            let factor = session.viewport.screenPixelsPerEditedPixel / max(session.backingScale, 1)
+        if s.cropMode { return DisplayTransform.rect(bitmap: frame.bitmapSize, in: safe, fill: false) }
+        if s.oneToOne, frame.fullResolution {
+            let size = CGSize(width:CGFloat(frame.image.width)/max(session.backingScale,1),height:CGFloat(frame.image.height)/max(session.backingScale,1))
+            let c = (s.showBefore ? originalViewport : session.viewport).editedImageCenter
+            return CGRect(x:safe.midX-c.x*size.width,y:safe.midY-(1-c.y)*size.height,width:size.width,height:size.height)
+        }
+        if (s.showBefore ? originalViewport : session.viewport).mode == .manual {
+            let factor = (s.showBefore ? originalViewport : session.viewport).screenPixelsPerEditedPixel / max(session.backingScale, 1)
             let size = CGSize(width: frame.editedExtent.width * factor, height: frame.editedExtent.height * factor)
-            let center = session.viewport.editedImageCenter
+            let center = (s.showBefore ? originalViewport : session.viewport).editedImageCenter
             return CGRect(x: safe.midX - center.x * size.width, y: safe.midY - (1 - center.y) * size.height,
                           width: size.width, height: size.height)
         }
@@ -473,28 +481,22 @@ struct CanvasPane: View {
             let pixelReady = s.oneToOne && displayed?.fullResolution == true
             ZStack(alignment: .topLeading) {
                 StudioStyle.canvas
-                if let displayed, pixelReady {
-                    let pixelSize = CGSize(width: CGFloat(displayed.image.width) / max(session.backingScale, 1),
-                                           height: CGFloat(displayed.image.height) / max(session.backingScale, 1))
-                    ScrollView([.horizontal, .vertical]) {
-                        Image(decorative: displayed.image, scale: 1).resizable()
-                            .frame(width: pixelSize.width, height: pixelSize.height)
-                            .overlay { selectionOverlay(width: pixelSize.width, height: pixelSize.height) }
-                            .overlay(alignment: .topLeading) {
-                                if let mask = editableMask { MaskOverlay(mask: mask, frame: CGRect(origin: .zero, size: pixelSize)) }
-                            }
-                            .gesture(canvasGesture(frame: CGRect(origin: .zero, size: pixelSize), pixelView: true),
-                                     including: s.selectedMask != nil || s.whiteBalancePicker ? .all : .subviews)
-                    }
-                    .frame(width: shell.safeCanvas.width, height: shell.safeCanvas.height)
-                    .offset(x: shell.safeCanvas.minX, y: shell.safeCanvas.minY)
-                } else if let displayed {
+                if let displayed {
                     Image(decorative: displayed.image, scale: 1).resizable()
                         .frame(width: rect.width, height: rect.height)
                         .overlay { selectionOverlay(width: rect.width, height: rect.height) }
                         .overlay(alignment: .topLeading) {
-                            if let mask = editableMask { MaskOverlay(mask: mask, frame: CGRect(origin: .zero, size: rect.size)) }
+                            if let mask = editableMask, !s.temporaryPan { MaskOverlay(mask: mask, frame: CGRect(origin: .zero, size: rect.size)) }
+                            if s.splitComparison, let before = s.geometryBeforeFrame,
+                               before.key.photoID == displayed.key.photoID, before.key.revision == displayed.key.revision {
+                                Image(decorative:before.image,scale:1).resizable().frame(width:rect.width,height:rect.height)
+                                    .mask(alignment:.leading) { Rectangle().frame(width:rect.width*s.splitPosition) }
+                                    .allowsHitTesting(false)
+                                Rectangle().fill(.white.opacity(0.85)).frame(width:1,height:rect.height)
+                                    .position(x:rect.width*s.splitPosition,y:rect.height/2).allowsHitTesting(false)
+                            }
                         }
+                        .clipped()
                         .position(x: rect.midX, y: rect.midY)
                 } else {
                     VStack(spacing: 12) {
@@ -519,20 +521,28 @@ struct CanvasPane: View {
             }
             .frame(width: geo.size.width, height: geo.size.height)
             .contentShape(Rectangle())
-            .gesture(canvasGesture(frame: rect), including: pixelReady ? .subviews : .all)
-            .simultaneousGesture(MagnificationGesture().onChanged { value in
-                guard let displayed, !preciseTool, !s.oneToOne else { return }
-                let transform = DisplayTransform(frame: displayed, imageRect: rect, backingScale: session.backingScale)
-                if gestureScale == nil {
-                    gestureScale = transform.screenPixelsPerEditedPixel
-                    session.viewport.editedImageCenter = transform.normalizedPoint(CGPoint(x: shell.safeCanvas.midX, y: shell.safeCanvas.midY), requireInside: false) ?? CGPoint(x: 0.5, y: 0.5)
+            .gesture(canvasGesture(frame: rect), including: .all)
+            .overlay {
+                WorkspaceCanvasInput(state:s,safeRect:shell.safeCanvas) { factor,anchor in
+                    guard let displayed, !s.cropMode else { return }
+                    let transform = DisplayTransform(frame:displayed,imageRect:rect,backingScale:session.backingScale)
+                    if s.showBefore { originalViewport.zoom(factor:factor,anchor:anchor,transform:transform,viewport:shell.safeCanvas,backingScale:session.backingScale) }
+                    else { session.viewport.zoom(factor:factor,anchor:anchor,transform:transform,viewport:shell.safeCanvas,backingScale:session.backingScale) }
+                    if s.oneToOne { s.oneToOne = false }
+                }.allowsHitTesting(false)
+            }
+            .overlay(alignment:.topLeading) {
+                if s.splitComparison, displayed != nil {
+                    VStack(spacing:0) {
+                        HStack { Text("同几何 · 调整前"); Spacer(); Text("调整后") }.font(.system(size:11,weight:.medium)).padding(8).background(.regularMaterial)
+                        Spacer()
+                        Slider(value:$s.splitPosition,in:0.05...0.95).accessibilityLabel("分割对比位置").frame(width:180).padding(8).background(.regularMaterial,in:Capsule())
+                    }.frame(width:shell.safeCanvas.width,height:shell.safeCanvas.height).offset(x:shell.safeCanvas.minX,y:shell.safeCanvas.minY)
                 }
-                session.viewport.mode = .manual
-                session.viewport.screenPixelsPerEditedPixel = min(max((gestureScale ?? 1) * value, 0.02), 16)
-            }.onEnded { _ in gestureScale = nil })
+            }
             .onAppear { canvasSize = geo.size }
             .onChange(of: geo.size) { _, size in canvasSize = size }
-            .onChange(of: s.current?.id) { _, _ in session.viewport.editedImageCenter = CGPoint(x: 0.5, y: 0.5); panOrigin = nil }
+            .onChange(of: s.current?.id) { _, _ in session.viewport.editedImageCenter = CGPoint(x: 0.5, y: 0.5); originalViewport = CanvasViewport(); panOrigin = nil }
             .onChange(of: s.canvasResetID) { _, _ in session.viewport.editedImageCenter = CGPoint(x: 0.5, y: 0.5); gestureScale = nil }
         }
     }
@@ -552,14 +562,14 @@ struct CanvasPane: View {
     func canvasGesture(frame: CGRect, pixelView: Bool = false) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { v in
-                guard (!s.oneToOne || pixelView), !s.cropMode, !s.showBefore else { return }
+                guard !s.cropMode, !s.splitComparison else { return }
                 guard frame.contains(v.startLocation) else { return }
-                if s.whiteBalancePicker { return }
-                if let drawingKind = s.maskDrawingKind {
+                if s.whiteBalancePicker && !s.temporaryPan { return }
+                if !s.showBefore, !s.temporaryPan, let drawingKind = s.maskDrawingKind {
                     drawGradient(v.location, start: v.startLocation, frame: frame, kind: drawingKind)
                     return
                 }
-                if let id = s.selectedMask,
+                if !s.showBefore, !s.temporaryPan, let id = s.selectedMask,
                    let m = s.params.masks.first(where: { $0.id == id }) {
                     if s.maskTool != .position {
                         paint(v.location, frame: frame, mask: m, refining: true)
@@ -570,6 +580,7 @@ struct CanvasPane: View {
                         paint(v.location, frame: frame, mask: m)
                     case .linear, .radial:
                         if maskGestureStart == nil {
+                            maskToken = s.parameterEdits.begin()
                             maskGestureStart = v.startLocation
                             maskOrigin = m
                             maskOriginSize = CGSize(width: frame.width, height: frame.height)
@@ -580,7 +591,7 @@ struct CanvasPane: View {
                                                             from: start, to: v.location,
                                                             size: maskOriginSize,
                                                             constrained: NSEvent.modifierFlags.contains(.shift))
-                        s.updateMaskLive(updated)
+                        if s.parameterEdits.valid(maskToken) { s.updateMaskLive(updated) }
                     case .colorRange, .luminanceRange:
                         // 取样类蒙版：在画布上拖到哪儿就取哪儿的颜色/亮度
                         sample(v.location, frame: frame, mask: m)
@@ -597,20 +608,24 @@ struct CanvasPane: View {
                     // The safe viewport is anchored at the same edited-image point in either layout.
                     let shell = layout(canvasSize)
                     let anchor = CGPoint(x: shell.safeCanvas.midX, y: shell.safeCanvas.midY)
-                    session.viewport.editedImageCenter = transform.normalizedPoint(anchor, requireInside: false) ?? CGPoint(x: 0.5, y: 0.5)
-                    session.viewport.screenPixelsPerEditedPixel = transform.screenPixelsPerEditedPixel
-                    session.viewport.mode = .manual
+                    var next = s.showBefore ? originalViewport : session.viewport
+                    next.editedImageCenter = transform.normalizedPoint(anchor, requireInside:false) ?? CGPoint(x:0.5,y:0.5)
+                    next.screenPixelsPerEditedPixel = transform.screenPixelsPerEditedPixel
+                    if !s.oneToOne { next.mode = .manual }
+                    if s.showBefore { originalViewport = next } else { session.viewport = next }
                 }
             }
             .onEnded { value in
-                if s.whiteBalancePicker, !s.cropMode, !s.showBefore, frame.contains(value.location) {
+                if s.whiteBalancePicker, !s.cropMode, !s.showBefore, panOrigin == nil, frame.contains(value.location) {
                     s.sampleWhiteBalance(at: CGPoint(x: (value.location.x - frame.minX) / frame.width,
                                                     y: 1 - (value.location.y - frame.minY) / frame.height))
                 }
                 if s.maskDrawingKind != nil {
                     s.finishMaskDrawing()
-                } else if painting { painting = false; s.endEdit() }
-                else if maskOrigin != nil || sampled { s.endEdit() }
+                } else if painting || maskOrigin != nil || sampled {
+                    if s.parameterEdits.complete(maskToken) { s.endEdit() }
+                    painting = false; maskToken = nil
+                }
                 panOrigin = nil; maskOrigin = nil; maskGestureStart = nil
                 drawingStart = nil; drawingOriginal = nil; maskOriginSize = .zero
                 lastBrush = nil; sampled = false
@@ -619,11 +634,13 @@ struct CanvasPane: View {
 
     /// 画笔：屏幕点 → 归一化坐标（y 向上，跟引擎里的笔刷位图一致）
     func paint(_ loc: CGPoint, frame: CGRect, mask m: Mask, refining: Bool = false) {
+        guard frame.contains(loc) else { lastBrush = nil; return }
         let p = CGPoint(x: min(max((loc.x - frame.minX) / max(frame.width, 1), 0), 1),
                         y: min(max(1 - (loc.y - frame.minY) / max(frame.height, 1), 0), 1))
         var mm = m
         var strokes = refining ? mm.refinements : mm.strokes
         if !painting {
+            maskToken = s.parameterEdits.begin()
             painting = true
             let rad = refining ? s.brushRadius : (mm.strokes.last?.radius ?? 0.05)
             strokes.append(Stroke(pts: [[Double(p.x), Double(p.y)]], radius: rad,
@@ -633,7 +650,7 @@ struct CanvasPane: View {
             s.updateMaskLive(mm)
             return
         }
-        guard !strokes.isEmpty else { return }
+        guard s.parameterEdits.valid(maskToken), !strokes.isEmpty else { return }
         let from = lastBrush ?? p
         // 中间补点：手快拖过时不会画成一串断开的圆点
         let step = max(0.003, (strokes.last?.radius ?? 0.05) / 4)
@@ -651,7 +668,9 @@ struct CanvasPane: View {
 
     /// 颜色范围 / 亮度范围蒙版：在画布上拖到哪儿就取哪儿
     func sample(_ loc: CGPoint, frame: CGRect, mask m: Mask) {
-        guard let cg = s.preview else { return }
+        guard frame.contains(loc), let displayed = self.frame, displayed.key.purpose == .edited,
+              displayed.key.photoID == s.current?.id else { return }
+        let cg = displayed.image
         let nx = min(max((loc.x - frame.minX) / max(frame.width, 1), 0), 1)
         let ny = min(max(1 - (loc.y - frame.minY) / max(frame.height, 1), 0), 1)
         let px = min(cg.width - 1, Int(nx * CGFloat(cg.width))), py = min(cg.height - 1, Int(ny * CGFloat(cg.height)))
@@ -669,8 +688,8 @@ struct CanvasPane: View {
             mm.lumLow = min(max(y - half, 0), 1)
             mm.lumHigh = min(max(y + half, 0), 1)
         }
-        sampled = true
-        s.updateMaskLive(mm)
+        if !sampled { maskToken = s.parameterEdits.begin(); sampled = true }
+        if s.parameterEdits.valid(maskToken) { s.updateMaskLive(mm) }
     }
 
     /// 线性 / 径向蒙版：在画布上直接拖，整体位移（旧手势兼容入口）
@@ -808,13 +827,15 @@ struct MaskOverlay: View {
     /// 当前这次拖动的会话：记住按下点和按下那一刻的蒙版。
     /// 不能拿「当前蒙版」去叠加 DragGesture 的累计位移，否则控制点越拖越远。
     @State private var drag: MaskDragSession?
+    @State private var dragToken: ParameterEditCoordinator.Token?
 
     private func edit(_ control: MaskGeometry.Control, from start: CGPoint, to end: CGPoint) {
         // 按下点变了说明是新的拖动：重建会话，避免上一次拖动没收到 onEnded 时残留
         if drag == nil || drag?.start != start {
+            dragToken = s.parameterEdits.begin()
             drag = MaskDragSession(start: start, base: mask)
         }
-        guard let session = drag else { return }
+        guard let session = drag, s.parameterEdits.valid(dragToken) else { return }
         let updated = session.updated(control, to: end, size: frame.size,
                                       constrained: NSEvent.modifierFlags.contains(.shift))
         s.updateMaskLive(updated)
@@ -822,7 +843,8 @@ struct MaskOverlay: View {
 
     private func endDrag() {
         drag = nil
-        s.endEdit()
+        if s.parameterEdits.complete(dragToken) { s.endEdit() }
+        dragToken = nil
     }
 }
 
@@ -944,8 +966,9 @@ struct CropBar: View {
                     .fill(.white.opacity(0.2))
                     .frame(width: 1, height: 14)
                     .padding(.horizontal, 3)
+                Button("取消") { s.cancelCrop() }.buttonStyle(.plain)
                 Button {
-                    s.toggleCropMode()
+                    s.finishCrop()
                 } label: {
                     Text("完成")
                         .font(.system(size: 11, weight: .semibold))

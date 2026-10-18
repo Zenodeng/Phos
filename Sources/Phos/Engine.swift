@@ -48,7 +48,7 @@ enum Engine {
     }
 
     // MARK: - 主渲染
-    static func geometry(_ source: CIImage, _ p: EditParams) -> CIImage {
+    static func oriented(_ source: CIImage, _ p: EditParams) -> CIImage {
         var img = source
 
         // 1) 翻转 / 90° 旋转
@@ -66,9 +66,38 @@ enum Engine {
             img = img.transformed(by: t)
         }
 
+        return img
+    }
+
+    /// A resolved normalized quad belongs to this decoded source and orientation, not a bitmap size.
+    struct ResolvedPerspective: @unchecked Sendable {
+        let normalized: Quad?
+        func quad(in e: CGRect) -> Quad? {
+            guard let n = normalized else { return nil }
+            func p(_ v: CGPoint) -> CGPoint { CGPoint(x:e.minX+v.x*e.width,y:e.minY+v.y*e.height) }
+            return (p(n.tl),p(n.tr),p(n.br),p(n.bl))
+        }
+    }
+    private static let perspectiveLock = NSLock()
+    private static var perspectiveCache: [(source:CIImage,rotation:Int,flipped:Bool,value:ResolvedPerspective)] = []
+    static func resolvedPerspective(_ source: CIImage, _ p: EditParams) -> ResolvedPerspective? {
+        guard p.perspectiveAuto else { return nil }
+        perspectiveLock.lock(); defer { perspectiveLock.unlock() }
+        if let hit = perspectiveCache.first(where:{ $0.source === source && $0.rotation == p.rotation && $0.flipped == p.flipped }) { return hit.value }
+        let image = oriented(source,p), e = image.extent
+        let quad = autoPerspectiveQuad(from:image)
+        func n(_ v: CGPoint) -> CGPoint { CGPoint(x:(v.x-e.minX)/e.width,y:(v.y-e.minY)/e.height) }
+        let value = ResolvedPerspective(normalized:quad.map { (n($0.tl),n($0.tr),n($0.br),n($0.bl)) })
+        perspectiveCache.append((source,p.rotation,p.flipped,value))
+        if perspectiveCache.count > 6 { perspectiveCache.removeFirst() }
+        return value
+    }
+
+    static func geometry(_ source: CIImage, _ p: EditParams, resolvedAuto: ResolvedPerspective? = nil) -> CIImage {
+        var img = oriented(source,p)
         // 1b) 透视校正（自动：Vision 矩形检测；手动：垂直/水平滑块构四边形）
         if p.perspectiveAuto {
-            if let quad = autoPerspectiveQuad(from: img) {
+            if let quad = (resolvedAuto ?? resolvedPerspective(source,p))?.quad(in:img.extent) {
                 img = applyPerspective(img, quad)
             }
         } else if p.perspectiveV != 0 || p.perspectiveH != 0 {
@@ -101,8 +130,8 @@ enum Engine {
     }
 
     static func render(_ source: CIImage, _ p: EditParams, disparityMask: CIImage? = nil,
-                       selectedMask: UUID? = nil, maskPreview: ((CIImage) -> Void)? = nil) -> CIImage {
-        var img = geometry(source, p)
+                       selectedMask: UUID? = nil, resolvedAuto: ResolvedPerspective? = nil, maskPreview: ((CIImage) -> Void)? = nil) -> CIImage {
+        var img = geometry(source, p, resolvedAuto:resolvedAuto)
         let gains = p.whiteBalanceGains
         if gains.count == 3, gains != [1, 1, 1], gains.allSatisfy({ $0.isFinite && $0 > 0 }) {
             img = img.applyingFilter("CIColorMatrix", parameters: [

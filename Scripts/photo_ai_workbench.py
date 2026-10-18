@@ -18,6 +18,7 @@ import shutil
 import subprocess
 import sys
 import textwrap
+import tempfile
 import urllib.parse
 import urllib.request
 import time
@@ -88,7 +89,7 @@ def freeze(args):
         raise ValueError('Frozen baseline exists; use a fresh root rather than overwrite it')
     dest.mkdir(parents=True)
     files = {}
-    for pattern in ('Sources/Phos/*.swift', 'Scripts/*.sh', 'Info.plist', 'Package.swift'):
+    for pattern in ('Sources/Phos/*.swift', 'Tools/*.swift', 'Scripts/*.sh', 'Scripts/*.py', 'Info.plist', 'Package.swift'):
         for src in sorted(REPO.glob(pattern)):
             relative = str(src.relative_to(REPO))
             target = dest / 'source' / relative
@@ -104,6 +105,9 @@ def freeze(args):
     packages = subprocess.check_output([str(env / '.venv/bin/python'), '-c',
         'import importlib.metadata as m; print("\\n".join(sorted(d.metadata["Name"]+"=="+d.version for d in m.distributions())))'], text=True)
     (dest / 'environment.txt').write_text(packages)
+    immutable_worker = dest / 'worker/photo-ai-data'
+    immutable_worker.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(args.worker, immutable_worker)
     protocol = dest / 'protocol'
     worker(args, 'protocol', {'instruction': ''}, protocol)
     source_digest = hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest()
@@ -112,7 +116,7 @@ def freeze(args):
           'sourceDigest': source_digest, 'modelFiles': model_files, 'modelDigest': model_digest,
           'modelPath': str(model), 'modelConfig': read(model / 'config.json'),
           'installedBinarySHA256': sha(binary), 'platform': platform.platform(),
-          'workerSHA256': sha(args.worker), 'workerPath': str(args.worker),
+          'workerSHA256': sha(immutable_worker), 'workerPath': str(immutable_worker.resolve()),
           'decode': {'temperature': 0, 'editMaxTokens': 1800, 'cropMaxTokens': 180},
           'coordinates': {'crop': 'normalized top-left of current preview', 'mask': 'normalized bottom-left of post-crop preview'},
           'semantics': {'sliders': 'absolute values; omitted keys preserve existing edits', 'masks': 'append only; selection normalization is reported separately', 'noOp': 'protocol accepts empty plan; current app rejects unchanged suggestion'},
@@ -230,6 +234,16 @@ def add(args):
 
 
 def prompt_from_frozen(root, record, params):
+    if (root / 'baseline/frozen/source/Sources/Phos/PhotoAITrainingProtocol.swift').exists():
+        frozen = read(root / 'baseline/frozen/manifest.json')
+        binary = Path(frozen['workerPath'])
+        if sha(binary) != frozen['workerSHA256']:
+            raise ValueError('Frozen prompt builder changed')
+        with tempfile.TemporaryDirectory(prefix='phos-prompt-') as tmp:
+            out = Path(tmp)
+            request = dict(record, baseParams=params)
+            worker(argparse.Namespace(worker=binary), 'protocol', request, out)
+            return (out / 'prompt.txt').read_text()
     source = (root / 'baseline/frozen/source/Sources/Phos/LocalPhotoAI.swift').read_text()
     method = 'func crop(' if record['task'] == 'crop' else 'func plan('
     part = source.split(method,1)[1].split('let prompt = """',1)[1].split('"""',1)[0]

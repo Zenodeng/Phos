@@ -113,11 +113,34 @@ extension PhotoAIPlan {
         }
         return r
     }
+    /// Resolve only a single explicit verb/target pair. Conflicting or open-ended
+    /// instructions remain model decisions rather than a broad keyword override.
+    static func explicitMaskTarget(_ instruction: String) -> String? {
+        let verbs = "(?:提亮|压暗|调亮|调暗|变亮|变暗)"
+        let clauses = instruction.components(separatedBy:CharacterSet(charactersIn:"，,；;。\n")).filter { clause in
+            !["不要","避免","别把","不必","不需要","不提亮","不压暗","不调亮","不调暗"].contains(where:clause.contains)
+        }
+        let semanticText = ["人物蒙版","主体蒙版","前景蒙版"].reduce(clauses.joined(separator:" ")) { $0.replacingOccurrences(of:$1,with:"") }
+        let mentionsSubject = ["主体","人物","前景"].contains(where:semanticText.contains)
+        let mentionsBackground = semanticText.contains("背景")
+        guard mentionsSubject != mentionsBackground else { return nil }
+        var targets = Set<String>()
+        for (target,words) in [("subject",["主体","人物","前景"]),("background",["背景"])] {
+            for word in words {
+                for pattern in [verbs+"(?:的|\\s)*"+word+"(?=$|[，,；;。\\s]|并|同时|且|而)",word+"(?:区域)?\\s*"+verbs] {
+                    if clauses.contains(where:{ $0.range(of:pattern,options:.regularExpression) != nil }) { targets.insert(target) }
+                }
+            }
+        }
+        return targets.count == 1 ? targets.first : nil
+    }
     func enforcing(_ instruction: String) throws -> Self {
         var result = self
+        let explicitTarget = Self.explicitMaskTarget(instruction)
         let mappings = [("subject",["主体","人物"]),("background",["背景"]),("highlights",["亮区","高光"]),("shadows",["暗部","阴影"])]
         for i in result.masks.indices {
             var r = result.masks[i]
+            if let explicitTarget, ["person","subject","foreground"].contains(r.kind) { r.target = explicitTarget }
             if let words = mappings.first(where: { $0.0 == r.target })?.1 {
                 var intents = Set<String>()
                 for word in words {
@@ -146,6 +169,32 @@ extension PhotoAIPlan {
             parts.append("\(target)\(sign)")
         }
         return parts.joined(separator:" · ")
+    }
+}
+
+extension PhotoAIService {
+    /// A concrete repair example for one explicit, common request. It is only
+    /// offered after rejection and never resets an existing nonidentity curve.
+    static func curveRepairHint(instruction: String, base: EditParams) -> String? {
+        guard base.lumaCurve.isIdentity else { return nil }
+        guard !["抬黑","褪色","灰雾","黑位","黑点","白场","压白","matte","fade"].contains(where:instruction.lowercased().contains) else { return nil }
+        let clauses = instruction.components(separatedBy:CharacterSet(charactersIn:"，,；;。\n"))
+        guard clauses.contains(where:{ $0.contains("亮度曲线") && $0.contains("轻提中间调") && !["不要","不必","避免","保持","保留"].contains(where:$0.contains) }) else { return nil }
+        return "\nFor THIS gentle luma midtone lift from an identity curve, use curves.luma=[[0,0],[0.25,0.25],[0.5,0.54],[0.75,0.75],[1,1]]. Keep the black and white endpoints. Do not raise the black point to 0.5 or flatten the entire tonal range. Preserve the requested HSL and grading adjustments."
+    }
+    /// Reject explicit impossible targets before generation; never substitute a
+    /// different tool/value after the user required an exact exposure setting.
+    static func validateExplicitNumericRequest(_ instruction: String) throws {
+        let pattern = "曝光\\s*(?:严格\\s*)?(?:设置为|设为|设到|调至|调到)\\s*([+\\-−]?[0-9]+(?:\\.[0-9]+)?)\\s*(?:EV)?"
+        let regex = try NSRegularExpression(pattern:pattern,options:.caseInsensitive)
+        for match in regex.matches(in:instruction,range:NSRange(instruction.startIndex...,in:instruction)) {
+            guard let whole = Range(match.range,in:instruction), let number = Range(match.range(at:1),in:instruction),
+                  let value = Double(instruction[number].replacingOccurrences(of:"−",with:"-")) else { continue }
+            let prefix = String(instruction[..<whole.lowerBound]).components(separatedBy:CharacterSet(charactersIn:"，,；;。\n")).last ?? ""
+            if ["不要","避免","别把","不必","不需要"].contains(where:prefix.contains) { continue }
+            let range = PhotoAIPlan.range("exposure",local:prefix.contains("局部"))
+            guard range.contains(value) else { throw PhotoAIError(message:"曝光 \(value) EV 超出支持范围 \(range.lowerBound)…\(range.upperBound) EV，未修改任何参数。") }
+        }
     }
 }
 
@@ -188,6 +237,13 @@ extension PhotoAIService {
             throw PhotoAIError(message:"用户要求保留全局参数，请删除对应的全局调整，仅调整指定蒙版。")
         }
         let candidate = try plan.applying(to:base)
+        if curveRepairHint(instruction:instruction,base:base) != nil, let points = plan.curves?["luma"] {
+            let mid = points.first(where:{ abs($0[0]-0.5) < 0.001 })?[1]
+            guard let first = points.first, let last = points.last, let mid,
+                  abs(first[1]) <= 0.02, abs(last[1]-1) <= 0.02, mid > 0.5, mid <= 0.6 else {
+                throw PhotoAIError(message:"轻提中间调的亮度曲线应保留黑白端点，不能把整个影调压成灰色。")
+            }
+        }
         let curveClauses = instruction.components(separatedBy:CharacterSet(charactersIn:"，,；;。\n")).filter { $0.contains("曲线") }
         let curveRequest = curveClauses.joined(separator:" ")
         let keepCurve = curveRequest.contains("保持") || curveRequest.contains("保留") || curveRequest.contains("不改变") || curveRequest.contains("不调整")
@@ -202,15 +258,16 @@ extension PhotoAIService {
     }
     /// Restrict only explicit preservation requests; mixed global/local instructions remain supported.
     static func preservedGlobalKeys(_ instruction: String) -> Set<String> {
-        let clauses = instruction.components(separatedBy:CharacterSet(charactersIn:"；;。\n"))
+        let clauses = instruction.components(separatedBy:CharacterSet(charactersIn:"，,；;。\n"))
         let preserving = clauses.filter { clause in
-            ["保持不变","保留不变","不要改变","不要修改","不调整","不改动"].contains(where:clause.contains)
+            ["保持不变","保留不变","不要改变","不要修改","不调整","不改动","别动","不要动"].contains(where:clause.contains) || ((clause.hasPrefix("保持") || clause.hasPrefix("保留")) && clause.contains("不变"))
         }
         if preserving.contains(where: { $0.contains("全局参数") || $0.contains("所有全局") || $0.contains("整体参数") }) {
             return Set(PhotoAIPlan.keys.keys)
         }
         let explicitGlobalChange = instruction.range(of:"(?:全局|整体)(?:曝光|对比度|饱和度|色温|参数)[^，。；;\\n]{0,8}(?:设置|设为|提高|降低|增加|减少|提亮|压暗)",options:.regularExpression) != nil
-        if !explicitGlobalChange, instruction.contains("蒙版"), preserving.contains(where: { $0.contains("其他参数保持不变") || $0.contains("其他参数均保持不变") }) {
+        let affirmativeMaskText = ["不要新增蒙版","不加蒙版","不使用蒙版","不要蒙版"].reduce(instruction) { $0.replacingOccurrences(of:$1,with:"") }
+        if !explicitGlobalChange, affirmativeMaskText.contains("蒙版"), preserving.contains(where: { $0.contains("其他参数保持不变") || $0.contains("其他参数均保持不变") }) {
             return Set(PhotoAIPlan.keys.keys)
         }
         var keys = Set<String>()

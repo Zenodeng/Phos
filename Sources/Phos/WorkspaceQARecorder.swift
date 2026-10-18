@@ -47,6 +47,18 @@ final class WorkspaceQARecorder: NSObject {
         data["visiblePhotos"] = s.visiblePhotoIndices.count
         data["filterRating"] = s.filterRating; data["filterPicked"] = s.filterPicked; data["searchText"] = s.searchText
         data["selection"] = s.selectedPhotos.map(\.uuidString).sorted()
+        data["oneToOne"] = s.oneToOne; data["status"] = s.status
+        data["cropSession"] = s.cropSession != nil; data["splitComparison"] = s.splitComparison
+        data["maskDrawingKind"] = s.maskDrawingKind?.rawValue ?? "none"
+        data["maskTool"] = s.maskTool.rawValue
+        data["maskCount"] = s.params.masks.count; data["maskNames"] = s.params.masks.map(\.name)
+        data["strokeCount"] = s.params.masks.map { $0.strokes.count+$0.refinements.count }
+        data["temporaryPan"] = s.temporaryPan
+        data["jobRunning"] = s.jobRunning; data["jobFailures"] = s.jobFailures
+        data["batchProgress"] = s.batchProgress; data["syncProgress"] = s.syncProgress
+        data["viewportCenter"] = [root.model.session.viewport.editedImageCenter.x,root.model.session.viewport.editedImageCenter.y]
+        data["viewportScale"] = root.model.session.viewport.screenPixelsPerEditedPixel
+        data["geometryBeforeRevision"] = s.geometryBeforeFrame?.key.revision ?? 0
         data["previewing"] = s.previewing; data["photoCount"] = s.items.count
         data["sheet"] = root.model.router.presented?.rawValue ?? "none"
         data["pendingSheets"] = root.model.router.pending.map(\.rawValue)

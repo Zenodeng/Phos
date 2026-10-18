@@ -78,6 +78,21 @@ final class AppState: ObservableObject {
     @Published var maskDraft: Mask?
     private var sidecarReadFailed = false
 
+    weak var workspaceSession: WorkspaceSessionState?
+    struct CropEditSession {
+        let id = UUID()
+        let photoID: UUID?
+        let initial: EditParams
+        let viewport: CanvasViewport?
+        let pixel100: Bool
+    }
+    private(set) var cropSession: CropEditSession?
+    @Published var splitComparison = false {
+        didSet { if splitComparison { showBefore = false; cancelMaskDrawing(); render() } }
+    }
+    @Published private(set) var geometryBeforeFrame: PreviewFrame?
+    @Published var splitPosition: CGFloat = 0.5
+    @Published var temporaryPan = false
     // 编辑
     @Published var params = EditParams()
     @Published var source: CIImage?
@@ -86,7 +101,7 @@ final class AppState: ObservableObject {
     var preview: CGImage? { previewFrame?.image }
     @Published var previewing: Bool = false
     @Published var showBefore: Bool = false {
-        didSet { if showBefore { cancelMaskDrawing(); refreshBefore() } }
+        didSet { if showBefore { splitComparison = false; cancelMaskDrawing(); refreshBefore() } }
     }
     var beforeImage: CGImage? { beforeFrame?.image }
     var displayFrame: PreviewFrame? { showBefore ? beforeFrame : previewFrame }
@@ -124,6 +139,10 @@ final class AppState: ObservableObject {
     @Published var exportRunning = false
     @Published var batchRunning = false
     @Published var batchProgress: Double = 0
+    @Published var syncProgress: Double = 0
+    @Published var jobFailures: [String] = []
+    var jobCancellation: WorkspaceCancellation?
+    var batchTask: Task<Void,Never>?
 
     // 多重曝光合成
     @Published var showMerge = false
@@ -169,6 +188,7 @@ final class AppState: ObservableObject {
         let cropMode: Bool
         let longEdge: CGFloat
         let overlayMask: UUID?
+        let split: Bool
     }
     private lazy var folderQueue = LatestWorkQueue<URL, [PhotoItem]?>(
         priority: .userInitiated,
@@ -214,7 +234,7 @@ final class AppState: ObservableObject {
             self.render()
             if self.showBefore { self.refreshBefore() }
         })
-    private lazy var previewQueue: LatestWorkQueue<PreviewRequest, PreviewFrame?> = LatestWorkQueue(
+    private lazy var previewQueue: LatestWorkQueue<PreviewRequest, (edited:PreviewFrame,before:PreviewFrame?)?> = LatestWorkQueue(
         operation: { [workMetrics] request in
             workMetrics.increment("render")
             return Self.makePreview(request)
@@ -226,7 +246,7 @@ final class AppState: ObservableObject {
                   request.fullResolution == (fullResPreview || oneToOne) else {
                 workMetrics.increment("staleFrameRejected"); return
             }
-            if let result { previewFrame = result }
+            if let result { previewFrame = result.edited; geometryBeforeFrame = result.before }
             else { status = "预览生成失败，请重试或选择其他照片" }
             previewing = previewQueue.hasPendingWork
         })
@@ -254,6 +274,7 @@ final class AppState: ObservableObject {
 
     // MARK: - 打开文件夹
     func openFolder(_ requestedURL: URL) {
+        if cropSession != nil { cancelCrop() }
         guard !syncRunning, saveCurrent() else { return }
         #if PHOS_QA
         let url: URL
@@ -330,6 +351,7 @@ final class AppState: ObservableObject {
     @discardableResult func select(_ i: Int) -> Bool {
         guard !syncRunning, i >= 0, i < items.count else { return false }
         guard i != currentIndex || source == nil else { return true }
+        if cropSession != nil { cancelCrop() }
         let finish = finishPendingPhotoEdit; finishPendingPhotoEdit = nil; pendingPhotoEditID = nil; finish?()
         guard saveCurrent() else { return false }
         workMetrics.increment("select")
@@ -375,6 +397,7 @@ final class AppState: ObservableObject {
         guard !syncRunning else { return }
         parameterEdits.invalidate()
         params = p
+        if cropSession != nil { render(); return }
         history.push(p)
         render()
         autoSave()
@@ -382,6 +405,7 @@ final class AppState: ObservableObject {
 
     func undo() {
         guard !syncRunning else { return }
+        if cropSession != nil { cancelCrop(); return }
         parameterEdits.invalidate()
         if maskDrawingKind != nil { cancelMaskDrawing(); return }
         if let p = history.undo() { params = p; render(); autoSave() }
@@ -427,6 +451,7 @@ final class AppState: ObservableObject {
     }
     @discardableResult
     func saveCurrent() -> Bool {
+        guard cropSession == nil else { return true }
         guard !sidecarReadFailed, let it = current else { return true }
         let fingerprint = sidecarFingerprint()
         if fingerprint != nil, fingerprint == savedSidecarFingerprint { return true }
@@ -454,12 +479,29 @@ final class AppState: ObservableObject {
 
     // MARK: - 裁剪模式辅助
     func toggleCropMode() {
-        guard source != nil else { return }
-        cancelMaskDrawing()
-        if !cropMode { oneToOne = false; showBefore = false; whiteBalancePicker = false }
-        previewQueue.invalidate()
-        cropMode.toggle()
-        if cropMode { selectedMask = nil; render() } else { endEdit(); render() }
+        guard source != nil, !syncRunning else { return }
+        if cropSession != nil { finishCrop(); return }
+        parameterEdits.finishCurrent()
+        NSApp?.keyWindow?.makeFirstResponder(nil)
+        cropSession = CropEditSession(photoID:current?.id, initial:params, viewport:workspaceSession?.viewport, pixel100:oneToOne)
+        cancelMaskDrawing(); splitComparison = false; showBefore = false; whiteBalancePicker = false
+        selectedMask = nil; oneToOne = false; cropMode = true
+        previewQueue.invalidate(); render()
+    }
+    func finishCrop() {
+        guard let edit = cropSession, edit.photoID == current?.id else { return }
+        parameterEdits.finishCurrent()
+        cropSession = nil; cropMode = false
+        if params != edit.initial { history.push(params); saveCurrent() }
+        render()
+    }
+    func cancelCrop() {
+        guard let edit = cropSession else { return }
+        parameterEdits.invalidate()
+        cropSession = nil; params = edit.initial; cropMode = false
+        if let viewport = edit.viewport { workspaceSession?.viewport = viewport }
+        oneToOne = edit.pixel100
+        previewQueue.invalidate(); render()
     }
 
     /// 画幅比例预设：保持中心，调整裁剪框的宽高比（ratio = 宽/高，nil = 自由）
@@ -484,11 +526,11 @@ final class AppState: ObservableObject {
     /// 地平线自动校直：Vision 检测倾角 → 反向旋转 + 最大内接矩形裁切
     func autoStraighten() {
         guard let src = source else { return }
-        let photoID = current?.id
+        let photoID = current?.id, cropID = cropSession?.id
         status = "检测地平线…"
         Task {
             let angle = await Task.detached { Engine.autoStraightenAngle(from: src) }.value
-            guard current?.id == photoID else { return }
+            guard current?.id == photoID, cropSession?.id == cropID else { return }
             guard var a = angle else {
                 await MainActor.run { status = "未检测到地平线" }
                 return
@@ -509,6 +551,16 @@ final class AppState: ObservableObject {
         }
     }
 
+    func suspendPreviewWork() {
+        folderQueue.invalidate(); sourceQueue.invalidate(); previewQueue.invalidate(); beforeQueue.invalidate()
+        thumbnails.reset(); folderLoading = false; previewing = false; temporaryPan = false
+    }
+    func resumePreviewWork() {
+        if source != nil { render() }
+        else if current != nil { _ = select(currentIndex) }
+        else if let folder { openFolder(folder) }
+    }
+
     // MARK: - 渲染
     func render() {
         guard let src = source else { return }
@@ -527,9 +579,9 @@ final class AppState: ObservableObject {
         expectedPreview = key
         previewQueue.submit(PreviewRequest(key: key, source: source, params: parameters,
                                            url: current?.url, fullResolution: fullResPreview || oneToOne,
-                                           cropMode: cropMode, longEdge: previewLongEdge, overlayMask: mask))
+                                           cropMode: cropMode, longEdge: previewLongEdge, overlayMask: mask, split:splitComparison))
     }
-    nonisolated private static func makePreview(_ request: PreviewRequest) -> PreviewFrame? {
+    nonisolated private static func makePreview(_ request: PreviewRequest) -> (edited:PreviewFrame,before:PreviewFrame?)? {
         let src = request.source, p = request.params, e = src.extent
         let scale: CGFloat = request.fullResolution ? 1 : min(1, request.longEdge / max(e.width, e.height))
         let base = scale < 1 ? src.transformed(by: CGAffineTransform(scaleX: scale, y: scale)) : src
@@ -538,17 +590,27 @@ final class AppState: ObservableObject {
            !p.masks.contains(where: { $0.kind == .depth && $0.enabled }), let url = request.url {
             disparity = Engine.disparityBokehMask(for: url, target: base.extent)
         }
+        let resolved = Engine.resolvedPerspective(src,p)
         var mask: CIImage?
-        let out = Engine.render(base, p, disparityMask: disparity, selectedMask: request.overlayMask) { mask = $0 }
+        let out = Engine.render(base, p, disparityMask: disparity, selectedMask: request.overlayMask, resolvedAuto:resolved) { mask = $0 }
         guard let image = Engine.ctx.createCGImage(out, from: out.extent, format: .RGBA8,
                                                    colorSpace: Engine.srgb) else { return nil }
         // Histogram the displayed pixels without evaluating the RAW/filter graph a second time.
         let histogram = Engine.histogram(CIImage(cgImage: image))
         let maskCG = mask.flatMap { Engine.ctx.createCGImage($0, from: out.extent, format: .RGBA8, colorSpace: Engine.srgb) }
-        return PreviewFrame(key: request.key, image: image, mask: maskCG, maskID: request.overlayMask,
+        let edited = PreviewFrame(key: request.key, image: image, mask: maskCG, maskID: request.overlayMask,
                             histogram: histogram, renderExtent: out.extent,
                             editedExtent: out.extent.applying(CGAffineTransform(scaleX: 1 / scale, y: 1 / scale)),
                             proxyScale: scale, fullResolution: request.fullResolution || scale == 1)
+        var before: PreviewFrame?
+        if request.split, !request.cropMode {
+            let geometry = EditGroup.applying(p,to:EditParams(),groups:[.geometry])
+            let neutral = Engine.render(base,geometry,resolvedAuto:resolved)
+            if let bitmap = Engine.ctx.createCGImage(neutral,from:out.extent,format:.RGBA8,colorSpace:Engine.srgb) {
+                before = PreviewFrame(key:PreviewFrameKey(photoID:request.key.photoID,revision:request.key.revision,purpose:.beforeGeometry,paramsFingerprint:request.key.paramsFingerprint),image:bitmap,mask:nil,maskID:nil,histogram:([],[],[],[]),renderExtent:out.extent,editedExtent:edited.editedExtent,proxyScale:scale,fullResolution:edited.fullResolution)
+            }
+        }
+        return (edited,before)
     }
 
     func refreshBefore() {
@@ -563,8 +625,11 @@ final class AppState: ObservableObject {
     // MARK: - 蒙版
     func startMaskDrawing(_ kind: MaskKind, replacing id: UUID? = nil) {
         guard source != nil, !syncRunning, kind == .linear || kind == .radial else { return }
+        NSApp?.keyWindow?.makeFirstResponder(nil)
         selectedMask = id
+        if cropSession != nil { cancelCrop() }
         cropMode = false
+        splitComparison = false
         showBefore = false
         whiteBalancePicker = false
         maskTool = .position
@@ -628,6 +693,30 @@ final class AppState: ObservableObject {
         maskTool = .position
     }
 
+    func createMask(_ kind: MaskKind) {
+        parameterEdits.finishCurrent()
+        NSApp?.keyWindow?.makeFirstResponder(nil)
+        if cropSession != nil { finishCrop() }
+        showBefore = false; splitComparison = false; whiteBalancePicker = false
+        inspectorUI.category = .masks; workspaceSession?.inspectorVisible = true
+        if kind == .linear || kind == .radial { startMaskDrawing(kind) }
+        else { addMask(kind); showMaskOverlay = true }
+    }
+    func activateBrush() {
+        parameterEdits.finishCurrent()
+        NSApp?.keyWindow?.makeFirstResponder(nil)
+        if cropSession != nil { finishCrop() }
+        showBefore = false; splitComparison = false; whiteBalancePicker = false
+        inspectorUI.category = .masks; workspaceSession?.inspectorVisible = true
+        if selectedMask == nil || !params.masks.contains(where: { $0.id == selectedMask }) { addMask(.brush) }
+        maskTool = .paint; showMaskOverlay = true
+        status = "在照片上拖动添加选区；一次拖动一笔，Esc 取消当前笔画"
+    }
+    func renameMask(_ id:UUID,name:String) {
+        let name = name.trimmingCharacters(in:.whitespacesAndNewlines)
+        guard !name.isEmpty, var mask = params.masks.first(where:{$0.id == id}) else { return }
+        mask.name = String(name.prefix(120)); updateMask(mask)
+    }
     func addMask(_ kind: MaskKind) {
         var m = Mask()
         m.kind = kind
@@ -810,8 +899,9 @@ final class AppState: ObservableObject {
     }
 
     private func startExport(to url: URL, foreground: Mask?) {
-        guard let src = source, !exportRunning else { return }
+        guard let src = source, !jobRunning else { return }
         let parameters = params, settings = exportSettings
+        let cancellation = WorkspaceCancellation(); jobCancellation = cancellation; jobFailures = []
         exportRunning = true
         status = "正在导出 \(url.lastPathComponent)…"
         Task {
@@ -836,58 +926,76 @@ final class AppState: ObservableObject {
                         ])
                     }
                     do {
-                        try Engine.write(rendered, to: url, settings: settings)
+                        if cancellation.cancelled { return "已取消" }
+                        let staging = url.deletingLastPathComponent().appendingPathComponent(".phos-export-"+UUID().uuidString+"."+settings.format)
+                        defer { try? FileManager.default.removeItem(at:staging) }
+                        try Engine.write(rendered, to: staging, settings: settings)
+                        if cancellation.cancelled { return "已取消" }
+                        if FileManager.default.fileExists(atPath:url.path) { _ = try FileManager.default.replaceItemAt(url,withItemAt:staging) }
+                        else { try FileManager.default.moveItem(at:staging,to:url) }
                         return nil
                     } catch {
                         return error.localizedDescription
                     }
                 }
             }.value
-            exportRunning = false
+            exportRunning = false; jobCancellation = nil
+            if cancellation.cancelled { status = "导出已取消"; return }
+            if let error { jobFailures = [error]; workflowError = "导出失败，可重试：\(error)" }
             status = error.map { "导出失败：\($0)" } ?? "已导出 \(url.lastPathComponent)"
         }
     }
 
     func batchExport(to dir: URL, onlyPicked: Bool) async {
-        guard !batchRunning else { return }
+        guard !jobRunning else { return }
         let list = items.filter { !onlyPicked || $0.picked }
         guard !list.isEmpty else {
             status = "没有符合条件的照片可导出"
             return
         }
         guard saveCurrent() else { return }
+        let cancellation = WorkspaceCancellation(); jobCancellation = cancellation; jobFailures = []
         batchRunning = true
+        defer { batchRunning = false; jobCancellation = nil; batchTask = nil }
         batchProgress = 0
         let settings = exportSettings
         var failed = 0
         for (i, it) in list.enumerated() {
-            guard !Task.isCancelled else {
-                batchRunning = false
-                status = "批量导出已取消"
+            guard !Task.isCancelled, !cancellation.cancelled else {
+                status = "批量导出已取消，已处理 \(i)/\(list.count) 张"
                 return
             }
             let ext = settings.format
             let dest = dir.appendingPathComponent(it.url.deletingPathExtension().lastPathComponent + ".\(ext)")
             let error = await Task.detached(priority: .userInitiated) {
-                Self.exportBatchItem(it.url, to: dest, settings: settings)
+                Self.exportBatchItem(it.url, to: dest, settings: settings,cancellation:cancellation)
             }.value
-            if error != nil { failed += 1 }
+            if cancellation.cancelled || Task.isCancelled { status = "批量导出已取消，已处理 \(i)/\(list.count) 张"; return }
+            if let error { failed += 1; jobFailures.append(it.url.lastPathComponent+"："+error) }
+            status = "批量导出 \(i+1)/\(list.count) 张"
             batchProgress = Double(i + 1) / Double(max(list.count, 1))
         }
-        batchRunning = false
+        if !jobFailures.isEmpty { workflowError = "以下照片导出失败，可重试：\n"+jobFailures.joined(separator:"\n") }
         status = failed == 0
             ? "批量导出完成：\(list.count) 张"
             : "批量导出完成：成功 \(list.count - failed) 张，失败 \(failed) 张"
     }
 
     nonisolated private static func exportBatchItem(_ url: URL, to dest: URL,
-                                                 settings: ExportSettings) -> String? {
+                                                 settings: ExportSettings,cancellation: WorkspaceCancellation) -> String? {
         autoreleasepool {
+            guard !cancellation.cancelled else { return "已取消" }
             guard let src = Engine.decode(url) else { return "无法解码" }
-            let params = SidecarStore.load(for: url)?.params ?? EditParams()
-            let rendered = Engine.render(src, params)
             do {
-                try Engine.write(rendered, to: dest, settings: settings)
+                let params = try SidecarStore.read(for:url)?.params ?? EditParams()
+                let rendered = Engine.render(src,params)
+                if cancellation.cancelled { return "已取消" }
+                let staging = dest.deletingLastPathComponent().appendingPathComponent(".phos-batch-"+UUID().uuidString+"."+settings.format)
+                defer { try? FileManager.default.removeItem(at:staging) }
+                try Engine.write(rendered, to: staging, settings: settings)
+                if cancellation.cancelled { return "已取消" }
+                if FileManager.default.fileExists(atPath:dest.path) { _ = try FileManager.default.replaceItemAt(dest,withItemAt:staging) }
+                else { try FileManager.default.moveItem(at:staging,to:dest) }
                 return nil
             } catch {
                 return error.localizedDescription

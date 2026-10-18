@@ -908,6 +908,9 @@ struct MaskAddButton: View {
 struct MaskPane: View {
     @EnvironmentObject var s: AppState
 
+    @State private var renameID: UUID?
+    @State private var renameText = ""
+    @State private var renaming = false
     private var maskHint: String {
         guard let id = s.selectedMask,
               let m = s.params.masks.first(where: { $0.id == id }) else {
@@ -927,25 +930,17 @@ struct MaskPane: View {
     }
     var body: some View {
         VStack(spacing: 8) {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 6),
-                                GridItem(.flexible(), spacing: 6)], spacing: 6) {
-                ForEach(MaskKind.allCases, id: \.self) { k in
-                    MaskAddButton(kind: k)
-                }
-            }
-            if s.source != nil {
-                HStack(spacing: 6) {
-                    Button { s.startMaskDrawing(.linear) } label: {
-                        Label("拖画线性", systemImage: "line.diagonal")
+            HStack {
+                Menu {
+                    ForEach(MaskKind.allCases,id:\.self) { kind in
+                        Button { s.createMask(kind) } label: { Label(kind.label,systemImage:kind.icon) }
                     }
-                    Button { s.startMaskDrawing(.radial) } label: {
-                        Label("拖画径向", systemImage: "oval")
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
-                .help("像 Lightroom 一样在画布上拖动创建渐变蒙版")
-            }
+                } label: { Label("新建蒙版",systemImage:"plus") }
+                .menuStyle(.borderlessButton).fixedSize()
+                Spacer()
+                Button { s.showMaskOverlay.toggle() } label: { Image(systemName:"square.3.layers.3d") }
+                    .buttonStyle(.borderless).help("显示或隐藏当前蒙版").disabled(s.selectedMask == nil)
+            }.font(.system(size:11,weight:.medium))
             Label(maskHint, systemImage: "text.bubble")
                 .font(.system(size: 9.5))
                 .foregroundStyle(.secondary)
@@ -970,9 +965,10 @@ struct MaskPane: View {
                         Image(systemName: m.kind.icon)
                             .font(.system(size: 9))
                             .foregroundStyle(.secondary)
-                        Text(maskName)
-                            .font(.system(size: 11, weight: .medium))
-                            .lineLimit(1)
+                        Button(maskName) { s.selectedMask = isSel ? nil : m.id }
+                            .buttonStyle(.plain).font(.system(size:11,weight:.medium)).lineLimit(1)
+                            .help("选择蒙版；右键重命名")
+                            .contextMenu { Button("重命名…") { renameID = m.id; renameText = m.name; renaming = true } }
                         Spacer()
                         Toggle("", isOn: Binding(get: { m.enabled }, set: { var x = m; x.enabled = $0; s.updateMask(x) }))
                             .labelsHidden().controlSize(.mini)
@@ -1007,6 +1003,11 @@ struct MaskPane: View {
                         .help("删除蒙版")
                     }
                     if s.selectedMask == m.id {
+                        HStack {
+                            Button("重命名…") { renameID = m.id; renameText = m.name; renaming = true }
+                            Spacer()
+                            Button("复位调整") { var x = m; x.adjust = LocalAdjust(); s.updateMask(x) }
+                        }.font(.system(size:10)).buttonStyle(.borderless)
                         MaskEditingControls()
                         if m.kind.usesVision {
                             HStack(spacing: 6) {
@@ -1042,7 +1043,7 @@ struct MaskPane: View {
                                 get: { m.lumSoft },
                                 set: { var x = m; x.lumSoft = $0; s.updateMaskLive(x) }), range: 0.01...0.5, defaultValue:Mask().lumSoft) { s.endEdit() }
                         }
-                        if m.kind == .brush || m.kind == .depth {
+                        if (m.kind == .brush || m.kind == .depth) && s.maskTool == .position {
                             SliderRow(label: "笔刷", value: Binding(
                                 get: { m.strokes.last?.radius ?? 0.05 },
                                 set: { var x = m; if !x.strokes.isEmpty { x.strokes[x.strokes.count - 1].radius = $0 } else { x.strokes.append(Stroke(pts: [], radius: $0, feather: x.feather)) }; s.updateMaskLive(x) }),
@@ -1059,7 +1060,7 @@ struct MaskPane: View {
                                 get: { m.radialAngle },
                                 set: { var x = MaskGeometry.ellipse(m); x.radialAngle = $0; s.updateMaskLive(x) }), range: -180...180) { s.endEdit() }
                         }
-                        SliderRow(label: "羽化", value: Binding(
+                        SliderRow(label: "蒙版羽化", value: Binding(
                             get: { m.feather },
                             set: { var x = m; x.feather = $0; s.updateMaskLive(x) }), range: 0...1, defaultValue:Mask().feather) { s.endEdit() }
                         if m.kind != .depth {
@@ -1111,6 +1112,12 @@ struct MaskPane: View {
                     .stroke(isSel ? Color.accentColor.opacity(0.4)
                             : Color(nsColor: .rfCardBorder), lineWidth: isSel ? 1 : 0.5))
             }
+        }
+        .alert("重命名蒙版",isPresented:$renaming) {
+            TextField("蒙版名称",text:$renameText)
+            Button("取消",role:.cancel) {}
+            Button("保存") { if let id = renameID { s.renameMask(id,name:renameText) } }
+                .disabled(renameText.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty)
         }
     }
 }

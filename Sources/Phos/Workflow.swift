@@ -356,12 +356,18 @@ extension AppState {
     }
 
     func synchronize(_ parameters: EditParams, to urls: [URL], groups: Set<EditGroup>) async {
-        guard !syncRunning, !groups.isEmpty, !urls.isEmpty, saveCurrent() else { return }
-        syncRunning = true
-        let result = await Task.detached(priority: .userInitiated) {
-            BatchEditor.apply(parameters, to: urls, groups: groups)
-        }.value
-        syncRunning = false
+        guard !jobRunning, !groups.isEmpty, !urls.isEmpty, saveCurrent() else { return }
+        let cancellation = WorkspaceCancellation(); jobCancellation = cancellation; jobFailures = []
+        syncRunning = true; syncProgress = 0
+        defer { syncRunning = false; jobCancellation = nil }
+        var result = BatchEditResult()
+        for (i,url) in urls.enumerated() {
+            if cancellation.cancelled || Task.isCancelled { break }
+            let item = await Task.detached(priority:.userInitiated) { BatchEditor.apply(parameters,to:[url],groups:groups) }.value
+            result.succeeded += item.succeeded; result.failures += item.failures
+            syncProgress = Double(i+1)/Double(urls.count)
+            status = "同步调整 \(i+1)/\(urls.count) 张"
+        }
         if let url = current?.url, result.succeeded.contains(url), let saved = SidecarStore.load(for: url) {
             snapshots = saved.snapshots
             params = saved.params
@@ -369,7 +375,10 @@ extension AppState {
             selectedMask = nil
             render()
         }
-        status = "已同步 \(result.succeeded.count) 张，失败 \(result.failures.count) 张"
+        jobFailures = result.failures
+        status = cancellation.cancelled || Task.isCancelled
+            ? "同步已取消，已同步 \(result.succeeded.count) 张，失败 \(result.failures.count) 张"
+            : "已同步 \(result.succeeded.count) 张，失败 \(result.failures.count) 张"
         if !result.failures.isEmpty { workflowError = result.failures.joined(separator: "\n") }
     }
 

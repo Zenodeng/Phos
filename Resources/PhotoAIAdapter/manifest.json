@@ -1,8 +1,44 @@
 {
-  "name": "Phos operation LoRA pilot 20261017",
+  "name": "Phos P2 LoRA epoch1 20261018",
   "baseRepo": "mlx-community/Qwen3-VL-4B-Instruct-4bit",
   "baseRevision": "2fd8dacbdb8f1e54b8c005f081ec5bf79c56376b",
   "baseConfigSHA256": "07406d087dfb8a8849427a4da81bc9edd1dd942e518493629b5a983169b47820",
-  "adapterSHA256": "9311d57db7b28b48c1c38a56c73f274b0674313860dc180b51a3032a1914737a",
-  "experimental": true
+  "adapterSHA256": "b3cac4aadb8a2310643e9a2a1e33f3f96e1f9bf17e4149d7e8db6241d4399553",
+  "experimental": true,
+  "trainingRun": {
+    "iters": 2563,
+    "layers": 4,
+    "rank": 8,
+    "learningRate": 3e-05,
+    "trainSamples": 2563,
+    "validationSamples": 301,
+    "originalShortValidationLoss": {
+      "before": 0.04898098368703583,
+      "after": 0.00011047745054518735,
+      "scope": "4 shortest crop sequences only; not full validation"
+    }
+  },
+  "adapterConfigSHA256": "f2e1caefb5fde494bfdb365c0a61c2f2aecb3f791590ee4c29445d25bde54185",
+  "schemaVersion": "phos-parameter-plan-v2",
+  "serializationVersion": "phos-json-compact-v1",
+  "decoderFingerprint": "cdc6da0726d1922e893b948d92251cc316262b80a644353db431c8cfbcdd5ab1",
+  "fullValidation": {
+    "val_loss": 0.011156867055568133,
+    "val_nll": 0.011156867055568133,
+    "val_token_accuracy": 0.997951907759994,
+    "val_num_padded_tokens": 4115,
+    "val_num_processed_tokens": 234304,
+    "val_num_sequences": 301,
+    "val_num_tokens": 13183,
+    "val_num_vision_tokens": 23060,
+    "val_perplexity": 1.0112193370036242,
+    "val_time": 1096.6655383330071,
+    "val_compute_time": 1089.2251491719508,
+    "val_padded_tokens_per_second": 3.777914972977166,
+    "val_processed_tokens_per_second": 215.11071441760436,
+    "val_sequences_per_second": 0.2763432337463249,
+    "val_tokens_per_second": 12.103099171022595,
+    "val_vision_tokens_per_second": 21.17101319000084
+  },
+  "releaseStatus": "experimental"
 }

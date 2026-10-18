@@ -17,6 +17,7 @@ final class WorkspaceWindowModel: ObservableObject {
         self.session = session ?? WorkspaceSessionState()
         selection = PhotoSelectionController(state: state)
         router = WorkspaceSheetRouter(state: state)
+        state.workspaceSession = self.session
     }
 
     func finishEditing() { selection.finishEditing() }
@@ -105,7 +106,7 @@ private struct WorkspaceWindowContent: View {
                 WorkspaceSheetContent(route: route, model: model)
                     .environmentObject(model.state).tint(WorkspaceTokens.accent)
             }
-            .onExitCommand { if model.state.parameterEdits.token != nil { model.state.parameterEdits.invalidate() } else { model.state.cancelMaskDrawing() } }
+            .onExitCommand { if model.state.cropSession != nil { model.state.cancelCrop() } else if model.state.parameterEdits.token != nil { model.state.parameterEdits.invalidate() } else { model.state.cancelMaskDrawing() } }
     }
 }
 

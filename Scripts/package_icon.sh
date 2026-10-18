@@ -37,3 +37,10 @@ done
 for FILE in icon-light-1024.png icon-dark-1024.png; do
     cp "$PROJECT_ROOT/Resources/$FILE" "$DESTINATION/$FILE"
 done
+
+# The same owned protocol implementation must ship in every production/QA bundle.
+mkdir -p "$DESTINATION/PhotoAIRuntime"
+cp "$PROJECT_ROOT/Scripts/photo_ai_protocol.py" "$PROJECT_ROOT/Scripts/photo_ai_server.py" "$DESTINATION/PhotoAIRuntime/"
+cp "$PROJECT_ROOT/Tools/OptionalModel/model-manifest.json" "$DESTINATION/PhotoAIRuntime/"
+# The small, hash-pinned pilot ships with Phos; the 3.1 GB base stays external.
+ditto "$PROJECT_ROOT/Resources/PhotoAIAdapter" "$DESTINATION/PhotoAIAdapter"

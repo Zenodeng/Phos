@@ -262,7 +262,7 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
         }
         pick.isEnabled = s.current != nil && !s.syncRunning; pick.contentTintColor = s.current?.picked == true ? .controlAccentColor : .secondaryLabelColor
         pick.image = NSImage(systemSymbolName: s.current?.picked == true ? "flag.fill" : "flag", accessibilityDescription: "标记当前照片")
-        sync.isEnabled = !s.selectedPhotos.isEmpty && s.source != nil && !s.syncRunning
+        sync.isEnabled = model.enabled(.sync)
         listScroll.isHidden = isFilm; filmScroll.isHidden = !isFilm
         let changed = lastCurrent != s.current?.id || lastMode != model.session.mode
         lastCurrent = s.current?.id; lastMode = model.session.mode
@@ -325,7 +325,7 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
     }
     @objc private func rate(_ sender: NSButton) { model.selection.finishEditing(); model.state.setRating(model.state.current?.rating == sender.tag ? 0 : sender.tag) }
     @objc private func togglePick() { model.selection.finishEditing(); model.state.togglePick() }
-    @objc private func synchronize() { model.present(.sync) }
+    @objc private func synchronize() { model.perform(.sync) }
     private func updateFilter() {
         let s = model.state, menu = NSMenu()
         let title = NSMenuItem(title: "筛选", action: nil, keyEquivalent: "")

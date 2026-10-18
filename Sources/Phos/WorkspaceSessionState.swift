@@ -81,7 +81,7 @@ struct WorkspaceLayout {
         let actions = CGRect(x: w - 176, y: y, width: 164, height: toolHeight)
         return Self(canvas: CGRect(x: 0, y: 0, width: w, height: h), safeCanvas: safe,
                     browser: browser, inspector: inspector,
-                    rail: CGRect(x: w - 48, y: bodyY, width: 36, height: 164),
+                    rail: CGRect(x: w - 48, y: bodyY, width: 36, height: 196),
                     navigation: navigation, viewing: viewing, actions: actions,
                     title: CGRect(x: viewing.maxX + 20, y: y, width: max(0, actions.minX - viewing.maxX - 40), height: toolHeight),
                     drag: CGRect(x: 80, y: topInset, width: w - 80, height: 60),

@@ -1,5 +1,6 @@
-Base model: Qwen/Qwen3-VL-4B-Instruct (Qwen Team), Apache-2.0.
-MLX quantization: mlx-community/Qwen3-VL-4B-Instruct-4bit, revision 2fd8dacbdb8f1e54b8c005f081ec5bf79c56376b.
-Source: https://huggingface.co/mlx-community/Qwen3-VL-4B-Instruct-4bit
-Modified by Phos: language-layer LoRA trained on controlled Phos editing operations, 2026-10-17. Base and vision parameters remain frozen.
-This is an experimental derivative adapter, not an official Qwen release.
+Phos P2 experimental operation LoRA, 2026-10-18.
+Base: mlx-community/Qwen3-VL-4B-Instruct-4bit, Apache-2.0; see BASE-MODEL-LICENSE.txt.
+Adapter: 2563 training examples, one epoch, rank 8, last four language q/v layers.
+Original training artifacts preserved in outputs/Phos-P2-20261018/train-epoch1.
+Training data provenance and per-file rights: outputs/Phos-P0-P1-20261018. Academic experimental release.
+301-case validation is development validation, not independent image-understanding certification.

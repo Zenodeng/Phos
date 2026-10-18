@@ -10,6 +10,16 @@ import CoreImage
         try FileManager.default.createDirectory(at:out,withIntermediateDirectories:true)
         var checks = [String]()
         func check(_ ok: Bool,_ name: String) { if !ok { FileHandle.standardError.write(Data("FAILED: \(name)\n".utf8)); exit(1) }; checks.append(name); print("PASS: \(name)"); fflush(stdout) }
+        check(PhotoAIService.serializationVersion == "phos-json-compact-v1" && PhotoAIService.decoderFingerprint.count == 64,"versioned constrained decoding protocol is declared")
+        let budget = PhotoAIRequestBudget()
+        try budget.take(); try budget.take()
+        do { try budget.take(); preconditionFailure("retry budget exceeded") } catch { checks.append("schema and render corrections share at most two model requests") }
+        try PhotoAIService.validateExplicitNumericRequest("曝光设置为0.2 EV")
+        try PhotoAIService.validateExplicitNumericRequest("不要把曝光设置为20 EV，只保留原样")
+        do {
+            _ = try await PhotoAIService.shared.plan(jpeg:Data(),instruction:"将整体曝光严格设置为20 EV，不接受其他数值。",base:EditParams())
+            preconditionFailure("impossible target reached model request")
+        } catch { check(error.localizedDescription.contains("超出支持范围"),"explicit impossible exposure is rejected before image/model request") }
         var base = EditParams(); base.grain = 12; base.cropX = 0.1; base.cropW = 0.9; base.masks = [Mask()]
         let text = #"{"summary":"局部提亮","adjustments":{"exposure":0.4},"masks":[{"kind":"person","name":"人物","inverted":true,"adjustments":{"shadows":20}},{"kind":"radial","name":"光线","geometry":{"x0":0.4,"y0":0.6,"radiusX":0.2,"radiusY":0.1},"adjustments":{"exposure":0.2}}]}"#
         let parsed = try PhotoAIPlan.decode("```json\n"+text+"\n```")
@@ -26,6 +36,16 @@ import CoreImage
         let reversed = #"{"summary":"人物提亮背景压暗","adjustments":{},"masks":[{"kind":"subject","target":"subject","brightness":"brighten","inverted":true,"adjustments":{"exposure":-0.4}},{"kind":"subject","target":"background","brightness":"darken","inverted":false,"adjustments":{"exposure":0.3}}]}"#
         let corrected = try PhotoAIPlan.decode(reversed).applying(to:EditParams())
         check(!corrected.masks[0].inverted && corrected.masks[0].adjust.exposure == 0.4 && corrected.masks[1].inverted && corrected.masks[1].adjust.exposure == -0.3,"selection inversion and exposure signs canonicalized separately")
+        let contradictory = try PhotoAIPlan.decode(#"{"summary":"局部","adjustments":{},"masks":[{"kind":"person","target":"subject","brightness":"darken","inverted":true,"adjustments":{"exposure":-0.25}}]}"#)
+        let background = try contradictory.enforcing("只创建人物蒙版压暗背景，局部曝光设置为-0.25 EV；全局参数保持不变。")
+        check(background.masks[0].target == "background" && background.masks[0].inverted == true && background.masks[0].adjustments["exposure"] == -0.25,"explicit background target overrides contradictory subject label before inversion")
+        let subject = try contradictory.enforcing("不要压暗背景，只创建人物蒙版提亮人物。")
+        check(subject.masks[0].target == "subject" && subject.masks[0].inverted == false && subject.masks[0].adjustments["exposure"] == 0.25,"negated background clause does not override explicit subject brightening")
+        check(PhotoAIPlan.explicitMaskTarget("提亮人物，同时压暗背景") == nil && PhotoAIPlan.explicitMaskTarget("提亮人物并压暗背景") == nil && PhotoAIPlan.explicitMaskTarget("提亮人物旁边的背景") == nil && PhotoAIPlan.explicitMaskTarget("提亮人物身后") == nil && PhotoAIPlan.explicitMaskTarget("自然通透，局部优化") == nil,"mixed and ambiguous mask requests are not forced to a single target")
+        var existingCurve = EditParams(); existingCurve.lumaCurve = ToneCurve(points:[[0,0.1],[0.5,0.6],[1,1]])
+        check(PhotoAIService.curveRepairHint(instruction:"用亮度曲线轻提中间调",base:EditParams()) != nil && PhotoAIService.curveRepairHint(instruction:"用亮度曲线轻提中间调",base:existingCurve) == nil && PhotoAIService.curveRepairHint(instruction:"不要用亮度曲线轻提中间调",base:EditParams()) == nil,"curve repair example is limited to an explicit gentle lift from identity")
+        let flattened = try PhotoAIPlan.decode(#"{"summary":"提亮","adjustments":{},"masks":[],"curves":{"luma":[[0,0.48],[0.25,0.52],[0.5,0.58],[0.75,0.62],[1,0.65]]}}"#)
+        do { try PhotoAIService.validateRequested(flattened,base:EditParams(),instruction:"用亮度曲线轻提中间调"); preconditionFailure("flattened tonal range accepted") } catch { checks.append("gentle midtone request rejects a flattened tonal range") }
         let highlights = #"{"summary":"压亮区","adjustments":{},"masks":[{"kind":"luminanceRange","target":"highlights","brightness":"darken","inverted":true,"geometry":{"lumLow":0,"lumHigh":0.3},"adjustments":{"exposure":0.3}}]}"#
         let hp = try PhotoAIPlan.decode(highlights).applying(to:EditParams())
         check(hp.masks[0].lumLow == 0.65 && hp.masks[0].lumHigh == 1 && !hp.masks[0].inverted && hp.masks[0].adjust.exposure == -0.3,"highlight mask cannot select dark pixels or brighten instead")
@@ -46,11 +66,20 @@ import CoreImage
         do { try PhotoAIService.validateRequested(unwantedGlobal,base:base,instruction:localOnly); preconditionFailure("global override accepted") } catch { checks.append("post-decode local-only global guard rejects overrides") }
         check(PhotoAIService.preservedGlobalKeys("整体曝光设置为0.2 EV；创建亮度范围蒙版压暗亮区。").isEmpty,"mixed global and local requests remain allowed")
         check(!PhotoAIService.preservedGlobalKeys("仅修改亮度曲线；全局曝光保持不变。").contains("contrast"),"named preservation does not lock unrelated sliders")
+        check(!PhotoAIService.preservedGlobalKeys("只把整体曝光设置为0.2 EV，其他参数保持不变，不要新增蒙版。").contains("exposure"),"comma-separated preservation does not contradict explicit exposure request")
+        check(PhotoAIService.preservedGlobalKeys("只把颗粒设置为12、暗角设置为-8；不要修改白平衡，不要新增蒙版。") == Set(["temperature","tint"]),"negative mask mention does not protect every slider")
+        check(PhotoAIService.preservedGlobalKeys("保持白平衡和曲线不变，只把鲜艳度设置为10，不要新增蒙版。") == Set(["temperature","tint"]),"preserve named white balance while permitting other changes")
         let exactCrop = try PhotoAICrop.explicit("仅裁去左右各5%，保留完整高度，不要旋转。")!
         check(abs(exactCrop.x-0.05)<1e-9 && abs(exactCrop.width-0.9)<1e-9 && exactCrop.height == 1,"explicit crop percentages use exact validated arithmetic")
         let ambiguousCrop = try PhotoAICrop.explicit("稍微优化构图")
         check(ambiguousCrop == nil,"ambiguous composition remains model-directed")
         do { _ = try PhotoAICrop.explicit("裁去左右各40%，保留完整高度"); preconditionFailure("aggressive explicit crop accepted") } catch { checks.append("explicit excessive crop remains rejected") }
+        let compactDefault = try PhotoAIService.editingPrompt(instruction:"曝光设置为0.2 EV",base:EditParams())
+        check(compactDefault.contains("defaults except {}"),"production prompt compacts only defaults")
+        var withExisting = EditParams(); withExisting.exposure = 0.4; withExisting.grain = 7
+        let compactExisting = try PhotoAIService.editingPrompt(instruction:"只修改对比度",base:withExisting)
+        check(compactExisting.contains("\"exposure\":0.4") && compactExisting.contains("\"grain\":7"),"shared training prompt preserves existing nondefault edits")
+        check(PhotoAIService.cropPrompt(instruction:"不要裁切").contains("origin TOP LEFT"),"shared crop prompt retains coordinate convention")
         let selectedAdapter = try PhotoAIService.shared.adapterDirectory()
         check(selectedAdapter != nil,"production-compatible pilot adapter selected and hash verified")
         let synthetic = CIImage(color:CIColor(red:0.4,green:0.4,blue:0.4)).cropped(to:CGRect(x:0,y:0,width:200,height:200))
@@ -84,6 +113,7 @@ import CoreImage
         checks.append("real model local direction verified from rendered pixels")
         let style = try await PhotoAIService.shared.plan(jpeg:input.1,instruction:"用 HSL 将绿色饱和度降至 -15；用亮度曲线轻提中间调；阴影颜色分级用210度蓝色、饱和度8。不要新增蒙版。",base:original)
         try JSONEncoder().encode(style).write(to:out.appendingPathComponent("real-style-plan.json"))
+        try JSONEncoder().encode(PhotoAIService.shared.lastEditingAttempts).write(to:out.appendingPathComponent("real-style-attempts.json"))
         let styled = try style.applying(to:original)
         check(!styled.hsl.isNeutral && !styled.lumaCurve.isIdentity && !styled.gradeShadow.isNeutral,"real model uses HSL, luma curve and color grading")
 

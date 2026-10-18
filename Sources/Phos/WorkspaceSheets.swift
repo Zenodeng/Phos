@@ -122,7 +122,7 @@ private struct WorkspaceOutputSheet: View {
             s.exportSettings = committed
             UserDefaults.standard.set(directory.path,forKey:ExportPaths.key)
             let destination = directory, picked = onlyPicked
-            Task { await s.batchExport(to:destination,onlyPicked:picked) }
+            s.startBatchExport(to:destination,onlyPicked:picked)
             dismiss()
         } else {
             let p = NSSavePanel(); p.directoryURL = directory

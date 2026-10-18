@@ -16,10 +16,11 @@ private struct WorkspaceHostedContent<Content: View>: View {
     @ObservedObject var state: AppState
     @ObservedObject var environment: WorkspaceEnvironment
     let content: Content
+    var blocksDuringSync = true
     var body: some View {
         content.environmentObject(state).tint(WorkspaceTokens.accent)
             .environment(\.workspaceAccessibility, environment.accessibility)
-            .disabled(state.syncRunning)
+            .disabled(blocksDuringSync && state.syncRunning)
     }
 }
 
@@ -192,9 +193,11 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         menuNeedsUpdate(moreMenu) // A pull-down with only its title item cannot begin tracking.
         model.state.objectWillChange.receive(on: RunLoop.main).sink { [weak self] _ in self?.refresh() }.store(in: &observations)
         model.state.history.objectWillChange.receive(on: RunLoop.main).sink { [weak self] _ in self?.refresh() }.store(in: &observations)
+        model.state.inspectorUI.objectWillChange.receive(on:RunLoop.main).sink { [weak self] _ in self?.refresh() }.store(in:&observations)
         model.session.objectWillChange.receive(on: RunLoop.main).sink { [weak self] _ in self?.refresh() }.store(in: &observations)
         model.environment.objectWillChange.receive(on: RunLoop.main).sink { [weak self] _ in self?.refreshMaterials() }.store(in: &observations)
         refreshMaterials(); refresh()
+        model.state.resumePreviewWork()
         #if PHOS_QA
         qaRecorder = WorkspaceQARecorder(root: self)
         #endif
@@ -202,7 +205,7 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
 
     private func mount<Content: View>(_ name: String, _ content: Content, panel: Bool = false) {
-        let host = WorkspaceTransparentHost(rootView: WorkspaceHostedContent(state: model.state, environment: model.environment, content: content))
+        let host = WorkspaceTransparentHost(rootView: WorkspaceHostedContent(state: model.state, environment: model.environment, content: content, blocksDuringSync:name != "status"))
         host.safeAreaRegions = []; host.sizingOptions = []
         host.wantsLayer = true; host.layer?.backgroundColor = NSColor.clear.cgColor
         contentHosts[name] = host
@@ -223,6 +226,14 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
             MainActor.assumeIsolated {
                 guard let self, event.window === self.window, self.window?.isKeyWindow == true,
                       self.window?.attachedSheet == nil, self.model.router.presented == nil else { return event }
+                let state = self.model.state
+                let text = self.window?.firstResponder is NSTextView || self.window?.firstResponder is NSTextField
+                if !text, event.keyCode == 53 {
+                    if state.cropSession != nil { state.cancelCrop(); return nil }
+                    if state.parameterEdits.token != nil { state.parameterEdits.invalidate(); return nil }
+                    if state.maskDrawingKind != nil { state.cancelMaskDrawing(); return nil }
+                }
+                if !text, event.keyCode == 36, state.cropSession != nil { state.finishCrop(); return nil }
                 return self.model.selection.handleKey(event, firstResponder: self.window?.firstResponder) ? nil : event
             }
         }
@@ -237,6 +248,8 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
                 .receive(on: RunLoop.main).sink { [weak self] _ in
                     guard let self else { return }
                     WorkspaceWindowChrome.positionStandardButtons(in: self)
+                    if notification == NSWindow.willCloseNotification { model.state.finishWindowWork() }
+                    if notification == NSWindow.didResignKeyNotification { model.state.temporaryPan = false }
                     if notification == NSWindow.willCloseNotification, let monitor = keyMonitor {
                         NSEvent.removeMonitor(monitor); keyMonitor = nil
                     }
@@ -264,22 +277,25 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
     func refresh() {
         let s = model.state
         navigation.buttons[0].select(model.session.browserVisible)
-        navigation.buttons[1].isEnabled = s.source != nil && (s.history.canUndo || s.pendingPhotoEditID != nil) && !s.syncRunning
-        navigation.buttons[2].isEnabled = s.source != nil && s.history.canRedo && !s.syncRunning
+        navigation.buttons[1].isEnabled = model.enabled(.undo)
+        navigation.buttons[2].isEnabled = model.enabled(.redo)
         viewing.buttons[0].isEnabled = s.previousVisiblePhotoIndex != nil && !s.syncRunning
         viewing.buttons[1].isEnabled = s.nextVisiblePhotoIndex != nil && !s.syncRunning
         zoom.isEnabled = s.source != nil && !s.syncRunning
         zoom.item(at: 4)?.isEnabled = s.source != nil && !s.cropMode && !s.syncRunning
-        zoom.item(at: 0)?.title = s.oneToOne ? "1:1" : (s.cropMode || s.whiteBalancePicker || s.selectedMask != nil ? "适合" : model.session.viewingTitle)
+        zoom.item(at: 0)?.title = s.oneToOne ? (s.displayFrame?.fullResolution == true ? "1:1" : "准备1:1…") : (s.cropMode ? "裁剪" : model.session.viewingTitle)
         modeSwitch.selectedSegment = model.session.mode == .immersive ? 0 : 1
-        actions.buttons[0].select(s.showBefore); actions.buttons[0].isEnabled = s.source != nil && !s.syncRunning
+        actions.buttons[0].select(s.showBefore); actions.buttons[0].isEnabled = model.enabled(.beforeOriginal)
         actions.buttons[1].isEnabled = !s.syncRunning
-        actions.buttons[2].isEnabled = s.source != nil && !s.exportRunning && !s.syncRunning
+        actions.buttons[2].isEnabled = model.enabled(.export)
         actions.buttons[3].select(model.session.inspectorVisible)
         rail.buttons[0].select(s.cropMode); rail.buttons[0].isEnabled = s.source != nil && !s.syncRunning
-        rail.buttons[1].select(s.whiteBalancePicker); rail.buttons[1].isEnabled = s.source != nil && !s.cropMode && !s.previewing && !s.whiteBalanceRunning && !s.syncRunning
-        rail.buttons[2].isEnabled = s.source != nil && !s.autoRunning && !s.previewing && !s.syncRunning
-        rail.buttons[3].select(s.showMaskOverlay); rail.buttons[3].isEnabled = s.selectedMask != nil && !s.syncRunning
+        rail.buttons[1].select(s.whiteBalancePicker); rail.buttons[1].isEnabled = model.enabled(.whiteBalance)
+        rail.buttons[2].isEnabled = model.enabled(.autoTone)
+        rail.buttons[3].select(s.inspectorUI.category == .masks && !s.cropMode); rail.buttons[3].isEnabled = model.enabled(.masks)
+        rail.buttons[5].select(s.selectedMask != nil && s.maskTool != .position && !s.cropMode)
+        rail.buttons[5].isEnabled = model.enabled(.brush)
+        rail.buttons[5].image = NSImage(systemSymbolName:s.maskTool == .erase ? "eraser" : "paintbrush.pointed",accessibilityDescription:"局部画笔")
         rail.buttons[4].select(s.oneToOne); rail.buttons[4].isEnabled = s.source != nil && !s.cropMode && !s.syncRunning
         title.stringValue = s.current?.url.lastPathComponent ?? "Phos · 打开文件夹开始编辑"
         title.toolTip = s.current?.url.path
@@ -314,8 +330,8 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
     private func configureTools() {
         let s = model.state
         navigation.add(WorkspaceToolButton("sidebar.left", "显示或隐藏照片浏览器") { [weak self] in self?.model.session.browserVisible.toggle() })
-        navigation.add(WorkspaceToolButton("arrow.uturn.backward", "撤销") { [weak self] in self?.model.undo() })
-        navigation.add(WorkspaceToolButton("arrow.uturn.forward", "重做") { [weak self] in self?.model.redo() })
+        navigation.add(WorkspaceToolButton("arrow.uturn.backward", "撤销") { [weak self] in self?.model.perform(.undo) })
+        navigation.add(WorkspaceToolButton("arrow.uturn.forward", "重做") { [weak self] in self?.model.perform(.redo) })
         viewing.add(WorkspaceToolButton("chevron.left", "上一张照片") { [weak self] in
             self?.model.selection.navigate(-1)
         })
@@ -328,26 +344,27 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         for name in ["铺满", "适合窗口", "铺满窗口", "跟随布局", "1:1 检查", "全像素预览"] { zoom.addItem(withTitle: name) }
         zoom.target = self; zoom.action = #selector(changeZoom)
         viewing.addSubview(zoom)
-        actions.add(WorkspaceToolButton("rectangle.lefthalf.inset.filled", "原图与调整后对比") { s.showBefore.toggle() })
-        actions.add(WorkspaceToolButton("folder", "打开文件夹") { [weak self] in self?.model.openFolder() })
-        actions.add(WorkspaceToolButton("square.and.arrow.up", "导出当前照片") { [weak self] in self?.model.present(.export) })
+        actions.add(WorkspaceToolButton("rectangle.lefthalf.inset.filled", "原图与调整后对比") { [weak self] in self?.model.perform(.beforeOriginal) })
+        actions.add(WorkspaceToolButton("folder", "打开文件夹") { [weak self] in self?.model.perform(.openFolder) })
+        actions.add(WorkspaceToolButton("square.and.arrow.up", "导出当前照片") { [weak self] in self?.model.perform(.export) })
         actions.add(WorkspaceToolButton("sidebar.right", "显示或隐藏调整面板") { [weak self] in self?.model.session.inspectorVisible.toggle() })
         more.isBordered = false; more.imagePosition = .imageOnly
         more.toolTip = "更多操作与外观"; more.setAccessibilityLabel("更多操作与外观")
         (more.cell as? NSPopUpButtonCell)?.arrowPosition = .noArrow
         addMoreTitle(); more.menu = moreMenu; actions.addSubview(more)
-        rail.add(WorkspaceToolButton("crop", "裁剪") { [weak self] in self?.model.finishEditing(); s.toggleCropMode() })
-        rail.add(WorkspaceToolButton("eyedropper", "白平衡灰点取样") { s.showBefore = false; s.whiteBalancePicker.toggle() })
-        rail.add(WorkspaceToolButton("sparkles", "自动影调") { [weak self] in self?.model.finishEditing(); s.runAutoTone() })
-        rail.add(WorkspaceToolButton("square.3.layers.3d", "显示或隐藏当前蒙版") { s.showMaskOverlay.toggle() })
-        rail.add(WorkspaceToolButton("1.magnifyingglass", "1:1 检查") { s.oneToOne.toggle() })
+        rail.add(WorkspaceToolButton("crop", "裁剪") { [weak self] in self?.model.perform(.crop) })
+        rail.add(WorkspaceToolButton("eyedropper", "白平衡灰点取样") { [weak self] in self?.model.perform(.whiteBalance) })
+        rail.add(WorkspaceToolButton("sparkles", "自动影调") { [weak self] in self?.model.perform(.autoTone) })
+        rail.add(WorkspaceToolButton("square.3.layers.3d", "局部蒙版") { [weak self] in self?.model.perform(.masks) })
+        rail.add(WorkspaceToolButton("1.magnifyingglass", "1:1 检查") { [weak self] in self?.model.perform(.pixel100) })
+        rail.add(WorkspaceToolButton("paintbrush.pointed", "局部画笔") { [weak self] in self?.model.perform(.brush) })
     }
     @objc private func changeZoom() {
         switch zoom.indexOfSelectedItem {
-        case 1: model.fit()
+        case 1: model.perform(.fit)
         case 2: model.state.oneToOne = false; model.session.viewport.mode = .fill
         case 3: model.state.oneToOne = false; model.session.viewport.mode = .automatic
-        case 4: if !model.state.cropMode { model.state.oneToOne.toggle() }
+        case 4: model.perform(.pixel100)
         case 5: model.state.fullResPreview.toggle()
         default: break
         }
@@ -397,10 +414,10 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         presets.addItem(.separator())
         item("保存当前调整为预设…", in: presets, enabled: ready) { [weak self] in self?.model.savePreset() }
         let presetItem = NSMenuItem(title: "预设", action: nil, keyEquivalent: ""); presetItem.submenu = presets; menu.addItem(presetItem)
-        for (name, route) in [("命名快照…", WorkspacePresentation.snapshots), ("同步调整…", .sync), ("批量导出…", .batch), ("多重曝光合成…", .merge)] {
-            item(name, in: menu, enabled: ready) { [weak self] in self?.model.present(route) }
+        for (name, command) in [("命名快照…", WorkspaceCommandID.snapshots), ("同步调整…", .sync), ("批量导出…", .batch), ("多重曝光合成…", .merge), ("同几何分割对比", .beforeGeometry), ("局部画笔", .brush), ("显示或隐藏当前蒙版", .overlay), ("取消当前处理", .cancelJob)] {
+            item(name, in: menu, enabled: model.enabled(command),checked:command == .beforeGeometry && s.splitComparison) { [weak self] in self?.model.perform(command) }
         }
-        item("复制调整", in: menu, enabled: ready) { [weak self] in self?.model.finishEditing(); s.copyAdjustments() }
+        item("复制调整", in: menu, enabled: model.enabled(.copy)) { [weak self] in self?.model.perform(.copy) }
         item("全像素预览", in: menu, enabled: ready, checked: s.fullResPreview) { s.fullResPreview.toggle() }
         menu.addItem(.separator())
         let appearance = NSMenu(title: "外观")

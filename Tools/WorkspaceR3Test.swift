@@ -2,7 +2,10 @@ import AppKit
 import CoreImage
 import SwiftUI
 
-@main struct WorkspaceR3Test {
+#if !PHOS_WORKSPACE_R4_SUITE
+@main
+#endif
+struct WorkspaceR3Test {
     @MainActor static func main() async throws {
         try await WorkspaceR2Test.main()
         let url = URL(fileURLWithPath:CommandLine.arguments[1])

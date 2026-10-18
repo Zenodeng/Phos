@@ -374,6 +374,11 @@ struct PremiumStatusBar: View {
         HStack(spacing: 10) {
             Circle().fill(s.previewing ? .orange : .green).frame(width: 6, height: 6)
             Text(s.status).font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary).lineLimit(1)
+            if s.jobRunning {
+                if s.batchRunning || s.syncRunning { ProgressView(value:s.batchRunning ? s.batchProgress : s.syncProgress).frame(width:80) }
+                else { ProgressView().controlSize(.mini) }
+                Button("取消处理") { s.cancelJobs() }.buttonStyle(.borderless).font(.system(size:10)).disabled(s.jobCancellation?.cancelled == true)
+            }
             Spacer()
             if let current = s.current {
                 HStack(spacing: 4) {

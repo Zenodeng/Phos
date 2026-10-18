@@ -603,7 +603,7 @@ footer a:hover{color:#fff}
     <!-- 下滑到这里才由 .hero-reveal.in 统一触发：截图放大淡入 → 四个数字依次上浮 -->
     <div class="hero-reveal">
       <div class="wide hero-shot">
-        <img class="shot" src="images/05-tone-adjustments.jpg" width="1920" height="1207" alt="Phos 主界面：左侧素材浏览器缩略图网格，中间照片画布与直方图，右侧白平衡与影调调整面板">
+        <img class="shot" src="images/05-tone-adjustments.jpg" width="1920" height="1192" alt="Phos 主界面（A 列表布局）：左侧素材列表，中间照片画布与直方图，右侧白平衡、基本影调与质感调整面板">
       </div>
       <div class="wrap">
         <div class="stats">
@@ -827,33 +827,40 @@ footer a:hover{color:#fff}
     <div class="wrap rv">
       <p class="eyebrow"><span class="idx">02</span>界面演示</p>
       <h2>看得见的工作流。</h2>
-      <p class="lead">下面四张是真实界面截图，对应 Phos 现有的功能，没有虚构的能力。4.0 的工作区提供两种布局：<strong>A 列表</strong>适合逐张精修，<strong>B 胶片</strong>适合连续选片，两者共用同一份编辑状态。</p>
+      <p class="lead">下面五张是真实界面截图，对应 Phos 现有的功能，没有虚构的能力。工作区提供两种布局：<strong>A 列表</strong>适合逐张精修，<strong>B 胶片</strong>适合连续选片，两者共用同一份编辑状态。</p>
     </div>
     <div class="wide">
       <div class="gal">
         <figure class="rv">
-          <img class="shot" src="images/07-color-grading.jpg" width="1920" height="1207" loading="lazy" alt="Phos 色彩面板：阴影、中间调、高光三档色轮，配明亮、混合与平衡滑杆，下方是胶片 CLUT 选择与浓度">
+          <img class="shot" src="images/07-color-grading.jpg" width="1920" height="1192" loading="lazy" alt="Phos 曲线面板：RGB 合成曲线带五个控制点，下方是饱和度补偿，以及折叠的颜色分级、HSL、黑白、校准与胶片 CLUT">
           <figcaption>
-            <div class="t">色彩 · 颜色分级</div>
-            <div class="d">阴影、中间调、高光三档色轮，各配明亮、混合与平衡。下方胶片 CLUT 可搜索、可扫描外置 HaldCLUT 目录，浓度连续可调。</div>
+            <div class="t">曲线 · 影调</div>
+            <div class="d">五个控制点的 RGB 合成曲线，可切到亮度与 R / G / B 单通道；下方是饱和度补偿，颜色分级、HSL、黑白、校准与胶片 CLUT 依次折叠，需要时再展开。</div>
           </figcaption>
         </figure>
         <figure class="rv">
-          <img class="shot" src="images/06-linear-gradient-mask.jpg" width="1920" height="1207" loading="lazy" alt="Phos 线性渐变蒙版：画布上三条平行参考线与三个控制点，右侧为蒙版工具与独立调整栈">
+          <img class="shot" src="images/06-linear-gradient-mask.jpg" width="1920" height="1193" loading="lazy" alt="Phos 线性渐变蒙版：画布上三条平行参考线与三个控制点，右侧为蒙版工具与独立调整栈">
           <figcaption>
             <div class="t">线性渐变蒙版</div>
             <div class="d">画布上三条参考线对应渐变的起止与中轴：拖中心移动，拖端点改宽度，拖旋转柄改变方向。每个蒙版都带独立调整栈。</div>
           </figcaption>
         </figure>
         <figure class="rv">
-          <img class="shot" src="images/08-radial-gradient-mask.jpg" width="1920" height="1207" loading="lazy" alt="Phos 径向渐变蒙版：画布上的椭圆选区与三个控制点，右侧为横半径、纵半径、旋转与羽化">
+          <img class="shot" src="images/08-radial-gradient-mask.jpg" width="1920" height="1192" loading="lazy" alt="Phos 径向渐变蒙版：画布上的椭圆选区与三个控制点，右侧为横半径、纵半径、旋转与羽化">
           <figcaption>
             <div class="t">径向渐变蒙版</div>
             <div class="d">拖出椭圆后由三个控制点接管：中心移动、边缘缩放、旋转柄改角度。横纵半径各自独立，羽化控制内外过渡。</div>
           </figcaption>
         </figure>
         <figure class="rv">
-          <img class="shot" src="images/04-export-dialog.jpg" width="2200" height="1375" loading="lazy" alt="Phos 导出面板：格式与位深、色彩空间、长边缩放、水印叠加与导出目录设置">
+          <img class="shot" src="images/12-b-filmstrip.jpg" width="1920" height="1192" loading="lazy" alt="Phos B 胶片布局：底部横向胶片条用于连续选片，上方是画布与右侧检查器">
+          <figcaption>
+            <div class="t">B 胶片布局</div>
+            <div class="d">底部胶片条横向排列，方向键连续选片；画布自动 fit 到不被面板和胶片遮挡的区域。切回 A 列表时，编辑状态、视口与撤销栈都保持不变。</div>
+          </figcaption>
+        </figure>
+        <figure class="rv">
+          <img class="shot" src="images/04-export-dialog.jpg" width="1920" height="1192" loading="lazy" alt="Phos 导出面板：格式与位深、色彩空间、长边缩放、水印叠加与导出目录设置">
           <figcaption>
             <div class="t">专业导出</div>
             <div class="d">8 位与 16 位 TIFF 多色域输出，长边缩放，文字与图片水印九宫格叠加，可固定导出目录。</div>
@@ -1011,6 +1018,13 @@ footer a:hover{color:#fff}
           <p>生成的方案先出预览，确认后才写入；一次应用对应一次撤销。局部效果会用真实渲染像素核对方向，不符合要求会重试或拦截。</p>
         </div>
       </div>
+      <figure class="rv" style="margin-top:56px">
+        <img class="shot" src="images/11-ai-panel.jpg" width="1920" height="1192" loading="lazy" alt="Phos AI 修图面板：输入中文要求后给出曝光、色温、鲜艳度等参数建议，左右并排显示当前效果与建议效果，右上角标注「微调实验版」">
+        <figcaption>
+          <div class="t">AI 修图 · 微调实验版</div>
+          <div class="d">写一句要求，模型给出曝光、色温、鲜艳度等参数与局部蒙版建议。左边是当前效果，右边是建议效果，确认后才写入；不满意可以关掉，原图一个字节都没动。</div>
+        </figcaption>
+      </figure>
       <p class="note-sm">AI 需要单独安装底模（约 3.1 GB，首次安装需联网），随应用附带的小型适配器约 1.3 MB。<strong>不安装模型也能正常使用全部常规编辑功能。</strong>这一功能仍属实验性：细节理解、局部调整与自动构图都可能误判，请以预览为准。<a href="#ai-model">安装步骤 →</a></p>
     </div>
   </section>

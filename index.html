@@ -1219,6 +1219,16 @@ python3.11 install_model.py</code></pre>
 
         <p class="sum" style="margin-top:24px">底模是 <a href="https://huggingface.co/mlx-community/Qwen3-VL-4B-Instruct-4bit" target="_blank" rel="noopener"><code>mlx-community/Qwen3-VL-4B-Instruct-4bit</code></a>（固定版本 <code>2fd8dacb…</code>；国内镜像见 <a href="https://hf-mirror.com/mlx-community/Qwen3-VL-4B-Instruct-4bit" target="_blank" rel="noopener">hf-mirror</a>），许可为 <strong>Apache-2.0</strong>，来源说明与许可原文随应用内 <code>PhotoAIAdapter</code> 目录一并保留。Phos 的学术用途声明不改变第三方模型的授权条件。</p>
       </div>
+
+      <div class="channels" id="windows" style="margin-top:40px">
+        <h3>Windows 版 · 实验性移植</h3>
+        <ul>
+          <li><a href="https://github.com/Zenodeng/Phos/releases/download/windows-4.0.1/Phos-4.0.1-Windows-x64.zip">Phos-4.0.1-Windows-x64.zip</a><span>323 MB · Windows 11 x64</span></li>
+        </ul>
+        <p class="sum">从 macOS 4.0.1 的源码移植而来，<strong>与 macOS 版分开维护</strong>，版本号也不同步。解压后双击根目录的 <code>Phos.exe</code>，它必须和 <code>app\</code> 文件夹放在同一目录。</p>
+        <p class="sum" style="margin-top:12px"><strong>它和 macOS 版不完全一样。</strong>Apple 的 Vision 与 Core Image 换成了本地实现（MODNet / BiRefNet / OpenCV / D3D11），主体分割、边缘和色彩结果可能有差异；<strong>不含本地 AI 修图</strong>；也没有 macOS 4.1 那一轮的界面更新（高级编辑、玻璃统一、裁剪热区、自动水平）。</p>
+        <p class="sum" style="margin-top:12px"><strong>未做代码签名</strong>，首次运行会被 Windows SmartScreen 拦下，需要点「更多信息 → 仍要运行」。完整的差异与已知限制见 <a href="https://github.com/Zenodeng/Phos/releases/tag/windows-4.0.1" target="_blank" rel="noopener">发布说明</a>。</p>
+      </div>
     </div>
   </section>
 

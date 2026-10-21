@@ -3,14 +3,23 @@ import SwiftUI
 struct WorkspaceButtonStyle: ButtonStyle {
     var selected = false
     var previewPressed = false
+    var prominent = false
+    var chrome = true
     @Environment(\.controlActiveState) private var active
     @Environment(\.isEnabled) private var enabled
     @State private var hover = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.workspaceAccessibility) private var options
     func makeBody(configuration:Configuration) -> some View {
         configuration.label
-            .foregroundStyle(selected ? WorkspaceTokens.accent : WorkspaceTokens.primaryText)
-            .padding(6)
-            .background(RoundedRectangle(cornerRadius:8).fill(Color.primary.opacity(configuration.isPressed || previewPressed ? 0.16 : selected ? 0.10 : hover && enabled ? 0.06 : 0)))
+            .foregroundStyle(configuration.role == .destructive ? WorkspaceTokens.error : WorkspaceTokens.primaryText)
+            .padding(chrome ? 6 : 0)
+            .background {
+                if chrome { Color.clear.modifier(WorkspaceGlassDecoration(selected: selected || prominent)) }
+            }
+            .scaleEffect(!enabled || reduceMotion || options.reduceMotion ? 1 : configuration.isPressed || previewPressed ? 0.96 : hover ? 1.035 : 1)
+            .animation(reduceMotion || options.reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.78), value: configuration.isPressed || previewPressed)
+            .animation(reduceMotion || options.reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.78), value: hover)
             .contentShape(RoundedRectangle(cornerRadius:8))
             .opacity(!enabled ? 0.38 : active == .inactive ? 0.80 : 1)
             .onHover { hover = $0 }

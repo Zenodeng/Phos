@@ -117,7 +117,7 @@ enum WorkspacePanelSurface {
 @MainActor
 enum WorkspaceGlassSurface {
     static func make(content:NSView, radius:CGFloat = 20, mode:WorkspaceSurfaceMode,
-                     accessibility:WorkspaceAccessibilityOptions? = nil, disableNativeGlass:Bool = false) -> NSView {
+                     accessibility:WorkspaceAccessibilityOptions? = nil, disableNativeGlass:Bool = false, tint:NSColor? = nil) -> NSView {
         let accessibility = accessibility ?? .current
         #if PHOS_NATIVE_GLASS
         let policy = WorkspaceMaterialPolicy(mode:mode,accessibility:accessibility,disableNativeGlass:disableNativeGlass)
@@ -125,6 +125,7 @@ enum WorkspaceGlassSurface {
                 let glass = NSGlassEffectView()
                 glass.style = .regular
                 glass.cornerRadius = radius
+                glass.tintColor = tint
                 glass.contentView = content
                 return glass
         }

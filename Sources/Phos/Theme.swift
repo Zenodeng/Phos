@@ -27,6 +27,10 @@ extension NSColor {
     /// 分栏边界色
     static let rfDivider = rfDynamic(light: NSColor(white: 0, alpha: 0.12),
                                      dark: NSColor(white: 1, alpha: 0.12))
+
+    /// 品牌金 #C9A876。只表达「选中」与「编辑态」，不做装饰：
+    /// 选中环、滑杆填充、胶片卡、导出主按钮。深浅模式同一个值，与官网一致。
+    static let rfGold = NSColor(srgbRed: 201.0/255.0, green: 168.0/255.0, blue: 118.0/255.0, alpha: 1)
 }
 
 enum RF {
@@ -69,15 +73,16 @@ struct ToolButton: View {
                 .font(.system(size: 13.5, weight: .medium))
                 .frame(width: 30, height: 26)
                 .foregroundStyle(disabled ? Color.secondary.opacity(0.4)
-                                 : (active ? Color.accentColor : Color.primary))
+                                 : (active ? WorkspaceTokens.accent : Color.primary))
                 .background(
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(active ? Color.accentColor.opacity(0.16)
+                        .fill(active ? WorkspaceTokens.accent.opacity(0.16)
                                 : (hover ? Color(nsColor: .rfHover) : .clear))
                 )
+                .modifier(WorkspaceGlassDecoration(selected: active, radius: 6))
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(WorkspaceButtonStyle(chrome: false))
         .disabled(disabled)
         .help(title)
         .onHover { hover = $0 && !disabled }

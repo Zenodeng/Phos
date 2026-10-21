@@ -43,7 +43,7 @@ final class PhotoSelectionController {
     func selectAllVisible() { state.selectedPhotos = Set(state.visiblePhotoIndices.map { state.items[$0].id }) }
     /// Native text fields consume arrows and rating digits themselves.
     @discardableResult func handleKey(_ event: NSEvent, firstResponder: NSResponder?) -> Bool {
-        guard state.pendingPhotoEditID == nil, !(firstResponder is NSTextView), !(firstResponder is NSTextField), !state.syncRunning,
+        guard state.pendingPhotoEditID == nil, !(firstResponder is NSTextView), !(firstResponder is NSTextField), !(firstResponder is WorkspaceModeSegmentButton), !state.syncRunning,
               event.modifierFlags.intersection([.command, .control, .option]).isEmpty else { return false }
         switch event.keyCode {
         case 123, 126: navigate(-1, extending: event.modifierFlags.contains(.shift)); return true
@@ -97,9 +97,9 @@ final class WorkspacePhotoCell: NSButton {
             ?? NSImage(systemSymbolName: failed ? "exclamationmark.triangle" : "photo", accessibilityDescription: failed ? "缩略图加载失败" : "缩略图加载中")
         thumbnail.contentTintColor = .tertiaryLabelColor
         currentMark.isHidden = !current; multiMark.isHidden = !multi
-        currentMark.contentTintColor = .controlAccentColor; multiMark.contentTintColor = .controlAccentColor
-        layer?.backgroundColor = (current ? NSColor.controlAccentColor.withAlphaComponent(0.14) : multi ? NSColor.selectedContentBackgroundColor.withAlphaComponent(0.08) : .clear).cgColor
-        layer?.borderColor = (current ? NSColor.controlAccentColor.withAlphaComponent(0.55) : .clear).cgColor
+        currentMark.contentTintColor = .rfGold; multiMark.contentTintColor = .rfGold
+        layer?.backgroundColor = (current ? NSColor.rfGold.withAlphaComponent(0.14) : multi ? NSColor.rfGold.withAlphaComponent(0.08) : .clear).cgColor
+        layer?.borderColor = (current ? NSColor.rfGold.withAlphaComponent(0.55) : .clear).cgColor
         layer?.borderWidth = current ? 1 : 0
         toolTip = item.url.path
         setAccessibilityLabel(title + (current ? "，当前照片" : "") + (multi ? "，已多选" : ""))
@@ -167,13 +167,14 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
     private let empty = NSTextField(wrappingLabelWithString: "打开文件夹开始选片")
     private let footer = NSTextField(labelWithString: "")
     private var stars: [NSButton] = []
-    private let pick = NSButton(), sync = NSButton()
+    private let pick = WorkspaceToolButton("flag", "标记当前照片", action: {}), sync = WorkspaceToolButton("arrow.triangle.2.circlepath", "同步所选照片", action: {})
     private var observations: [AnyCancellable] = []
     private var scrollObservations: [NSObjectProtocol] = []
     private(set) var indices: [Int] = []
     private var lastCurrent: UUID?
     private var lastMode: WorkspaceMode?
     private var lastDemand: Set<UUID> = []
+    private var lastFilterState: String?
     override var isFlipped: Bool { true }
     override var acceptsFirstResponder: Bool { true }
     init(model: WorkspaceWindowModel) {
@@ -204,7 +205,8 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
         empty.alignment = .center; empty.font = .systemFont(ofSize: 12); empty.textColor = .secondaryLabelColor
         footer.font = .monospacedDigitSystemFont(ofSize: 10, weight: .regular); footer.textColor = .secondaryLabelColor
         for value in 1...5 {
-            let button = NSButton(image: NSImage(systemSymbolName: "star", accessibilityDescription: "评分\(value)星")!, target: self, action: #selector(rate(_:)))
+            let button = WorkspaceToolButton("star", "评分\(value)星", action: {})
+            button.target = self; button.action = #selector(rate(_:))
             button.isBordered = false; button.tag = value; button.toolTip = "\(value)星，再点一次清除"; button.setAccessibilityLabel("评分\(value)星")
             stars.append(button); addSubview(button)
         }
@@ -213,8 +215,9 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
         sync.image = NSImage(systemSymbolName: "arrow.triangle.2.circlepath", accessibilityDescription: "同步所选照片")
         sync.isBordered = false; sync.target = self; sync.action = #selector(synchronize); sync.toolTip = "同步所选照片"; sync.setAccessibilityLabel("同步所选照片")
         for view in [heading, folder, search, filter, listScroll, filmScroll, empty, footer, pick, sync] { addSubview(view) }
-        model.state.objectWillChange.receive(on: RunLoop.main).sink { [weak self] _ in self?.refresh() }.store(in: &observations)
-        model.session.objectWillChange.receive(on: RunLoop.main).sink { [weak self] _ in self?.refresh() }.store(in: &observations)
+        model.state.objectWillChange.debounce(for: .milliseconds(1), scheduler: RunLoop.main).sink { [weak self] _ in self?.refresh() }.store(in: &observations)
+        model.session.objectWillChange.debounce(for: .milliseconds(1), scheduler: RunLoop.main).sink { [weak self] _ in self?.refresh() }.store(in: &observations)
+        model.environment.objectWillChange.debounce(for: .milliseconds(1), scheduler: RunLoop.main).sink { [weak self] _ in self?.refresh() }.store(in: &observations)
         refresh()
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
@@ -237,9 +240,13 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
         }
     }
     func refresh() {
+        for button in (stars + [pick, sync]).compactMap({ $0 as? WorkspaceToolButton }) {
+            button.motionReduced = model.environment.accessibility.reduceMotion
+        }
         let s = model.state, isFilm = model.session.mode == .filmstrip
         let next = s.visiblePhotoIndices
-        if next != indices {
+        let membershipChanged = next != indices
+        if membershipChanged {
             indices = next; table.reloadData(); film.clear(); lastDemand = []
         } else {
             table.enumerateAvailableRowViews { [weak self] _, row in
@@ -258,15 +265,16 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
         for button in stars {
             button.isEnabled = s.current != nil && !s.syncRunning
             button.image = NSImage(systemSymbolName: (s.current?.rating ?? 0) >= button.tag ? "star.fill" : "star", accessibilityDescription: "评分\(button.tag)星")
-            button.contentTintColor = (s.current?.rating ?? 0) >= button.tag ? .controlAccentColor : .secondaryLabelColor
+            button.contentTintColor = (s.current?.rating ?? 0) >= button.tag ? .rfGold : .secondaryLabelColor
         }
-        pick.isEnabled = s.current != nil && !s.syncRunning; pick.contentTintColor = s.current?.picked == true ? .controlAccentColor : .secondaryLabelColor
+        pick.isEnabled = s.current != nil && !s.syncRunning; pick.contentTintColor = s.current?.picked == true ? .rfGold : .secondaryLabelColor
         pick.image = NSImage(systemSymbolName: s.current?.picked == true ? "flag.fill" : "flag", accessibilityDescription: "标记当前照片")
         sync.isEnabled = model.enabled(.sync)
         listScroll.isHidden = isFilm; filmScroll.isHidden = !isFilm
-        let changed = lastCurrent != s.current?.id || lastMode != model.session.mode
+        let changed = membershipChanged || lastCurrent != s.current?.id || lastMode != model.session.mode
         lastCurrent = s.current?.id; lastMode = model.session.mode
-        updateFilter(); needsLayout = true; layoutSubtreeIfNeeded()
+        updateFilter()
+        if membershipChanged || changed { needsLayout = true; layoutSubtreeIfNeeded() }
         if changed, let row = indices.firstIndex(of: s.currentIndex) {
             if isFilm { film.scrollToVisible(CGRect(x: CGFloat(row) * 90, y: 0, width: 90, height: 80)) }
             else { table.scrollRowToVisible(row) }
@@ -327,7 +335,11 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
     @objc private func togglePick() { model.selection.finishEditing(); model.state.togglePick() }
     @objc private func synchronize() { model.perform(.sync) }
     private func updateFilter() {
-        let s = model.state, menu = NSMenu()
+        let s = model.state
+        let filterState = "\(s.filterRating)-\(s.filterPicked)"
+        guard lastFilterState != filterState else { return }
+        lastFilterState = filterState
+        let menu = NSMenu()
         let title = NSMenuItem(title: "筛选", action: nil, keyEquivalent: "")
         title.image = NSImage(systemSymbolName: "line.3.horizontal.decrease", accessibilityDescription: "筛选")
         menu.addItem(title)
@@ -342,7 +354,7 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
             let item = NSMenuItem(title: title, action: action, keyEquivalent: ""); item.target = self; menu.addItem(item)
         }
         filter.menu = menu
-        filter.contentTintColor = s.filterRating > 0 || s.filterPicked ? .controlAccentColor : .secondaryLabelColor
+        filter.contentTintColor = s.filterRating > 0 || s.filterPicked ? .rfGold : .secondaryLabelColor
     }
     @objc private func filterRating(_ item: NSMenuItem) { model.state.filterRating = item.tag }
     @objc private func filterPicked() { model.state.filterPicked.toggle() }

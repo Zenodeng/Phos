@@ -154,11 +154,13 @@ phos_verify_ui_binary "$PHOS_QA_BUILD_OUT/.work/PhosQA" "$PHOS_QA_BUILD_OUT/bina
     resources = stage / 'Contents/Resources'
     resources.mkdir()
     info = plistlib.loads((source / 'Info.plist').read_bytes())
-    info.update(CFBundleIdentifier=QA_ID, CFBundleName='PhosQA', CFBundleDisplayName='Phos QA',
-                CFBundleExecutable='PhosQA', LSMinimumSystemVersion='26.0',
+    qa_id = QA_ID + '.run' + hashlib.sha256(str(out).encode()).hexdigest()[:10]
+    executable = 'PhosQA' + qa_id.rsplit('.', 1)[-1]
+    info.update(CFBundleIdentifier=qa_id, CFBundleName='PhosQA' + qa_id.rsplit('.', 1)[-1], CFBundleDisplayName='Phos QA ' + qa_id.rsplit('.', 1)[-1],
+                CFBundleExecutable=executable, LSMinimumSystemVersion='26.0',
                 PhosQABuild=True, PhosQAWorkspace=str(work))
     (stage / 'Contents/Info.plist').write_bytes(plistlib.dumps(info))
-    shutil.copy2(out / '.work/PhosQA', stage / 'Contents/MacOS/PhosQA')
+    shutil.copy2(out / '.work/PhosQA', stage / 'Contents/MacOS' / executable)
     with (out / 'resources.log').open('w') as log:
         subprocess.run(['sh', 'Scripts/package_icon.sh', str(resources)], cwd=source, stdout=log, stderr=subprocess.STDOUT, check=True)
     run(['codesign', '--force', '--deep', '--sign', '-', str(stage)])
@@ -168,10 +170,10 @@ phos_verify_ui_binary "$PHOS_QA_BUILD_OUT/.work/PhosQA" "$PHOS_QA_BUILD_OUT/bina
     stage.rename(app)
     assert tree(Path(args.app_baseline).resolve()) == manifest['installedAppFiles']
     assert {n: sha(fixtures / n) for n in fixture_hashes} == fixture_hashes
-    report = dict(status='passed', app=str(app), bundleID=QA_ID, compileDefines=['PHOS_QA', 'PHOS_NATIVE_GLASS'],
+    report = dict(status='passed', app=str(app), bundleID=qa_id, compileDefines=['PHOS_QA', 'PHOS_NATIVE_GLASS'],
                   sourceSnapshot=str(out / 'baseline/snapshot.json'), sourceFiles=manifest['sourceFiles'],
                   fixtureManifest=str(out / 'fixture-manifest.json'), workspace=str(work),
-                  binarySHA256=sha(app / 'Contents/MacOS/PhosQA'),
+                  binarySHA256=sha(app / 'Contents/MacOS' / executable),
                   appFiles=tree(app), originalFixturesUnchanged=True, installedAppUnchanged=True,
                   launched=False, runtimeValidation='pending current-host editor validation')
     write(out / 'qa-build.json', report)

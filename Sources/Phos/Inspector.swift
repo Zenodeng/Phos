@@ -68,14 +68,11 @@ private struct AutoToneRow: View {
                         Text(busy ? "分析中…" : "自动").font(.system(size: 11.5, weight: .medium))
                     }
                     .frame(maxWidth: .infinity).frame(height: 26)
-                    .foregroundStyle(blocked ? Color.secondary.opacity(0.5) : StudioStyle.accent)
-                    .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(StudioStyle.accent.opacity(blocked ? 0.05 : 0.12)))
-                    .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .strokeBorder(StudioStyle.accent.opacity(blocked ? 0.15 : 0.35), lineWidth: 0.5))
+                    .foregroundStyle(blocked ? Color.secondary.opacity(0.5) : WorkspaceTokens.primaryText)
+                    .modifier(WorkspaceGlassDecoration(selected: true, radius: 6))
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(WorkspaceButtonStyle(chrome: false))
                 .disabled(blocked)
                 .help("按画面直方图自动给出曝光、对比、高光阴影、去朦胧、鲜艳度与白平衡")
 
@@ -191,6 +188,9 @@ struct GroupBox<Content: View>: View {
     @ObservedObject private var ui: WorkspaceInspectorState
     private var category: InspectorCategory { ui.category }
     @State private var confirmReset = false
+    @Namespace private var categoryGlass
+    @Environment(\.workspaceAccessibility) private var glassOptions
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private var transparent: Bool
 
     init(initialCategory: InspectorCategory = .light, transparent: Bool = false, ui: WorkspaceInspectorState? = nil) {
@@ -213,16 +213,21 @@ struct GroupBox<Content: View>: View {
             HStack(spacing: 0) {
                 ForEach(InspectorCategory.allCases, id: \.self) { tab in
                     Button { s.parameterEdits.finishCurrent(); ui.category = tab } label: {
-                        VStack(spacing: 5) {
-                            Image(systemName: tab.symbol).font(.system(size: 13))
-                            Text(tab.rawValue).font(.system(size: 10, weight: .medium))
-                        }.frame(maxWidth: .infinity).frame(height: 40)
-                        .foregroundStyle(category == tab ? StudioStyle.accent : Color.secondary)
-                        .background(category == tab ? StudioStyle.accent.opacity(0.08) : .clear)
-                        .overlay(alignment: .bottom) { if category == tab { Rectangle().fill(StudioStyle.accent).frame(height: 2) } }
-                    }.buttonStyle(.plain).help(tab.rawValue)
+                        VStack(spacing: 7) {
+                            Image(systemName: tab.symbol).font(.system(size: 13)).frame(height: 18)
+                            Text(tab.rawValue).font(.system(size: 10, weight: .medium)).lineLimit(1).frame(height: 13)
+                        }.frame(maxWidth: .infinity).frame(height: 52)
+                        .foregroundStyle(category == tab ? (transparent ? WorkspaceTokens.primaryText : StudioStyle.accent) : Color.secondary)
+                        .background {
+                            if category == tab {
+                                Color.clear.modifier(WorkspaceGlassDecoration(selected: true))
+                                    .matchedGeometryEffect(id: "inspectorCategory", in: categoryGlass)
+                            }
+                        }
+                    }.buttonStyle(WorkspaceButtonStyle(chrome:false)).help(tab.rawValue)
                 }
             }
+            .animation(reduceMotion || glassOptions.reduceMotion ? nil : .spring(response: 0.36, dampingFraction: 0.82), value: category)
             Divider()
         ScrollView {
             VStack(spacing: 0) {
@@ -342,10 +347,17 @@ struct GroupBox<Content: View>: View {
 
                 GroupBox(title: "变换与裁剪") {
                     HStack(spacing: 6) {
-                        Button("裁剪") { s.toggleCropMode() }.controlSize(.small)
+                        Button { s.toggleCropMode() } label: {
+                            Text("裁剪").font(.system(size:11)).frame(height:14)
+                        }.controlSize(.small)
                             .help("进入画布裁剪模式（R）：拖角/边裁剪、切画幅、自动校直")
+                        Button { s.autoStraighten() } label: {
+                            Text(s.autoLevelRunning ? "检测中…" : "自动水平").font(.system(size:11)).frame(height:14)
+                        }.controlSize(.small)
+                            .disabled(s.source == nil || s.autoLevelRunning)
+                            .help("本地检测地平线并校正倾斜，可撤销")
                         Spacer()
-                    }
+                    }.padding(.bottom,6)
                     HStack(spacing: 6) {
                         Button("↺") { s.set(\.rotation, (s.params.rotation + 270) % 360 == 0 ? 0 : ((s.params.rotation + 270) % 360)); s.endEdit() }
                         Button("↻") { s.set(\.rotation, (s.params.rotation + 90) % 360); s.endEdit() }
@@ -482,7 +494,7 @@ struct CurvePane: View {
 // MARK: - 曲线编辑器（正方形、控制点自由拖，像 Lightroom）
 struct CurveEditor: View {
     @Binding var points: [[Double]]
-    var color: Color = .accentColor
+    var color: Color = WorkspaceTokens.accent
     var onEnd: () -> Void
     @State private var dragIndex: Int?
     @EnvironmentObject private var s: AppState
@@ -899,7 +911,7 @@ struct MaskAddButton: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 5)
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(WorkspaceButtonStyle())
         .controlSize(.small)
         .help(kind.label)
     }
@@ -918,8 +930,8 @@ struct MaskPane: View {
         }
         switch m.kind {
         case .brush: return "已在画笔模式：直接在画布上按住拖动涂抹（一次拖动算一笔）；调「笔刷」改大小、「羽化」改边缘软硬"
-        case .linear: return "点「拖画线性」后在画布上拖出三线渐变；拖中心移动，拖端点改宽度，拖旋转柄改变方向"
-        case .radial: return "点「拖画径向」后拖出椭圆；拖中心移动，拖横/竖边缩放，拖旋转柄改变角度，羽化控制内外过渡"
+        case .linear: return "从「新建蒙版」选择线性渐变后，在画布上拖出三线渐变；拖中心移动，拖端点改宽度，拖旋转柄改变方向"
+        case .radial: return "从「新建蒙版」选择径向渐变后，在画布上拖出椭圆；拖中心移动，拖横/竖边缩放，拖旋转柄改变角度，羽化控制内外过渡"
         case .colorRange: return "在画布上按住拖动，取哪点算哪点的颜色；「容差」控制收进来的颜色范围"
         case .luminanceRange: return "在画布上按住拖动取样亮度；也可用下面的上下界滑块手动框定"
         case .subject: return "系统视觉模型算显著性主体（本地跑，不联网），第一次算要等一两秒，结果会缓存"
@@ -939,7 +951,7 @@ struct MaskPane: View {
                 .menuStyle(.borderlessButton).fixedSize()
                 Spacer()
                 Button { s.showMaskOverlay.toggle() } label: { Image(systemName:"square.3.layers.3d") }
-                    .buttonStyle(.borderless).help("显示或隐藏当前蒙版").disabled(s.selectedMask == nil)
+                    .buttonStyle(WorkspaceButtonStyle()).accessibilityLabel("显示或隐藏当前蒙版").help("显示或隐藏当前蒙版").disabled(s.selectedMask == nil)
             }.font(.system(size:11,weight:.medium))
             Label(maskHint, systemImage: "text.bubble")
                 .font(.system(size: 9.5))
@@ -953,7 +965,7 @@ struct MaskPane: View {
                     HStack(spacing: 5) {
                         Image(systemName: isSel ? "circle.inset.filled" : "circle")
                             .font(.system(size: 9))
-                            .foregroundStyle(isSel ? Color.accentColor : .secondary)
+                            .foregroundStyle(isSel ? WorkspaceTokens.accent : .secondary)
                             .onTapGesture {
                                 if isSel {
                                     s.selectedMask = nil
@@ -971,16 +983,16 @@ struct MaskPane: View {
                             .contextMenu { Button("重命名…") { renameID = m.id; renameText = m.name; renaming = true } }
                         Spacer()
                         Toggle("", isOn: Binding(get: { m.enabled }, set: { var x = m; x.enabled = $0; s.updateMask(x) }))
-                            .labelsHidden().controlSize(.mini)
+                            .labelsHidden().controlSize(.mini).accessibilityLabel("启用蒙版：" + maskName)
                         Button {
                             var x = m; x.inverted.toggle(); s.updateMask(x)
                         } label: {
                             Image(systemName: "circle.lefthalf.filled")
                                 .font(.system(size: 10))
                         }
-                        .buttonStyle(.borderless)
+                        .buttonStyle(WorkspaceButtonStyle())
                         .controlSize(.mini)
-                        .help(m.inverted ? "取消反转" : "反转蒙版")
+                        .help(m.inverted ? "取消反转" : "反转蒙版").accessibilityLabel(m.inverted ? "取消反转蒙版" : "反转蒙版")
                         Button {
                             s.duplicateMask(m.id)
                         } label: {
@@ -988,9 +1000,9 @@ struct MaskPane: View {
                                 .font(.system(size: 9, weight: .bold))
                                 .foregroundStyle(.secondary)
                         }
-                        .buttonStyle(.borderless)
+                        .buttonStyle(WorkspaceButtonStyle())
                         .controlSize(.mini)
-                        .help("复制蒙版")
+                        .help("复制蒙版").accessibilityLabel("复制蒙版")
                         Button {
                             s.removeMask(m.id)
                         } label: {
@@ -998,16 +1010,16 @@ struct MaskPane: View {
                                 .font(.system(size: 9, weight: .bold))
                                 .foregroundStyle(.secondary)
                         }
-                        .buttonStyle(.borderless)
+                        .buttonStyle(WorkspaceButtonStyle())
                         .controlSize(.mini)
-                        .help("删除蒙版")
+                        .help("删除蒙版").accessibilityLabel("删除蒙版")
                     }
                     if s.selectedMask == m.id {
                         HStack {
                             Button("重命名…") { renameID = m.id; renameText = m.name; renaming = true }
                             Spacer()
                             Button("复位调整") { var x = m; x.adjust = LocalAdjust(); s.updateMask(x) }
-                        }.font(.system(size:10)).buttonStyle(.borderless)
+                        }.font(.system(size:10)).buttonStyle(WorkspaceButtonStyle())
                         MaskEditingControls()
                         if m.kind.usesVision {
                             HStack(spacing: 6) {
@@ -1105,11 +1117,11 @@ struct MaskPane: View {
                 .padding(8)
                 .background(
                     RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(isSel ? Color.accentColor.opacity(0.09)
+                        .fill(isSel ? WorkspaceTokens.accent.opacity(0.09)
                                : Color(nsColor: .textBackgroundColor).opacity(0.6))
                 )
                 .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .stroke(isSel ? Color.accentColor.opacity(0.4)
+                    .stroke(isSel ? WorkspaceTokens.accent.opacity(0.4)
                             : Color(nsColor: .rfCardBorder), lineWidth: isSel ? 1 : 0.5))
             }
         }
@@ -1201,7 +1213,7 @@ struct WMPosGrid: View {
                     ForEach(row, id: \.self) { p in
                         Button { pos = p } label: {
                             RoundedRectangle(cornerRadius: 3)
-                                .fill(pos == p ? Color.accentColor : Color.secondary.opacity(0.22))
+                                .fill(pos == p ? WorkspaceTokens.accent : Color.secondary.opacity(0.22))
                                 .frame(width: 22, height: 14)
                         }
                         .buttonStyle(.plain)
@@ -1243,7 +1255,7 @@ struct ExportDirRow: View {
                 Image(systemName: "macwindow.on.rectangle")
             }
             .controlSize(.small)
-            .buttonStyle(.borderless)
+            .buttonStyle(WorkspaceButtonStyle())
             .help("在访达中显示")
         }
     }

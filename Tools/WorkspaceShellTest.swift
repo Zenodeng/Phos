@@ -122,6 +122,40 @@ struct WorkspaceShellTest {
             (v is NSVisualEffectView || v is NSGlassEffectView ? 1 : 0) + v.subviews.reduce(0) { $0 + effects($1) }
         }
         check(effects(slot) == 0, "solid carrier removes native effect objects without unmounting content")
+        func glassViews(_ view: NSView) -> Int {
+            (view is NSGlassEffectView ? 1 : 0) + view.subviews.reduce(0) { $0 + glassViews($1) }
+        }
+        let panelHosts = [root.contentHosts["browser"]!, root.contentHosts["inspector"]!]
+        let panelParents = panelHosts.map { $0.superview! }
+        model.session.mode = .immersive; root.refresh(); root.layoutSubtreeIfNeeded()
+        let nativeExpected = WorkspaceMaterialPolicy(mode: .native, accessibility: model.environment.accessibility,
+            disableNativeGlass: model.environment.disableNativeGlass).tools == .nativeGlass
+        check(panelParents.allSatisfy { glassViews($0) == (nativeExpected ? 1 : 0) },
+              "immersive sidebars use native glass carriers when transparency is available")
+        model.session.mode = .filmstrip; root.refresh(); root.layoutSubtreeIfNeeded()
+        check(panelParents.allSatisfy { glassViews($0) == (nativeExpected ? 1 : 0) }
+              && zip(panelHosts, panelParents).allSatisfy { $0.superview === $1 },
+              "filmstrip shares glass sidebars without replacing or reparenting their contents")
+        let panelField = NSTextField(string: "draft")
+        let floating = WorkspaceSurfaceSlot(content: panelField, tools: false)
+        floating.frame = CGRect(x: 500, y: 250, width: 200, height: 100); root.addSubview(floating)
+        floating.refresh(environment: native, floating: true); window.makeFirstResponder(panelField)
+        let panelEditor = window.firstResponder
+        floating.refresh(environment: solid, floating: true)
+        check(effects(floating) == 0 && panelField.superview === floating && window.firstResponder === panelEditor,
+              "floating sidebar transparency fallback keeps the active native field editor")
+        let feedback = WorkspaceToolButton("checkmark", "feedback-test", action: {})
+        feedback.frame = CGRect(x: 400, y: 100, width: 28, height: 28); root.addSubview(feedback)
+        let hitFrame = feedback.frame
+        feedback.animateFeedback(1.06)
+        check((feedback.layer?.animation(forKey: "glassFeedback") != nil) == !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+              && feedback.frame == hitFrame, "native glass button feedback preserves its exact hit frame")
+        feedback.motionReduced = true
+        check(feedback.layer?.animation(forKey: "glassFeedback") == nil,
+              "Reduce Motion immediately cancels native tool button feedback")
+        feedback.motionReduced = false; feedback.isEnabled = false; feedback.animateFeedback(1.06)
+        check(feedback.layer?.animation(forKey: "glassFeedback") == nil,
+              "disabled native action buttons never start interaction animations")
         let precision = -43.88451206140351
         check(!SliderRoundTripPolicy.isEdit(precision.nextDown, current: precision, range: -100...100)
               && SliderRoundTripPolicy.isEdit(precision + 0.0001, current: precision, range: -100...100),

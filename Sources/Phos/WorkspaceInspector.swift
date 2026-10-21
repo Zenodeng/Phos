@@ -23,13 +23,12 @@ struct WorkspaceInspector: View {
                 Button { state.parameterEdits.finishCurrent(); state.showPhotoAI = true } label: {
                     Label("AI 修图",systemImage:"sparkles").font(.system(size:11))
                 }.buttonStyle(WorkspaceButtonStyle()).disabled(state.source == nil).help("用本地模型调整照片")
-                Text("调整").font(.system(size:13,weight:.semibold))
                 Spacer()
                 Button { state.parameterEdits.invalidate(); confirmReset = true } label: {
                     Image(systemName:"arrow.counterclockwise").font(.system(size:12)).frame(width:18,height:18)
                 }.buttonStyle(WorkspaceButtonStyle()).disabled(state.source == nil).help("恢复所有默认参数").accessibilityLabel("恢复所有默认参数")
                 Button { state.parameterEdits.finishCurrent(); ui.showPresets.toggle() } label: {
-                    Label("预设",systemImage:"square.grid.2x2").font(.system(size:11))
+                    Label("预设",systemImage:"square.grid.2x2").font(.system(size:11)).frame(height:18)
                 }.buttonStyle(WorkspaceButtonStyle(selected:ui.showPresets)).help("浏览预设")
                     .popover(isPresented:$ui.showPresets,arrowEdge:.leading) {
                         WorkspacePresetBrowser().environmentObject(state)
@@ -146,9 +145,9 @@ struct WorkspacePresetBrowser: View {
             HStack { Text("预览不会改动照片").font(.caption).foregroundStyle(WorkspaceTokens.secondaryText); Spacer()
                 Button("取消",role:.cancel) { dismiss() }
                 Button("应用预设") { if let selected { s.commit(selected.params); dismiss() } }
-                    .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction).disabled(selected == nil || s.source == nil || s.syncRunning)
+                    .buttonStyle(WorkspaceButtonStyle(prominent:true)).keyboardShortcut(.defaultAction).disabled(selected == nil || s.source == nil || s.syncRunning)
             }
-        }.padding(16).frame(width:438).background(Color(nsColor:WorkspaceTokens.panel))
+        }.padding(16).frame(width:438).workspaceGlassPanel()
             .onAppear { load() }
             .onChange(of:s.current?.id) { _, _ in refreshPreview() }
     }
@@ -175,7 +174,7 @@ struct WorkspacePhotoInformation: View {
             Text(s.current?.url.path ?? "—").font(.system(size:11)).textSelection(.enabled).fixedSize(horizontal:false,vertical:true)
             Button("在访达中显示") { if let url = s.current?.url { NSWorkspace.shared.activateFileViewerSelecting([url]) } }.disabled(s.current == nil)
             if let error = s.workflowError { Label(error,systemImage:"exclamationmark.triangle").font(.caption).foregroundStyle(WorkspaceTokens.error).fixedSize(horizontal:false,vertical:true) }
-        }.padding(16).frame(width:330).background(Color(nsColor:WorkspaceTokens.panel))
+        }.padding(16).frame(width:330).workspaceGlassPanel()
             .task(id:s.current?.url) { metadata = WorkspacePhotoMetadata.read(s.current?.url) }
     }
     private func information(_ name:String,value:String) -> some View {

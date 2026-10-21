@@ -37,10 +37,10 @@ struct SyncSheet: View {
                     Task { await s.synchronize(params, to: urls, groups: selectedGroups) }
                     dismiss()
                 }
-                .keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction).buttonStyle(WorkspaceButtonStyle(prominent:true))
                 .disabled(targets.isEmpty || groups.isEmpty || s.source == nil || s.syncRunning)
             }
-        }.padding(20).frame(width: 420).background(Color(nsColor:WorkspaceTokens.panel))
+        }.padding(20).frame(width: 420).workspaceGlassPanel()
             .onAppear { groups = s.syncGroups }
     }
 }
@@ -79,10 +79,10 @@ struct SnapshotSheet: View {
             if let error { Text(error).font(.caption).foregroundStyle(WorkspaceTokens.error) }
             HStack {
                 Button("取消",role:.cancel) { dismiss() }.keyboardShortcut(.cancelAction); Spacer()
-                Button("保存") { if persist() { dismiss() } }.keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent)
+                Button("保存") { if persist() { dismiss() } }.keyboardShortcut(.defaultAction).buttonStyle(WorkspaceButtonStyle(prominent:true))
                     .disabled(drafts.contains { $0.name.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty })
             }
-        }.padding(20).frame(width:450).background(Color(nsColor:WorkspaceTokens.panel))
+        }.padding(20).frame(width:450).workspaceGlassPanel()
             .onAppear { drafts = s.snapshots; photoID = s.current?.id }
     }
     private func add() {
@@ -124,7 +124,7 @@ struct MaskEditingControls: View {
                 Spacer()
                 Picker("蒙版工具", selection: $s.maskTool) {
                     ForEach(MaskTool.allCases, id: \.self) { tool in
-                        Image(systemName: tool.symbol).tag(tool).help(tool.label)
+                        Image(systemName: tool.symbol).tag(tool).help(tool.label).accessibilityLabel(tool.label)
                     }
                 }.labelsHidden().pickerStyle(.segmented).frame(width: 112)
             }

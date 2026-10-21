@@ -105,9 +105,9 @@ private struct WorkspaceOutputSheet: View {
                 Button("取消",role:.cancel) { dismiss() }.keyboardShortcut(.cancelAction)
                 Spacer()
                 Button(batch ? "导出 \(targetCount) 张" : "导出…") { confirm() }
-                    .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction).disabled(disabled)
+                    .buttonStyle(WorkspaceButtonStyle(prominent:true)).keyboardShortcut(.defaultAction).disabled(disabled)
             }
-        }.padding(20).frame(width:440).background(Color(nsColor:WorkspaceTokens.panel))
+        }.padding(20).frame(width:440).workspaceGlassPanel()
             .onAppear { settings = s.exportSettings; edge = String(settings.maxLongEdge); capturedPhoto = s.current?.id }
             .onChange(of:cutout) { _, on in if on && !["png","tiff"].contains(settings.format) { settings.format = "png" } }
     }

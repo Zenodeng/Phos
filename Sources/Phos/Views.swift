@@ -157,6 +157,8 @@ struct SliderRow: View {
 }
 
 // MARK: - 主窗口
+#if PHOS_TESTING || PHOS_BASELINE || PHOS_APPEARANCE_TEST || DEBUG
+// Retained only for historical baselines and developer previews.
 struct MainWindow: View {
     @EnvironmentObject var s: AppState
     var body: some View {
@@ -191,6 +193,8 @@ struct MainWindow: View {
         } message: { Text(s.workflowError ?? "") }
     }
 }
+
+#endif
 
 // MARK: - 顶栏
 struct TopBar: View {
@@ -369,6 +373,7 @@ struct BrowserPane: View {
 }
 
 struct ThumbCell: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let item: PhotoItem
     let selected: Bool
     @State private var hover = false
@@ -413,7 +418,7 @@ struct ThumbCell: View {
                     lineWidth: selected ? 2.5 : 0.5))
         .shadow(color: selected ? Color.accentColor.opacity(0.35) : .clear,
                 radius: 5, x: 0, y: 2)
-        .animation(.easeOut(duration: 0.12), value: hover)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hover)
         .onHover { hover = $0 }
     }
 }
@@ -521,7 +526,7 @@ struct CanvasPane: View {
             }
             .frame(width: geo.size.width, height: geo.size.height)
             .contentShape(Rectangle())
-            .gesture(canvasGesture(frame: rect), including: .all)
+            .gesture(canvasGesture(frame: rect), including: s.cropMode ? .subviews : .all)
             .overlay {
                 WorkspaceCanvasInput(state:s,safeRect:shell.safeCanvas) { factor,anchor in
                     guard let displayed, !s.cropMode else { return }
@@ -959,9 +964,9 @@ struct CropBar: View {
                 BarButton(title: "⇋", help: "水平翻转") {
                     s.set(\.flipped, !s.params.flipped); s.endEdit()
                 }
-                BarButton(title: "自动校直", help: "Vision 检测地平线并自动裁切") {
+                BarButton(title: s.autoLevelRunning ? "检测中…" : "自动水平", help: "本地检测地平线，校正倾斜并裁去旋转空边；完成前可取消") {
                     s.autoStraighten()
-                }
+                }.disabled(s.autoLevelRunning)
                 Rectangle()
                     .fill(.white.opacity(0.2))
                     .frame(width: 1, height: 14)
@@ -1012,11 +1017,28 @@ struct BarButton: View {
     }
 }
 
+/// Screen-point hit regions remain usable at every photo zoom level.
+enum CropHitTesting {
+    static func role(at p: CGPoint, in r: CGRect) -> String? {
+        guard r.insetBy(dx: -16, dy: -16).contains(p) else { return nil }
+        let left = abs(p.x-r.minX), right = abs(p.x-r.maxX)
+        let top = abs(p.y-r.minY), bottom = abs(p.y-r.maxY)
+        if min(left,right) <= 22 && min(top,bottom) <= 22 {
+            return (top <= bottom ? "t" : "b") + (left <= right ? "l" : "r")
+        }
+        let edges = [("l",left),("r",right),("t",top),("b",bottom)]
+        if let edge = edges.min(by: { $0.1 < $1.1 }), edge.1 <= 16 { return edge.0 }
+        return r.contains(p) ? "move" : nil
+    }
+}
+
 /// 裁剪框叠加：暗化外部 + 三分线 + 八向手柄 + 框内拖动
 struct CropOverlay: View {
     @EnvironmentObject var s: AppState
     let frame: CGRect          // 预览图在画布上的显示矩形
     @State private var moveOrigin: [Double]?
+    @State private var activeHandle: String?
+    @State private var handleOrigin = CGPoint.zero
 
     // 归一化裁剪参数 → 叠加层本地坐标（原点 = 显示图左上）
     private var rect: CGRect {
@@ -1053,24 +1075,37 @@ struct CropOverlay: View {
             .allowsHitTesting(false)
 
             ForEach(handles(in: r), id: \.0) { h in
-                Circle()
-                    .fill(Color.white)
-                    .frame(width: 12, height: 12)
-                    .position(h.1)
-                    .gesture(DragGesture(minimumDistance: 1, coordinateSpace: .named("cropSpace"))
-                        .onChanged { v in drag(h.0, to: v.location) }
-                        .onEnded { _ in s.endEdit() })
+                Circle().fill(Color.white).frame(width: 12, height: 12)
+                    .position(h.1).allowsHitTesting(false)
             }
 
-            Color.clear
-                .contentShape(Rectangle())
-                .frame(width: max(r.width - 24, 10), height: max(r.height - 24, 10))
-                .position(x: r.midX, y: r.midY)
-                .gesture(DragGesture(minimumDistance: 1, coordinateSpace: .named("cropSpace"))
-                    .onChanged { v in move(by: v.translation) }
-                    .onEnded { _ in moveOrigin = nil; s.endEdit() })
         }
         .frame(width: frame.width, height: frame.height)
+        .overlay {
+            Color.clear
+                .frame(width: frame.width + 32, height: frame.height + 32)
+                .contentShape(Rectangle())
+                .gesture(DragGesture(minimumDistance: 0, coordinateSpace: .local)
+                    .onChanged { v in
+                        if activeHandle == nil {
+                            // This overlay extends 16 points past each image edge.
+                            // Use its own local coordinates, independent of canvas offsets.
+                            let start = CGPoint(x:v.startLocation.x - 16,y:v.startLocation.y - 16)
+                            activeHandle = CropHitTesting.role(at: start, in: r) ?? "outside"
+                            handleOrigin = handles(in: r).first { $0.0 == activeHandle }?.1 ?? .zero
+                        }
+                        if activeHandle == "move" { move(by: v.translation) }
+                        else if let role = activeHandle, role != "outside" {
+                            drag(role, to: CGPoint(x: handleOrigin.x + v.translation.width,
+                                                  y: handleOrigin.y + v.translation.height))
+                        }
+                    }
+                    .onEnded { _ in
+                        if activeHandle != nil && activeHandle != "outside" { s.endEdit() }
+                        activeHandle = nil; moveOrigin = nil
+                    })
+        }
+
         .offset(x: frame.minX, y: frame.minY)
         .coordinateSpace(name: "cropSpace")
     }
@@ -1186,7 +1221,7 @@ struct MergeSheet: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(width: 30, height: 30)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.accentColor))
+                    .background(RoundedRectangle(cornerRadius: 8).fill(WorkspaceTokens.accent))
                 Text("多重曝光合成")
                     .font(.system(size: 15, weight: .bold))
             }
@@ -1313,13 +1348,13 @@ struct MergeSheet: View {
                 } label: {
                     Label("开始合成", systemImage: "play.fill")
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(WorkspaceButtonStyle(prominent:true))
                 .keyboardShortcut(.defaultAction)
                 .disabled(list.count < 2 || s.mergeRunning)
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .padding(20).frame(width: 470).background(Color(nsColor:WorkspaceTokens.panel))
+        .padding(20).frame(width: 470).workspaceGlassPanel()
         .onAppear {
             mergeMode = s.mergeMode; alignEnabled = s.alignEnabled; alignMethod = s.alignMethod
             // 默认带上之前已标记的照片
@@ -1377,7 +1412,7 @@ struct MergeRow: View {
                     : (checked ? "checkmark.circle.fill" : "circle"))
                     .font(.system(size: 14))
                     .foregroundStyle(removable ? AnyShapeStyle(Color.secondary)
-                        : (checked ? AnyShapeStyle(Color.accentColor)
+                        : (checked ? AnyShapeStyle(WorkspaceTokens.accent)
                            : AnyShapeStyle(HierarchicalShapeStyle.tertiary)))
             }
             .padding(.horizontal, 6).padding(.vertical, 3)
@@ -1385,7 +1420,7 @@ struct MergeRow: View {
             .background(
                 RoundedRectangle(cornerRadius: 5)
                     .fill(checked && !removable
-                          ? Color.accentColor.opacity(0.08) : .clear))
+                          ? WorkspaceTokens.accent.opacity(0.08) : .clear))
         }
         .buttonStyle(.plain)
     }

@@ -10,6 +10,8 @@ enum StudioStyle {
     static let line = Color.primary.opacity(0.10)
 }
 
+#if PHOS_TESTING || PHOS_BASELINE || PHOS_APPEARANCE_TEST || DEBUG
+// The shipping editor has one root: WorkspaceWindow.
 struct StudioMainWindow: View {
     @EnvironmentObject var s: AppState
     @AppStorage("rf.appearance") private var appearance = "system"
@@ -51,6 +53,8 @@ struct StudioMainWindow: View {
         } message: { Text(s.workflowError ?? "") }
     }
 }
+
+#endif
 
 struct StudioToolbar: View {
     @EnvironmentObject var s: AppState

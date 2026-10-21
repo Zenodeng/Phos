@@ -16,6 +16,25 @@ struct WorkspaceR3Test {
             guard value() else { FileHandle.standardError.write(Data("FAIL R3: \(name)\n".utf8)); exit(1) }
             checks += 1; print("PASS R3: \(name)"); fflush(stdout)
         }
+        for (w,h) in [(6000.0,4000.0),(4000.0,6000.0)] {
+            for angle in [0.0,1.25,15.0] {
+                let rad = angle * Double.pi / 180
+                let cw = w*cos(rad)+h*sin(rad), ch = w*sin(rad)+h*cos(rad)
+                let c = Engine.inscribedCrop(canvasW:cw,canvasH:ch,angleDeg:angle)
+                let rw = c.w*cw, rh = c.h*ch
+                check(c.x >= 0 && c.y >= 0 && c.w > 0 && c.h > 0 && c.w <= 1 && c.h <= 1 &&
+                      rw*cos(rad)+rh*sin(rad) <= w+0.001 && rw*sin(rad)+rh*cos(rad) <= h+0.001 &&
+                      (angle != 1.25 || c.w*c.h > 0.9),"auto-level crop stays inside rotated image without excessive trimming: \(w) / \(angle)")
+            }
+        }
+        let cropRect = CGRect(x:100,y:80,width:400,height:300)
+        for (point,role) in [(CGPoint(x:110,y:180),"l"),(CGPoint(x:490,y:180),"r"),
+                             (CGPoint(x:240,y:90),"t"),(CGPoint(x:240,y:370),"b"),
+                             (CGPoint(x:92,y:72),"tl"),(CGPoint(x:508,y:388),"br"),
+                             (CGPoint(x:300,y:200),"move")] {
+            check(CropHitTesting.role(at:point,in:cropRect) == role,"crop full-edge / corner / interior hit: " + role)
+        }
+        check(CropHitTesting.role(at:CGPoint(x:70,y:200),in:cropRect) == nil,"outside crop hot zone does not move frame")
         let all = ParameterDescriptor.all, defaults = EditParams()
         check(all.count == 45 && Set(all.map(\.id)).count == all.count,"45 unique global parameter descriptors")
         check(all.allSatisfy { $0.defaultValue == defaults[keyPath:$0.keyPath] && $0.range.contains($0.defaultValue) && !$0.isModified(defaults) },"every default comes from the real model and fits its range")

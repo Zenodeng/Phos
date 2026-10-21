@@ -6,6 +6,11 @@ import ImageIO
 @main
 #endif
 struct WorkspaceR2Test {
+    @MainActor private final class ModeActions: NSObject {
+        var count = 0
+        @objc func changed(_ sender: Any?) { count += 1 }
+    }
+
     @MainActor static func main() async throws {
         try await WorkspaceShellTest.main()
         let shellReport = try JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[1]))) as! [String: Any]
@@ -134,10 +139,12 @@ struct WorkspaceR2Test {
         check(panel.canChooseDirectories && !panel.canChooseFiles && !panel.allowsMultipleSelection
               && panel.allowedContentTypes.map(\.identifier) == ["public.folder"] && panel.directoryURL == fixtures,
               "folder panel has an explicit folder type, single directory selection and current-folder context")
+        let beforeMountRenders = s.workMetrics.snapshot["render"]
         let root = WorkspaceRootView(model: model)
         let window = NSWindow(contentRect: CGRect(x: 50, y: 50, width: 1440, height: 900), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
         window.contentView = root; root.layoutSubtreeIfNeeded()
         try await Task.sleep(nanoseconds: 200_000_000)
+        check(s.workMetrics.snapshot["render"] == beforeMountRenders, "mounting an active workspace does not request a redundant render")
         session.mode = .filmstrip; root.refresh(); root.layoutSubtreeIfNeeded()
         try await wait { s.items.allSatisfy { $0.thumb != nil } }
         check(s.items.allSatisfy { $0.thumb != nil }, "expanding the filmstrip requests its newly visible thumbnails after native layout")
@@ -153,6 +160,9 @@ struct WorkspaceR2Test {
         let switchCountersAfter = s.workMetrics.snapshot
         check(root.contentHosts.mapValues(ObjectIdentifier.init) == hosts && hosts.count == 4,
               "20 A/B switches preserve the same four hosts and a single canvas presenter")
+        if ObjectIdentifier(s.preview!) != previewID {
+            print("R5 diagnostic: image changed, previewing=\(s.previewing), countersBefore=\(counters), countersAfter=\(switchCountersAfter), paramsSame=\(s.params == params), historySame=\(s.history.stack == history)")
+        }
         check(s.params == params && s.history.stack == history && s.history.index == historyIndex
               && s.selectedMask == selectedMask && s.current?.url == current && ObjectIdentifier(s.preview!) == previewID,
               "20 A/B switches preserve current photo, precise parameters, history, mask and published image identity")
@@ -195,6 +205,58 @@ struct WorkspaceR2Test {
         let unchanged = s.currentIndex
         check(!selection.handleKey(event, firstResponder: NSTextView()) && s.currentIndex == unchanged,
               "text input focus consumes navigation keys without selecting another photo")
+        let modeActions = ModeActions()
+        let modeControl = WorkspaceModeSwitch(labels: ["A 沉浸", "B 选片"], target: modeActions, action: #selector(ModeActions.changed(_:)))
+        modeControl.frame = CGRect(x: 0, y: 0, width: 156, height: 28)
+        window.contentView?.addSubview(modeControl); modeControl.layoutSubtreeIfNeeded()
+        let segments = modeControl.subviews.compactMap { $0 as? WorkspaceModeSegmentButton }
+        check(modeControl.accessibilityRole() == .radioGroup && segments.count == 2
+              && segments.allSatisfy { $0.accessibilityRole() == .radioButton },
+              "custom A/B control retains a radio group and two named radio buttons")
+        check(segments.map { $0.accessibilityLabel() ?? "" } == ["A 沉浸", "B 选片"]
+              && segments[0].state == .on && segments[1].state == .off,
+              "layout radio labels and mutually exclusive values survive custom rendering")
+        segments[0].performClick(nil)
+        check(modeActions.count == 0 && segments[0].state == .on,
+              "pressing the selected layout preserves its radio value without redundant actions")
+        check(window.makeFirstResponder(segments[0]) && segments[0].acceptsFirstResponder && !segments[1].acceptsFirstResponder,
+              "keyboard traversal enters the selected radio instead of adding two tab stops")
+        check(!selection.handleKey(event, firstResponder: segments[0]) && s.currentIndex == unchanged,
+              "a layout radio owns its arrows without navigating or editing the current photo")
+        segments[0].keyDown(with: event)
+        check(modeControl.selectedSegment == 1 && modeActions.count == 1 && window.firstResponder === segments[1]
+              && segments[0].state == .off && segments[1].state == .on,
+              "arrow navigation changes layout once and transfers keyboard focus with the selected radio")
+        segments[1].keyDown(with: event)
+        check(modeControl.selectedSegment == 1 && modeActions.count == 1,
+              "arrow navigation at the final radio is bounded and emits no duplicate action")
+        modeControl.selectedSegment = 0
+        check(window.firstResponder === segments[0] && segments[0].state == .on && segments[1].state == .off,
+              "external layout changes keep focus and radio values on the active segment")
+        let lastRadio = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: window.windowNumber, context: nil, characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: 119)!
+        segments[0].keyDown(with: lastRadio)
+        check(modeControl.selectedSegment == 1 && window.firstResponder === segments[1],
+              "End selects the final radio even when the control contains a glass decoration")
+        let highlight = modeControl.subviews.first { !($0 is NSButton) }!
+        check(highlight.layer?.animation(forKey: "layoutTravel") != nil
+              && highlight.layer?.animation(forKey: "layoutSwellx") != nil,
+              "layout selection schedules a moving glass capsule with elastic expansion")
+        let sameAnimation = highlight.layer?.animation(forKey: "layoutTravel")?.beginTime
+        modeControl.selectedSegment = 1; modeControl.layoutSubtreeIfNeeded()
+        check(highlight.layer?.animation(forKey: "layoutTravel")?.beginTime == sameAnimation,
+              "unrelated layout refreshes do not restart or cancel the active transition")
+        modeControl.refreshSurface(options: WorkspaceAccessibilityOptions(reduceMotion: true), disableNativeGlass: false)
+        modeControl.selectedSegment = 0
+        check(highlight.layer?.animationKeys()?.isEmpty != false && highlight.frame.minX == 2,
+              "Reduce Motion cancels travel and expansion and immediately selects the correct capsule")
+        modeControl.refreshSurface(options: WorkspaceAccessibilityOptions(reduceTransparency: true), disableNativeGlass: false)
+        func glassViews(_ view: NSView) -> Int {
+            (view is NSGlassEffectView ? 1 : 0) + view.subviews.reduce(0) { $0 + glassViews($1) }
+        }
+        check(glassViews(modeControl) == 0 && segments[0].state == .on && segments[1].state == .off,
+              "Reduce Transparency removes glass without changing radio selection or controls")
+        modeControl.removeFromSuperview(); window.makeFirstResponder(nil)
         s.pendingPhotoEditID = UUID()
         check(!selection.handleKey(event, firstResponder: NSResponder()) && s.currentIndex == unchanged,
               "a numeric draft awaiting native focus also blocks navigation and rating shortcuts")

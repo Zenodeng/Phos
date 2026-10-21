@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import Combine
+import QuartzCore
 
 struct WorkspaceHost: NSViewRepresentable {
     let model: WorkspaceWindowModel
@@ -20,6 +21,8 @@ private struct WorkspaceHostedContent<Content: View>: View {
     var body: some View {
         content.environmentObject(state).tint(WorkspaceTokens.accent)
             .environment(\.workspaceAccessibility, environment.accessibility)
+            .environment(\.workspaceNativeGlassDisabled, environment.disableNativeGlass)
+            .buttonStyle(WorkspaceButtonStyle())
             .disabled(blocksDuringSync && state.syncRunning)
     }
 }
@@ -41,16 +44,18 @@ final class WorkspaceSurfaceSlot: NSView {
         addSubview(content)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
-    func refresh(environment: WorkspaceEnvironment) {
+    func refresh(environment: WorkspaceEnvironment, floating: Bool = false) {
         let options = environment.accessibility
-        let next = "\(options.reduceTransparency)-\(options.increaseContrast)-\(environment.disableNativeGlass)"
+        let next = "\(options.reduceTransparency)-\(options.increaseContrast)-\(environment.disableNativeGlass)-\(floating)"
         guard next != signature else { return }
         signature = next
         carrier?.removeFromSuperview()
         let empty = NSView()
-        let surface = tools
+        let surface = (tools || floating)
             ? WorkspaceGlassSurface.make(content: empty, radius: 13, mode: .native, accessibility: options,
-                                         disableNativeGlass: environment.disableNativeGlass)
+                                         disableNativeGlass: environment.disableNativeGlass,
+                                         tint: floating ? .rfDynamic(light: NSColor(white: 1, alpha: 0.26),
+                                                                    dark: NSColor(white: 0.04, alpha: 0.28)) : nil)
             : WorkspacePanelSurface.make(content: empty, mode: .native, radius: 13, accessibility: options)
         addSubview(surface, positioned: .below, relativeTo: content)
         carrier = surface
@@ -79,7 +84,7 @@ final class WorkspaceSurfaceSlot: NSView {
 }
 
 @MainActor
-private final class WorkspaceToolButton: NSButton {
+final class WorkspaceToolButton: NSButton {
     var perform: () -> Void = {}
     private var hovered = false
     private var tracking: NSTrackingArea?
@@ -100,19 +105,36 @@ private final class WorkspaceToolButton: NSButton {
         let area = NSTrackingArea(rect:bounds,options:[.mouseEnteredAndExited,.activeInKeyWindow,.inVisibleRect],owner:self,userInfo:nil)
         addTrackingArea(area); tracking = area
     }
-    override func mouseEntered(with event:NSEvent) { hovered = true; needsDisplay = true }
-    override func mouseExited(with event:NSEvent) { hovered = false; needsDisplay = true }
+    override func mouseEntered(with event:NSEvent) { hovered = true; animateFeedback(1.06); needsDisplay = true }
+    override func mouseExited(with event:NSEvent) { hovered = false; animateFeedback(1); needsDisplay = true }
+    var motionReduced = false { didSet { if motionReduced { layer?.removeAnimation(forKey: "glassFeedback") } } }
+    func animateFeedback(_ target: CGFloat) {
+        guard isEnabled, !motionReduced, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
+        wantsLayer = true
+        let animation = CAKeyframeAnimation(keyPath: "transform.scale")
+        animation.values = [layer?.presentation()?.transform.m11 ?? 1, target, 1]
+        animation.keyTimes = [0, 0.4, 1]
+        animation.timingFunctions = [CAMediaTimingFunction(name: .easeInEaseOut), CAMediaTimingFunction(name: .easeInEaseOut)]
+        animation.duration = 0.32
+        // The model transform stays neutral; feedback never changes hit rectangles or layout.
+        layer?.add(animation, forKey: "glassFeedback")
+    }
+    override func mouseDown(with event: NSEvent) {
+        animateFeedback(0.94)
+        super.mouseDown(with: event)
+        animateFeedback(hovered ? 1.04 : 1)
+    }
     override func draw(_ dirtyRect:NSRect) {
         if isEnabled && (hovered || state == .on || cell?.isHighlighted == true) {
             let opacity = cell?.isHighlighted == true ? 0.17 : state == .on ? 0.11 : 0.06
-            (state == .on ? NSColor.controlAccentColor : NSColor.labelColor).withAlphaComponent(opacity).setFill()
+            (state == .on ? NSColor.rfGold : NSColor.labelColor).withAlphaComponent(opacity).setFill()
             NSBezierPath(roundedRect:bounds.insetBy(dx:1,dy:1),xRadius:6,yRadius:6).fill()
         }
         super.draw(dirtyRect)
     }
     @objc private func invoke() { perform() }
     func select(_ selected: Bool) {
-        contentTintColor = selected ? .controlAccentColor : .labelColor
+        contentTintColor = selected ? .rfGold : .labelColor
         state = selected ? .on : .off
         needsDisplay = true
         setAccessibilityValue(selected ? "已选中" : "未选中")
@@ -137,9 +159,257 @@ private final class WorkspaceTitleLabel: NSTextField {
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }
 
+/// Keep radio navigation inside the focused layout control, rather than changing photos.
 @MainActor
-private final class WorkspaceModeSwitch: NSSegmentedControl {
+final class WorkspaceModeSegmentButton: NSButton {
+    weak var modeSwitch: WorkspaceModeSwitch?
+    override var acceptsFirstResponder: Bool { state == .on }
+    override func becomeFirstResponder() -> Bool {
+        let accepted = super.becomeFirstResponder()
+        modeSwitch?.needsDisplay = true
+        return accepted
+    }
+    override func resignFirstResponder() -> Bool {
+        let accepted = super.resignFirstResponder()
+        modeSwitch?.needsDisplay = true
+        return accepted
+    }
+    override func keyDown(with event: NSEvent) {
+        guard event.modifierFlags.intersection([.command, .control, .option]).isEmpty else {
+            super.keyDown(with: event); return
+        }
+        switch event.keyCode {
+        case 123, 126: modeSwitch?.choose(tag - 1, focus: true)
+        case 124, 125: modeSwitch?.choose(tag + 1, focus: true)
+        case 115: modeSwitch?.choose(0, focus: true)
+        case 119: modeSwitch?.choose((modeSwitch?.numberOfSegments ?? 1) - 1, focus: true)
+        default: super.keyDown(with: event)
+        }
+    }
+}
+
+@MainActor
+private final class WorkspaceModeHighlight: NSView {
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+}
+
+/// A/B 布局切换器。原生玻璃选中胶囊与轻微弹性过渡。
+/// 底色用 `NSColor.rfPill`（深浅模式各一套石墨灰），金色只表达「选中」。
+/// 每个分段是一个 NSButton，无障碍角色显式设为 radioButton，
+/// 与替换前 NSSegmentedControl 暴露的 radio button 保持一致。
+@MainActor
+final class WorkspaceModeSwitch: NSView {
+    private let buttons: [WorkspaceModeSegmentButton]
+    private var tips: [String?]
+    private var tracking: NSTrackingArea?
+    private var hovered: Int?
+    private weak var externalTarget: AnyObject?
+    private var externalAction: Selector?
+    private let highlight = WorkspaceModeHighlight()
+    private var glass: NSView?
+    private let focusOutline = CAShapeLayer()
+    private var accessibility = WorkspaceAccessibilityOptions.current
+    private var surfaceSignature = ""
+    private var nativeGlassDisabled = false
+    var numberOfSegments: Int { buttons.count }
+
+    var selectedSegment: Int = 0 {
+        didSet {
+            selectedSegment = min(max(0, selectedSegment), max(0, buttons.count - 1))
+            let hadFocus = buttons.contains { window?.firstResponder === $0 }
+            syncSelection()
+            if oldValue != selectedSegment { positionHighlight(animated: true) }
+            if hadFocus, !buttons.isEmpty { window?.makeFirstResponder(buttons[selectedSegment]) }
+        }
+    }
     override var acceptsFirstResponder: Bool { false }
+
+    /// 对外保持与 NSSegmentedControl 相同的 target/action 用法。
+    weak var target: AnyObject? {
+        get { externalTarget }
+        set { externalTarget = newValue }
+    }
+    var action: Selector? {
+        get { externalAction }
+        set { externalAction = newValue }
+    }
+
+    init(labels: [String], target: AnyObject?, action: Selector?) {
+        buttons = labels.enumerated().map { index, label in
+            let button = WorkspaceModeSegmentButton(title: label, target: nil, action: nil)
+            button.setButtonType(.toggle)
+            button.isBordered = false
+            button.focusRingType = .none
+            button.font = .systemFont(ofSize: 11.5, weight: .medium)
+            button.tag = index
+            button.setAccessibilityRole(.radioButton)
+            button.setAccessibilityLabel(label)
+            return button
+        }
+        tips = Array(repeating: nil, count: labels.count)
+        super.init(frame: .zero)
+        externalTarget = target
+        externalAction = action
+        for button in buttons {
+            button.modeSwitch = self
+            button.target = self
+            button.action = #selector(segmentClicked(_:))
+        }
+        setAccessibilityRole(.radioGroup)
+        setAccessibilityLabel("工作区布局")
+        highlight.wantsLayer = true
+        highlight.layer?.masksToBounds = false
+        focusOutline.fillColor = nil; focusOutline.lineWidth = 1.5; focusOutline.zPosition = 10
+        highlight.layer?.addSublayer(focusOutline)
+        addSubview(highlight)
+        buttons.forEach(addSubview)
+        refreshSurface(options: accessibility, disableNativeGlass: false)
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(displayOptionsChanged),
+            name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil)
+        syncSelection()
+    }
+    deinit { NSWorkspace.shared.notificationCenter.removeObserver(self) }
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+    @objc private func displayOptionsChanged() { refreshSurface(options: .current, disableNativeGlass: nativeGlassDisabled) }
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance(); syncSelection(); styleHighlight()
+    }
+
+    func setToolTip(_ tip: String?, forSegment index: Int) {
+        guard tips.indices.contains(index) else { return }
+        tips[index] = tip
+        buttons[index].toolTip = tip
+    }
+
+    @objc private func segmentClicked(_ sender: NSButton) {
+        choose(sender.tag)
+    }
+
+    fileprivate func choose(_ index: Int, focus: Bool = false) {
+        guard buttons.indices.contains(index) else { return }
+        let changed = selectedSegment != index
+        selectedSegment = index  // Also restore .on after pressing the active toggle again.
+        if focus { window?.makeFirstResponder(buttons[index]) }
+        if changed, let externalAction { NSApp.sendAction(externalAction, to: externalTarget, from: self) }
+    }
+
+    private func syncSelection() {
+        for (index, button) in buttons.enumerated() {
+            let on = index == selectedSegment
+            button.state = on ? .on : .off
+            // Gold carries selection; semantic text retains contrast on light surfaces.
+            button.contentTintColor = on ? .labelColor : .secondaryLabelColor
+            button.setAccessibilityValue(on ? 1 : 0)
+        }
+        needsDisplay = true
+    }
+
+    override func layout() {
+        super.layout()
+        guard !buttons.isEmpty else { return }
+        let width = bounds.width / CGFloat(buttons.count)
+        for (index, button) in buttons.enumerated() {
+            button.frame = CGRect(x: width * CGFloat(index), y: 0, width: width, height: bounds.height)
+        }
+        positionHighlight(animated: false)
+    }
+
+    func refreshSurface(options: WorkspaceAccessibilityOptions, disableNativeGlass: Bool) {
+        let signature = "\(options.reduceTransparency)-\(options.increaseContrast)-\(disableNativeGlass)"
+        accessibility = options
+        nativeGlassDisabled = disableNativeGlass
+        if surfaceSignature != signature {
+            surfaceSignature = signature
+            glass?.removeFromSuperview()
+            let tint = NSView(); tint.wantsLayer = true
+            tint.layer?.backgroundColor = NSColor.rfGold.withAlphaComponent(0.10).cgColor
+            let surface = WorkspaceGlassSurface.make(content: tint, radius: 12, mode: .native,
+                accessibility: options, disableNativeGlass: disableNativeGlass, tint: .rfGold.withAlphaComponent(0.18))
+            highlight.addSubview(surface); surface.frame = highlight.bounds
+            surface.autoresizingMask = [.width, .height]; glass = surface
+        }
+        if options.reduceMotion { highlight.layer?.removeAllAnimations() }
+        styleHighlight(); needsDisplay = true
+    }
+
+    private func styleHighlight() {
+        guard let layer = highlight.layer else { return }
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            CATransaction.begin(); CATransaction.setDisableActions(true)
+            layer.cornerRadius = max(0, (bounds.height - 4) / 2)
+            layer.borderWidth = accessibility.increaseContrast ? 1.5 : 0.5
+            layer.borderColor = (accessibility.increaseContrast ? NSColor.labelColor : NSColor.rfGold.withAlphaComponent(0.55)).cgColor
+            focusOutline.strokeColor = NSColor.labelColor.cgColor
+            focusOutline.path = CGPath(roundedRect: highlight.bounds.insetBy(dx: 2, dy: 2), cornerWidth: 10, cornerHeight: 10, transform: nil)
+            focusOutline.isHidden = !(window?.isKeyWindow == true && buttons.contains { window?.firstResponder === $0 })
+            CATransaction.commit()
+        }
+    }
+
+    private func positionHighlight(animated: Bool) {
+        guard !buttons.isEmpty, bounds.width > 0, bounds.height > 4, let layer = highlight.layer else { return }
+        let width = bounds.width / CGFloat(buttons.count)
+        let target = CGRect(x: width * CGFloat(selectedSegment), y: 0, width: width, height: bounds.height).insetBy(dx: 2, dy: 2)
+        guard highlight.frame != target else { return } // Repeated refresh/layout must not restart the animation.
+        let initialized = !highlight.frame.isEmpty
+        let position = layer.presentation()?.position ?? layer.position
+        let scaleX = layer.presentation()?.transform.m11 ?? 1
+        let scaleY = layer.presentation()?.transform.m22 ?? 1
+        layer.removeAllAnimations()
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        highlight.frame = target; glass?.frame = highlight.bounds
+        CATransaction.commit()
+        styleHighlight()
+        guard animated, initialized, window != nil, !accessibility.reduceMotion else { return }
+        let travel = CASpringAnimation(keyPath: "position")
+        travel.fromValue = NSValue(point: position); travel.toValue = NSValue(point: layer.position)
+        travel.mass = 1; travel.stiffness = 420; travel.damping = 32; travel.duration = 0.42
+        layer.add(travel, forKey: "layoutTravel")
+        for (axis, start, peak) in [("x", scaleX, CGFloat(1.12)), ("y", scaleY, CGFloat(1.08))] {
+            let swell = CAKeyframeAnimation(keyPath: "transform.scale." + axis)
+            swell.values = [start, peak, 1.025, 1]; swell.keyTimes = [0, 0.35, 0.72, 1]
+            swell.duration = 0.42; swell.timingFunctions = Array(repeating: CAMediaTimingFunction(name: .easeInEaseOut), count: 3)
+            layer.add(swell, forKey: "layoutSwell" + axis)
+        }
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let tracking { removeTrackingArea(tracking) }
+        let area = NSTrackingArea(rect: bounds,
+                                  options: [.mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect, .mouseMoved],
+                                  owner: self, userInfo: nil)
+        addTrackingArea(area); tracking = area
+    }
+
+    private func segment(at point: NSPoint) -> Int? {
+        guard !buttons.isEmpty, bounds.width > 0 else { return nil }
+        let index = Int(point.x / (bounds.width / CGFloat(buttons.count)))
+        return (0..<buttons.count).contains(index) ? index : nil
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        let next = segment(at: convert(event.locationInWindow, from: nil))
+        if next != hovered { hovered = next; needsDisplay = true }
+    }
+    override func mouseExited(with event: NSEvent) { hovered = nil; needsDisplay = true }
+
+    override func draw(_ dirtyRect: NSRect) {
+        guard !buttons.isEmpty else { return }
+        let radius = bounds.height / 2
+        // 胶囊底：rfPill 在浅色/深色各有一套值，跟着外观走。
+        NSColor.rfPill.setFill()
+        NSBezierPath(roundedRect: bounds, xRadius: radius, yRadius: radius).fill()
+
+        let width = bounds.width / CGFloat(buttons.count)
+        if let hovered, hovered != selectedSegment {
+            let rect = CGRect(x: width * CGFloat(hovered), y: 0, width: width, height: bounds.height).insetBy(dx: 2, dy: 2)
+            NSColor.labelColor.withAlphaComponent(0.06).setFill()
+            NSBezierPath(roundedRect: rect, xRadius: radius - 2, yRadius: radius - 2).fill()
+        }
+
+        styleHighlight()
+    }
 }
 
 @MainActor
@@ -153,11 +423,12 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
     private let zoom = NSPopUpButton(frame: .zero, pullsDown: true)
     private let more = NSPopUpButton(frame: .zero, pullsDown: true)
     private var keyMonitor: Any?
-    private let modeSwitch = WorkspaceModeSwitch(labels: ["A 沉浸", "B 选片"], trackingMode: .selectOne, target: nil, action: nil)
+    private let modeSwitch = WorkspaceModeSwitch(labels: ["A 沉浸", "B 选片"], target: nil, action: nil)
     private let title = WorkspaceTitleLabel(labelWithString: "Phos")
     let titleDrag = WorkspaceTitlebarDragView()
     private var menuActions: [Int: () -> Void] = [:]
     private let moreMenu = NSMenu(title: "更多")
+    private var materialMode: WorkspaceMode?
     private var appearanceObservation: NSKeyValueObservation?
     private var windowObservations: [AnyCancellable] = []
     #if PHOS_QA
@@ -183,7 +454,6 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         title.font = .systemFont(ofSize: 12, weight: .medium)
         title.alignment = .center; title.lineBreakMode = .byTruncatingMiddle
         title.textColor = .secondaryLabelColor; addSubview(title)
-        modeSwitch.controlSize = .small; modeSwitch.segmentStyle = .rounded
         modeSwitch.target = self; modeSwitch.action = #selector(changeWorkspace)
         modeSwitch.setAccessibilityLabel("工作区布局")
         modeSwitch.setToolTip("A 沉浸编辑：铺满画布与紧凑列表", forSegment: 0)
@@ -191,11 +461,11 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         addSubview(modeSwitch)
         moreMenu.delegate = self
         menuNeedsUpdate(moreMenu) // A pull-down with only its title item cannot begin tracking.
-        model.state.objectWillChange.receive(on: RunLoop.main).sink { [weak self] _ in self?.refresh() }.store(in: &observations)
-        model.state.history.objectWillChange.receive(on: RunLoop.main).sink { [weak self] _ in self?.refresh() }.store(in: &observations)
-        model.state.inspectorUI.objectWillChange.receive(on:RunLoop.main).sink { [weak self] _ in self?.refresh() }.store(in:&observations)
-        model.session.objectWillChange.receive(on: RunLoop.main).sink { [weak self] _ in self?.refresh() }.store(in: &observations)
-        model.environment.objectWillChange.receive(on: RunLoop.main).sink { [weak self] _ in self?.refreshMaterials() }.store(in: &observations)
+        model.state.objectWillChange.debounce(for: .milliseconds(1), scheduler: RunLoop.main).sink { [weak self] _ in self?.refresh() }.store(in: &observations)
+        model.state.history.objectWillChange.debounce(for: .milliseconds(1), scheduler: RunLoop.main).sink { [weak self] _ in self?.refresh() }.store(in: &observations)
+        model.state.inspectorUI.objectWillChange.debounce(for:.milliseconds(1),scheduler:RunLoop.main).sink { [weak self] _ in self?.refresh() }.store(in:&observations)
+        model.session.objectWillChange.debounce(for: .milliseconds(1), scheduler: RunLoop.main).sink { [weak self] _ in self?.needsLayout = true; self?.refresh() }.store(in: &observations)
+        model.environment.objectWillChange.debounce(for: .milliseconds(1), scheduler: RunLoop.main).sink { [weak self] _ in self?.refreshMaterials() }.store(in: &observations)
         refreshMaterials(); refresh()
         model.state.resumePreviewWork()
         #if PHOS_QA
@@ -271,10 +541,19 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         }
     }
     private func refreshMaterials() {
-        for slot in slots.values { slot.refresh(environment: model.environment) }
+        materialMode = model.session.mode
+        for (name, slot) in slots {
+            slot.refresh(environment: model.environment,
+                         floating: name == "browser" || name == "inspector")
+        }
+        modeSwitch.refreshSurface(options: model.environment.accessibility, disableNativeGlass: model.environment.disableNativeGlass)
+        for group in [navigation, viewing, actions, rail] {
+            group.buttons.forEach { $0.motionReduced = model.environment.accessibility.reduceMotion }
+        }
         needsLayout = true
     }
     func refresh() {
+        if materialMode != model.session.mode { refreshMaterials() }
         let s = model.state
         navigation.buttons[0].select(model.session.browserVisible)
         navigation.buttons[1].isEnabled = model.enabled(.undo)
@@ -301,7 +580,6 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         title.toolTip = s.current?.url.path
         slots["browser"]?.setDisplayed(model.session.browserVisible)
         slots["inspector"]?.setDisplayed(model.session.inspectorVisible)
-        needsLayout = true
     }
     override func layout() {
         super.layout()
@@ -432,6 +710,7 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         for (label,value) in [("系统","system"),("减少透明度","reduceTransparency"),("增强对比度","increaseContrast"),("减少动态效果","reduceMotion")] {
             item(label,in:qa) { [weak self] in self?.model.environment.setQAAccessibilityMode(value) }
         }
+        item("R5性能检查",in:menu) { [weak self] in guard let self else { return }; Task { await WorkspaceReviewBench.run(root:self) } }
         let qaItem = NSMenuItem(title:"QA辅助功能",action:nil,keyEquivalent:""); qaItem.submenu = qa; menu.addItem(qaItem)
         #endif
         item("检查更新…", in: menu) { s.checkForUpdates(silent: false) }

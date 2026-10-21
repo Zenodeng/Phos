@@ -898,16 +898,17 @@ enum Engine {
         w0 = max(1, w0); h0 = max(1, h0)
         let longSide = max(w0, h0), shortSide = min(w0, h0)
         var rw: Double, rh: Double
-        if longSide <= 2 * shortSide * sinA + 2 * shortSide * cosA {
-            let x = longSide / 2
-            rw = x / max(cosA, 1e-4)
-            rh = x / max(sinA, 1e-4)
+        if sinA < 1e-10 { return (0, 0, 1, 1) }
+        if shortSide <= 2 * sinA * cosA * longSide {
+            let half = shortSide / 2
+            rw = w0 >= h0 ? half / sinA : half / cosA
+            rh = w0 >= h0 ? half / cosA : half / sinA
         } else {
             let cos2a = cosA * cosA - sinA * sinA
-            rw = (longSide * cosA - shortSide * sinA) / cos2a
-            rh = (longSide * sinA - shortSide * cosA) / cos2a
+            rw = (w0 * cosA - h0 * sinA) / cos2a
+            rh = (h0 * cosA - w0 * sinA) / cos2a
         }
-        rw = min(rw, Double(canvasW)); rh = min(rh, Double(canvasH))
+        rw = min(max(rw, 1), Double(canvasW)); rh = min(max(rh, 1), Double(canvasH))
         let x = (Double(canvasW) - rw) / 2 / Double(canvasW)
         let y = (Double(canvasH) - rh) / 2 / Double(canvasH)
         return (x, y, rw / Double(canvasW), rh / Double(canvasH))

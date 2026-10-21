@@ -86,6 +86,7 @@ final class AppState: ObservableObject {
         let viewport: CanvasViewport?
         let pixel100: Bool
     }
+    @Published private(set) var autoLevelRunning = false
     private(set) var cropSession: CropEditSession?
     @Published var splitComparison = false {
         didSet { if splitComparison { showBefore = false; cancelMaskDrawing(); render() } }
@@ -246,7 +247,12 @@ final class AppState: ObservableObject {
                   request.fullResolution == (fullResPreview || oneToOne) else {
                 workMetrics.increment("staleFrameRejected"); return
             }
-            if let result { previewFrame = result.edited; geometryBeforeFrame = result.before }
+            if let result {
+                previewFrame = result.edited; geometryBeforeFrame = result.before
+                #if PHOS_QA
+                WorkspaceReviewBench.recordFirstPreview()
+                #endif
+            }
             else { status = "预览生成失败，请重试或选择其他照片" }
             previewing = previewQueue.hasPendingWork
         })
@@ -525,23 +531,34 @@ final class AppState: ObservableObject {
 
     /// 地平线自动校直：Vision 检测倾角 → 反向旋转 + 最大内接矩形裁切
     func autoStraighten() {
-        guard let src = source else { return }
+        guard let src = source, !autoLevelRunning else { return }
+        parameterEdits.finishCurrent()
+        let initial = params
+        var analysis = params.cropNeutral; analysis.straighten = 0
         let photoID = current?.id, cropID = cropSession?.id
+        autoLevelRunning = true
         status = "检测地平线…"
         Task {
-            let angle = await Task.detached { Engine.autoStraightenAngle(from: src) }.value
+            defer { autoLevelRunning = false }
+            let analysisParams = analysis
+            let detected = await Task.detached {
+                let image = Engine.geometry(src, analysisParams)
+                return (Engine.autoStraightenAngle(from: image), image.extent.size)
+            }.value
             guard current?.id == photoID, cropSession?.id == cropID else { return }
-            guard var a = angle else {
+            guard params == initial else { status = "已保留新的调整，请重新自动水平"; return }
+            let angle = detected.0
+            guard let a = angle else {
                 await MainActor.run { status = "未检测到地平线" }
                 return
             }
-            a = min(max(a, -15), 15)
+            guard a.isFinite, abs(a) <= 15 else { status = "倾斜超过 15°，请手动校正"; return }
             await MainActor.run {
                 set(\.straighten, a)
                 // 旋转后画幅外接框尺寸
                 let rad = abs(a) * .pi / 180
-                let cw = src.extent.width * CGFloat(cos(rad)) + src.extent.height * CGFloat(sin(rad))
-                let chh = src.extent.width * CGFloat(sin(rad)) + src.extent.height * CGFloat(cos(rad))
+                let cw = detected.1.width * CGFloat(cos(rad)) + detected.1.height * CGFloat(sin(rad))
+                let chh = detected.1.width * CGFloat(sin(rad)) + detected.1.height * CGFloat(cos(rad))
                 let ins = Engine.inscribedCrop(canvasW: cw, canvasH: chh, angleDeg: a)
                 set(\.cropX, ins.x); set(\.cropY, ins.y)
                 set(\.cropW, ins.w); set(\.cropH, ins.h)
@@ -551,11 +568,15 @@ final class AppState: ObservableObject {
         }
     }
 
+    private var previewWorkSuspended = false
     func suspendPreviewWork() {
+        previewWorkSuspended = true
         folderQueue.invalidate(); sourceQueue.invalidate(); previewQueue.invalidate(); beforeQueue.invalidate()
         thumbnails.reset(); folderLoading = false; previewing = false; temporaryPan = false
     }
     func resumePreviewWork() {
+        guard previewWorkSuspended else { return }
+        previewWorkSuspended = false
         if source != nil { render() }
         else if current != nil { _ = select(currentIndex) }
         else if let folder { openFolder(folder) }
@@ -1034,7 +1055,7 @@ struct PhosApp: App {
                 .environmentObject(state)
                 #if PHOS_QA
                 .onAppear {
-                    if state.folder == nil { state.openFolder(QAWorkspace.fixtureFolder) }
+                    if state.folder == nil { WorkspaceReviewBench.launchBegin = ProcessInfo.processInfo.systemUptime; state.openFolder(QAWorkspace.fixtureFolder) }
                 }
                 #endif
         }
@@ -1044,10 +1065,15 @@ struct PhosApp: App {
             #if PHOS_QA
             CommandMenu("QA") {
                 Button("平台基线检查…") { QAPlatformBaselineController.shared.show() }
-                    .keyboardShortcut("b",modifiers:[.command,.option])
+
                 Button("切换工作区应急材料") {
                     let defaults = UserDefaults.standard
                     defaults.set(!defaults.bool(forKey: "phos.ui.disableNativeGlass"), forKey: "phos.ui.disableNativeGlass")
+                }
+                Menu("验收窗口尺寸") {
+                    ForEach([1200,1440,1728],id:\.self) { width in
+                        Button("宽 \(width)") { NSApp.keyWindow?.setContentSize(NSSize(width:width,height:900)) }
+                    }
                 }
                 Button("测试工作区错误提示") { state.workflowError = "R2-A QA：窗口级错误路由验证。" }
             }

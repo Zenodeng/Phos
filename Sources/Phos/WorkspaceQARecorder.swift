@@ -19,6 +19,7 @@ final class WorkspaceQARecorder: NSObject {
         (matching(view) ? 1 : 0) + view.subviews.reduce(0) { $0 + count($1, matching: matching) }
     }
     @objc private func record() {
+        guard !WorkspaceReviewBench.running else { return }
         guard let root else { timer?.invalidate(); timer = nil; return }
         guard let window = root.window else { return }
         let s = root.model.state, a = root.model.environment.accessibility
@@ -75,7 +76,7 @@ final class WorkspaceQARecorder: NSObject {
         data["topInset"] = WorkspaceWindowChrome.topInset(in: root)
         data["appearance"] = root.effectiveAppearance.name.rawValue
         data["appearancePreference"] = UserDefaults.standard.string(forKey: "rf.appearance") ?? "system"
-        data["reduceTransparency"] = a.reduceTransparency; data["increaseContrast"] = a.increaseContrast
+        data["reduceMotion"] = a.reduceMotion; data["reduceTransparency"] = a.reduceTransparency; data["increaseContrast"] = a.increaseContrast
         data["emergencyDisabled"] = root.model.environment.disableNativeGlass
         data["glassCount"] = count(root) { $0 is NSGlassEffectView }
         data["visualEffectCount"] = count(root) { $0 is NSVisualEffectView }

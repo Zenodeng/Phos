@@ -105,6 +105,10 @@ private struct WorkspaceWindowContent: View {
                    onDismiss: { router.didDismiss() }) { route in
                 WorkspaceSheetContent(route: route, model: model)
                     .environmentObject(model.state).tint(WorkspaceTokens.accent)
+                    .environment(\.workspaceAccessibility, model.environment.accessibility)
+                    .environment(\.workspaceNativeGlassDisabled, model.environment.disableNativeGlass)
+                    .buttonStyle(WorkspaceButtonStyle())
+                    .presentationBackground(.clear)
             }
             .onExitCommand { if model.state.cropSession != nil { model.state.cancelCrop() } else if model.state.parameterEdits.token != nil { model.state.parameterEdits.invalidate() } else { model.state.cancelMaskDrawing() } }
     }
@@ -116,7 +120,7 @@ private struct WorkspaceSheetContent: View {
     @Environment(\.dismiss) private var dismiss
     @ViewBuilder var body: some View {
         switch route {
-        case .photoAI: PhotoAISheet()
+        case .photoAI: PhotoAISheet().workspaceGlassPanel()
         case .export: ExportSheet()
         case .batch: BatchSheet()
         case .merge: MergeSheet()
@@ -134,7 +138,7 @@ private struct WorkspaceSheetContent: View {
                     }
                     Button("好") { dismiss() }.keyboardShortcut(.defaultAction)
                 }
-            }.padding(24).frame(width: 390)
+            }.padding(24).frame(width: 390).workspaceGlassPanel()
         }
     }
     private var message: String {

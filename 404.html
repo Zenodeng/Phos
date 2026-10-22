@@ -72,29 +72,51 @@ footer a:hover{color:#fff}
 
 <nav class="nav">
   <div class="inner">
-    <a href="/"><span class="dot"></span>Phos</a>
+    <a href="/" data-href-zh="/" data-href-en="/en/"><span class="dot"></span>Phos</a>
   </div>
 </nav>
 
 <main>
   <div class="box">
     <div class="code" aria-hidden="true">404</div>
-    <h1>这个页面不存在。</h1>
-    <p>链接可能已经失效，或者地址打错了。你可以回到首页，或者直接下载 Phos。</p>
+    <h1 data-zh="这个页面不存在。" data-en="This page doesn’t exist.">这个页面不存在。</h1>
+    <p data-zh="链接可能已经失效，或者地址打错了。你可以回到首页，或者直接下载 Phos。" data-en="The link may be broken or mistyped. Head back home, or download Phos directly.">链接可能已经失效，或者地址打错了。你可以回到首页，或者直接下载 Phos。</p>
     <div class="path" id="reqPath" hidden></div>
     <div class="btnrow">
-      <a class="btn btn-primary" href="/">回到首页</a>
-      <a class="btn btn-ghost" href="/download/Phos-macOS-apple-silicon.zip" download>下载 macOS 版</a>
+      <a class="btn btn-primary" href="/" data-href-zh="/" data-href-en="/en/" data-zh="回到首页" data-en="Back to home">回到首页</a>
+      <a class="btn btn-ghost" href="/download/Phos-macOS-apple-silicon.zip" download data-zh="下载 macOS 版" data-en="Download for macOS">下载 macOS 版</a>
     </div>
   </div>
 </main>
 
 <footer>
-  <a href="/">首页</a> · <a href="https://github.com/Zenodeng/Phos">GitHub</a> · MIT License
+  <a href="/" data-href-zh="/" data-href-en="/en/" data-zh="首页" data-en="Home">首页</a> · <a href="https://github.com/Zenodeng/Phos">GitHub</a> · MIT License ·
+  <a href="?lang=zh" data-lang-link="zh">中文</a> / <a href="?lang=en" data-lang-link="en">English</a>
 </footer>
 
 <script>
 (function(){
+  /* 404 页跟随语言：/en/ 下的地址用英文，其余按浏览器语言决定。
+     ?lang=en / ?lang=zh 可以手动覆盖。 */
+  var q = new URLSearchParams(location.search).get('lang');
+  var pref = (navigator.language || '').toLowerCase();
+  var path = location.pathname;
+  var enPath = path === '/en' || path.indexOf('/en/') === 0;
+  var lang = (q === 'zh' || q === 'en') ? q
+           : (enPath ? 'en' : (pref.indexOf('zh') === 0 ? 'zh' : 'en'));
+  var key = lang === 'en' ? 'en' : 'zh';
+  document.documentElement.lang = key === 'en' ? 'en' : 'zh-CN';
+  document.title = key === 'en' ? 'Page not found — Phos' : '页面不存在 — Phos';
+  document.querySelectorAll('[data-zh]').forEach(function(el){
+    el.textContent = el.getAttribute('data-' + key);
+  });
+  document.querySelectorAll('[data-href-' + key + ']').forEach(function(el){
+    el.setAttribute('href', el.getAttribute('data-href-' + key));
+  });
+  document.querySelectorAll('[data-lang-link]').forEach(function(el){
+    if (el.getAttribute('data-lang-link') === key) el.remove();
+  });
+
   var el = document.getElementById('reqPath');
   if (!el) return;
   var p = location.pathname + location.search;

@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phos — Native RAW Photo Editor for macOS</title>
+<meta name="description" content="Phos is a native, non-destructive RAW photo editor for macOS, written in Swift with Core Image and AppKit. RAW decoding, complete tonal and color control, film CLUT emulation, nine local masks, batch workflows, and professional export. Everything runs on your Mac — no network, no account, no subscription.">
+<meta name="keywords" content="Phos, RAW editor, macOS RAW editor, RAW photo editor, film simulation LUT, photo editing app, Swift, Core Image, non-destructive editing">
+<link rel="canonical" href="https://zenophos.dpdns.org/en/">
+<link rel="alternate" hreflang="zh-CN" href="https://zenophos.dpdns.org/">
+<link rel="alternate" hreflang="en" href="https://zenophos.dpdns.org/en/">
+<link rel="alternate" hreflang="x-default" href="https://zenophos.dpdns.org/">
+<meta name="google-site-verification" content="VpFD-mee9gLzbt9L78dK2LwITVrWsh_sOPfUTFIICrg" />
+<meta name="theme-color" content="#000000">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="zh_CN">
+<meta property="og:title" content="Phos — Native RAW Photo Editor for macOS">
+<meta property="og:description" content="Non-destructive RAW editing, film CLUT emulation, nine local masks, batch workflows. Everything runs on your Mac — no network, no account, no subscription.">
+<meta property="og:url" content="https://zenophos.dpdns.org/en/">
+<meta property="og:image" content="https://zenophos.dpdns.org/images/05-tone-adjustments.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23000'/%3E%3Ctext x='50' y='68' font-size='58' font-family='Helvetica' font-weight='600' fill='%23C9A876' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Phos",
+  "alternateName": "RawForge",
+  "operatingSystem": "macOS 26+",
+  "applicationCategory": "MultimediaApplication",
+  "applicationSubCategory": "RAW Photo Editor",
+  "softwareVersion": "4.2.0",
+  "fileSize": "7.28MB",
+  "isAccessibleForFree": true,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "CNY"
+  },
+  "license": "https://opensource.org/licenses/MIT",
+  "description": "A native, non-destructive RAW photo editor for macOS: RAW decoding, complete tonal and color controls, film CLUT emulation, nine local masks, batch sync, and watermarked export. Everything runs on-device — no network, no account, no subscription.",
+  "url": "https://zenophos.dpdns.org/en/",
+  "downloadUrl": "https://zenophos.dpdns.org/download/Phos-macOS-apple-silicon.dmg",
+  "installUrl": "https://zenophos.dpdns.org/en/#install",
+  "screenshot": "https://zenophos.dpdns.org/images/05-tone-adjustments.jpg",
+  "inLanguage": [
+    "en",
+    "zh-CN"
+  ],
+  "sameAs": [
+    "https://github.com/Zenodeng/Phos"
+  ],
+  "author": {
+    "@type": "Person",
+    "name": "Zenodeng",
+    "url": "https://github.com/Zenodeng"
+  },
+  "featureList": [
+    "RAW decoding (via macOS built-in decoders)",
+    "Complete tonal and color adjustments",
+    "Film CLUT emulation",
+    "Nine local masks (linear / radial gradients, subject and person selection, and more)",
+    "Batch sync and batch export",
+    "Export watermarks",
+    "Non-destructive editing with parameters stored in sidecar files",
+    "Fully local processing — no network, no account, no subscription"
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is Phos free?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Free and open source under the MIT license. No subscription, no in-app purchases, no account, and no “Pro” tier."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which macOS versions and Macs are supported?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "macOS 26.0 or later on an Apple-silicon (M-series) Mac. Since 3.2.5 the minimum is 26.0, up from 15.0; on older systems, keep using 3.2.4. Only Apple-silicon builds are provided — Intel Macs aren’t supported yet."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which cameras’ RAW files are supported?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Phos uses macOS’s built-in RAW decoding (Core Image and ImageIO), so any RAW file that Preview can open can be edited — including mainstream formats from Canon (CR2 / CR3), Nikon (NEF), Sony (ARW), Fujifilm (RAF), and Adobe DNG."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Are my photos uploaded? What is the network used for?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Photos are processed entirely on your Mac — no cloud, no account, no telemetry. The only network activity is a single check of the latest version number at launch; the request contains nothing about you, your photos, or this Mac."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How is it different from Lightroom?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Phos is local-first: no subscription, no cloud sync, no mobile app, with a focus on doing RAW decoding, tone and color, film CLUT emulation, local masks, and batch export really well. It’s built for personal photography workflows where photos stay entirely on your own machine."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What if macOS blocks Phos on first launch?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "This is the standard prompt every app without Apple notarization gets — not something specific to Phos. Double-click Phos → click “Done” → open System Settings → Privacy & Security → scroll to the bottom and click “Open Anyway”. You can also run xattr -dr com.apple.quarantine /Applications/Phos.app in Terminal."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does it support batch processing?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Batch import, syncing one photo’s adjustments to others, and batch export (including watermarks)."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is there a Windows or iPad version?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The macOS app is the main line. Windows has a separate experimental port (4.0.1, ported from the macOS 4.0.1 source) and maintained separately from macOS: Apple’s Vision and Core Image are replaced with local implementations, there is no on-device AI editing, and it isn’t code-signed. It’s available from the downloads section. An iPad version is still being assessed for feasibility, with no releasable timeline."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How can I report issues or contribute?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "File an Issue or a Pull Request at the GitHub repository. The project is written in Swift, built on Core Image, Vision, and AppKit."
+      }
+    }
+  ]
+}
+</script>
+<script>/* 首屏淡入的前置状态只在「允许动效」时才加。
+   否则关掉动效（prefers-reduced-motion）或禁用 JS 时，body 会永远停在 opacity:0，整页空白。 */
+if(!matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentElement.className+=' anim-on';}</script>
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="inner">
+    <a class="brand" href="#top"><span class="dot"></span>Phos</a>
+    <div class="links">
+      <a href="#studio">Try it</a>
+      <a href="#gallery">Interface</a>
+      <a href="#design">Design</a>
+      <a href="#features">Features</a>
+      <a href="#ai">AI Edit</a>
+      <a href="#install">Install</a>
+    </div>
+    <div class="act">
+      <a class="lang" href="../" hreflang="zh-CN" aria-label="View this page in Chinese"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M2 8h12M8 2c2.4 2.4 2.4 9.6 0 12M8 2c-2.4 2.4-2.4 9.6 0 12"/></svg><span lang="zh-CN">中文</span></a>
+      <a href="https://github.com/Zenodeng/Phos/releases">Download</a>
+    </div>
+  </div>
+</nav>
+
+<main id="top">
+
+  <header class="hero dark">
+    <!-- 首屏只放文案：截图与数字一律推到折叠线以下 -->
+    <div class="wrap hero-intro">
+      <p class="eyebrow">Native macOS · Swift · Core Image</p>
+      <h1>Phos</h1>
+      <p class="subhead">RAW editing, done with precision.</p>
+      <p class="lead">A non-destructive RAW photo editor built for macOS. Every pixel is processed on your Mac; edits are written to a sidecar file next to the original, and not a single byte of the original is changed. Version 4.0 rebuilt the entire workspace and added optional on-device AI editing.</p>
+      <div class="btnrow">
+        <a class="btn btn-primary" href="../download/Phos-macOS-apple-silicon.dmg" download>Download for macOS</a>
+        <a class="btn btn-outline-d" href="https://github.com/Zenodeng/Phos">View source</a>
+      </div>
+    </div>
+    <!-- 下滑到这里才由 .hero-reveal.in 统一触发：截图放大淡入 → 四个数字依次上浮 -->
+    <div class="hero-reveal">
+      <div class="wide hero-shot">
+        <img class="shot" src="../images/05-tone-adjustments.jpg" width="1920" height="1192" alt="Phos main window (A List layout): asset list on the left, photo canvas and histogram in the center, white balance, basic tone, and texture panels on the right">
+      </div>
+      <div class="wrap">
+        <div class="stats">
+          <div class="stat"><b data-mode="tween" data-count="100" data-suffix="%">100%</b><span>on-device</span></div>
+          <div class="stat"><b data-mode="tween" data-count="9" data-suffix=" types">9 types</b><span>local masks</span></div>
+          <div class="stat"><b data-mode="step" data-count="64" data-suffix="³">64³</b><span>film CLUT</span></div>
+          <div class="stat"><b data-mode="type" data-text="MIT">MIT</b><span>open source</span></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= 实时试用 ================= -->
+  <section id="studio" class="dark demo-intro">
+    <div class="wrap rv">
+      <p class="eyebrow"><span class="idx">01</span>Try it</p>
+      <h2>No download — just drag a slider.</h2>
+      <p class="lead">Below is a demo that follows Phos’s actual render order: tone, color, film CLUT, then local masks, with parameters matching the real panels. Sliders, the dots on the tone curve, and the mask handles on the canvas are all draggable — the image updates live.</p>
+    </div>
+
+    <div class="wide">
+      <div class="demo rv">
+
+        <!-- 画布 -->
+        <div class="stage" id="stage">
+          <svg class="scene" viewBox="0 0 1200 760" preserveAspectRatio="xMidYMid slice" aria-label="Demo photo; it updates live with the controls on the right" role="img">
+            <defs>
+              <!-- 蒙版：从暖到透明，用来做局部曝光 -->
+              <linearGradient id="maskGrad" gradientUnits="userSpaceOnUse" x1="240" y1="560" x2="900" y2="220">
+                <stop offset="0" stop-color="#ffd9a0" stop-opacity="0"/>
+                <stop offset="0.5" stop-color="#ffd9a0" stop-opacity="0.26"/>
+                <stop offset="1" stop-color="#ffd9a0" stop-opacity="0.52"/>
+              </linearGradient>
+              <!-- 径向蒙版：中心亮、向外衰减 -->
+              <radialGradient id="maskRadialGrad" gradientUnits="userSpaceOnUse" cx="552" cy="350" r="300">
+                <stop offset="0" stop-color="#ffd9a0" stop-opacity="0.5"/>
+                <stop offset="0.62" stop-color="#ffd9a0" stop-opacity="0.3"/>
+                <stop offset="1" stop-color="#ffd9a0" stop-opacity="0"/>
+              </radialGradient>
+              <clipPath id="frameClip"><rect x="0" y="0" width="1200" height="760"/></clipPath>
+              <!-- 色调曲线：查找表由 JS 的 drawCurve() 实时写入 tableValues -->
+              <!-- 影调滤镜：所有调整合并在这一个 SVG 滤镜里。
+                   不要拆成「外层 SVG 滤镜 + 内层 CSS filter」——外层滤镜会缓存输入，
+                   后代元素的 CSS filter 变化不会让它重算，症状就是
+                   「只有曲线能动、其他滑杆没反应」。
+                   顺序与 CSS filter 链一致：亮度/对比 -> 饱和 -> 棕调 -> 色相 -> 曲线 -->
+              <filter id="toneFx" color-interpolation-filters="sRGB"
+                      x="-2%" y="-2%" width="104%" height="104%">
+                <feComponentTransfer>
+                  <feFuncR type="linear" id="tfRS" slope="1" intercept="0"/>
+                  <feFuncG type="linear" id="tfGS" slope="1" intercept="0"/>
+                  <feFuncB type="linear" id="tfBS" slope="1" intercept="0"/>
+                </feComponentTransfer>
+                <feColorMatrix type="saturate" id="tfSat" values="1"/>
+                <feColorMatrix type="matrix" id="tfSep"
+                  values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"/>
+                <feColorMatrix type="hueRotate" id="tfHue" values="0"/>
+                <feComponentTransfer>
+                  <feFuncR type="table" id="tfCR" tableValues="0 1"/>
+                  <feFuncG type="table" id="tfCG" tableValues="0 1"/>
+                  <feFuncB type="table" id="tfCB" tableValues="0 1"/>
+                </feComponentTransfer>
+              </filter>
+              <!-- 颗粒：feTurbulence 生成噪点 -->
+              <filter id="grainFx" x="0" y="0" width="100%" height="100%"
+                      color-interpolation-filters="sRGB">
+                <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="7"/>
+                <feColorMatrix type="saturate" values="0"/>
+              </filter>
+              <!-- 暗角：中心透明、四角压暗 -->
+              <radialGradient id="vignetteGrad" cx="0.5" cy="0.48" r="0.72">
+                <stop offset="0.45" stop-color="#000000" stop-opacity="0"/>
+                <stop offset="1" stop-color="#000000" stop-opacity="0.85"/>
+              </radialGradient>
+            </defs>
+
+            <g clip-path="url(#frameClip)">
+              <!-- 全部影调/色彩/胶片调整都在这一个滤镜里完成，sceneGroup 上不再挂 CSS filter -->
+              <g filter="url(#toneFx)">
+              <g id="sceneGroup">
+                <!-- 演示用照片：AI 生成，无水印 -->
+                <image href="../images/demo-scene.jpg" x="0" y="0" width="1200" height="760"
+                       preserveAspectRatio="xMidYMid slice"/>
+                <!-- 蒙版着色层（局部曝光） -->
+                <rect id="maskLayer" x="0" y="0" width="1200" height="760" fill="url(#maskGrad)" opacity="0" style="mix-blend-mode:screen;transition:opacity .3s ease"/>
+              </g>
+              </g>
+
+              <!-- 颗粒与暗角：后期效果层，不参与上面的影调 / 色彩调整链 -->
+              <rect id="grainLayer" x="0" y="0" width="1200" height="760" filter="url(#grainFx)"
+                    opacity="0" style="mix-blend-mode:overlay;pointer-events:none;transition:opacity .25s ease"/>
+              <rect id="vignetteLayer" x="0" y="0" width="1200" height="760" fill="url(#vignetteGrad)"
+                    opacity="0" style="pointer-events:none;transition:opacity .25s ease"/>
+
+              <!-- 蒙版参考线：线性为三线，径向为椭圆 -->
+              <g id="guides" opacity="0" style="transition:opacity .28s ease">
+                <g id="linearGuides" stroke="#fff" stroke-opacity="0.78" stroke-width="1.4" stroke-dasharray="7 6" fill="none">
+                  <line id="gA" x1="0" y1="0" x2="0" y2="0"/>
+                  <line id="gB" x1="0" y1="0" x2="0" y2="0"/>
+                  <line id="gC" x1="0" y1="0" x2="0" y2="0"/>
+                </g>
+                <g id="radialGuides" style="display:none">
+                  <ellipse id="rOuter" cx="0" cy="0" rx="1" ry="1" fill="none"
+                           stroke="#f5d94a" stroke-opacity="0.9" stroke-width="1.8"/>
+                  <ellipse id="rInner" cx="0" cy="0" rx="1" ry="1" fill="none"
+                           stroke="#f5d94a" stroke-opacity="0.4" stroke-width="1.2" stroke-dasharray="5 5"/>
+                </g>
+                <g id="handles">
+                  <circle id="hStart" r="11" fill="#3ad0e0" stroke="#fff" stroke-width="2.5" style="cursor:grab"/>
+                  <circle id="hEnd"   r="11" fill="#3ad0e0" stroke="#fff" stroke-width="2.5" style="cursor:grab"/>
+                  <circle id="hMid"   r="9"  fill="#ffffff" stroke="#fff" stroke-width="1.5" style="cursor:grab"/>
+                  <circle id="hRot"   r="8.5" fill="#e08b3a" stroke="#fff" stroke-width="2" style="cursor:grab"/>
+                </g>
+              </g>
+            </g>
+          </svg>
+
+          <div class="cmp" role="group" aria-label="Before / after comparison">
+            <button type="button" id="btnAfter" aria-pressed="true">Adjusted</button>
+            <button type="button" id="btnBefore" aria-pressed="false">Original</button>
+          </div>
+          <div class="badge"><i></i><span id="badgeText">Rendered 24ms · 4096 × 6144</span></div>
+        </div>
+
+        <!-- 面板 -->
+        <div class="panel">
+          <div class="tabs" role="tablist">
+            <button type="button" role="tab" aria-selected="true" data-pane="p-light">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.1"/><path d="M8 1.2v1.5M8 13.3v1.5M1.2 8h1.5M13.3 8h1.5M3.2 3.2l1.1 1.1M11.7 11.7l1.1 1.1M12.8 3.2l-1.1 1.1M4.3 11.7l-1.1 1.1"/></svg>Tone</button>
+            <button type="button" role="tab" aria-selected="false" data-pane="p-color">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 4.4h12.8M1.6 8h12.8M1.6 11.6h12.8"/><circle cx="5.4" cy="4.4" r="1.7"/><circle cx="10.6" cy="8" r="1.7"/><circle cx="6.6" cy="11.6" r="1.7"/></svg>Color</button>
+            <button type="button" role="tab" aria-selected="false" data-pane="p-film">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.6" y="2.6" width="12.8" height="10.8" rx="1.6"/><path d="M1.6 6.2h12.8M1.6 9.8h12.8M5.2 2.6v10.8M10.8 2.6v10.8"/></svg>Film</button>
+            <button type="button" role="tab" aria-selected="false" data-pane="p-mask">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.6" stroke-dasharray="2.3 2.1"/><circle cx="8" cy="8" r="2.1"/></svg>Mask</button>
+          </div>
+
+          <div class="body">
+            <!-- 明暗 -->
+            <div class="pane on" id="p-light" role="tabpanel">
+              <h4>Tone &amp; light</h4>
+              <div class="ctrl"><label for="rExp">Exposure</label><input type="range" id="rExp" min="-100" max="100" value="14"><output id="oExp">+0.14</output></div>
+              <div class="ctrl"><label for="rCon">Contrast</label><input type="range" id="rCon" min="-100" max="100" value="18"><output id="oCon">+18</output></div>
+              <div class="ctrl"><label for="rHi">Highlights</label><input type="range" id="rHi" min="-100" max="100" value="-22"><output id="oHi">−22</output></div>
+              <div class="ctrl"><label for="rSh">Shadows</label><input type="range" id="rSh" min="-100" max="100" value="26"><output id="oSh">+26</output></div>
+              <div class="sep"></div>
+              <h4>Histogram</h4>
+              <div class="hist" id="hist" aria-hidden="true"></div>
+              <div class="hint">As you move a slider, the histogram redistributes with the tone — just like the real Phos panel, it reads the actual render.</div>
+            </div>
+
+            <!-- 色彩 -->
+            <div class="pane" id="p-color" role="tabpanel">
+              <h4>Color</h4>
+              <div class="ctrl"><label for="rSat">Saturation</label><input type="range" id="rSat" min="-100" max="100" value="8"><output id="oSat">+8</output></div>
+              <div class="ctrl"><label for="rTem">Temperature</label><input type="range" id="rTem" min="-100" max="100" value="6"><output id="oTem">+6</output></div>
+              <div class="ctrl"><label for="rVib">Vibrance</label><input type="range" id="rVib" min="-100" max="100" value="16"><output id="oVib">+16</output></div>
+              <div class="sep"></div>
+              <h4>Tone curve</h4>
+              <div class="curve-box">
+                <svg id="curveSvg" viewBox="0 0 260 110" preserveAspectRatio="none" aria-label="Tone curve; drag the dots to adjust" role="img">
+                  <g stroke="rgba(255,255,255,.13)" stroke-width="1">
+                    <line x1="0" y1="27.5" x2="260" y2="27.5"/>
+                    <line x1="0" y1="55" x2="260" y2="55"/>
+                    <line x1="0" y1="82.5" x2="260" y2="82.5"/>
+                    <line x1="65" y1="0" x2="65" y2="110"/>
+                    <line x1="130" y1="0" x2="130" y2="110"/>
+                    <line x1="195" y1="0" x2="195" y2="110"/>
+                  </g>
+                  <polyline id="curveLine" fill="none" stroke="#C9A876" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points=""/>
+                  <g id="curvePts" fill="#C9A876" stroke="#0b0c0e" stroke-width="1.5"></g>
+                </svg>
+              </div>
+              <div class="hint" style="margin-top:12px"><strong>Drag the dots on the curve</strong> to reshape it and the image follows live. Dragging Contrast, Highlights, or Shadows on the Tone tab moves it too. Double-click to reset.</div>
+            </div>
+
+            <!-- 胶片 -->
+            <div class="pane" id="p-film" role="tabpanel">
+              <h4>Film CLUT</h4>
+              <div class="films" id="films">
+                <button type="button" data-film="none" aria-pressed="false"><b>None</b><span>Keep original color</span></button>
+                <button type="button" data-film="k2383" aria-pressed="true"><b>Kodak 2383</b><span>Print emulation · 64³</span></button>
+                <button type="button" data-film="k2393" aria-pressed="false"><b>Kodak 2393</b><span>Print emulation · 64³</span></button>
+                <button type="button" data-film="f3510" aria-pressed="false"><b>Fuji 3510</b><span>Print emulation · 64³</span></button>
+              </div>
+              <div class="sep"></div>
+              <div class="ctrl"><label for="rStr">Strength</label><input type="range" id="rStr" min="0" max="100" value="85"><output id="oStr">85%</output></div>
+              <div class="sep"></div>
+              <h4>Grain &amp; vignette</h4>
+              <div class="ctrl"><label for="rGr">Grain</label><input type="range" id="rGr" min="0" max="100" value="22"><output id="oGr">22</output></div>
+              <div class="ctrl"><label for="rVig">Vignette</label><input type="range" id="rVig" min="0" max="100" value="18"><output id="oVig">18</output></div>
+              <div class="hint" style="margin-top:14px">Phos ships with 303 HALD film-emulation LUTs and can also scan your own external HaldCLUT folder. Strength is continuously adjustable — not an on/off switch.</div>
+            </div>
+
+            <!-- 蒙版 -->
+            <div class="pane" id="p-mask" role="tabpanel">
+              <h4>Local adjustments (masks)</h4>
+              <div class="masklist">
+                <div class="maskrow" data-mask="linear" aria-pressed="true" role="button" tabindex="0"><span class="g"></span>Linear gradient<em>draggable</em></div>
+                <div class="maskrow" data-mask="radial" aria-pressed="false" role="button" tabindex="0"><span class="g"></span>Radial gradient<em>drag out an ellipse</em></div>
+                <div class="maskrow" data-mask="brush" aria-pressed="false" role="button" tabindex="0"><span class="g"></span>Brush<em>paint by dragging</em></div>
+                <div class="maskrow" data-mask="range" aria-pressed="false" role="button" tabindex="0"><span class="g"></span>Color / luminance range<em>sample on canvas</em></div>
+                <div class="maskrow" data-mask="ai" aria-pressed="false" role="button" tabindex="0"><span class="g"></span>Subject · Person · Cutout<em>on-device Vision</em></div>
+                <div class="maskrow" data-mask="depth" aria-pressed="false" role="button" tabindex="0"><span class="g"></span>Depth paint<em>bokeh</em></div>
+              </div>
+              <div class="sep"></div>
+              <div class="ctrl"><label for="rMExp">Exposure</label><input type="range" id="rMExp" min="-100" max="100" value="52"><output id="oMExp">+52</output></div>
+              <div class="ctrl"><label for="rMFe">Feather</label><input type="range" id="rMFe" min="0" max="100" value="60"><output id="oMFe">0.60</output></div>
+              <div class="sep"></div>
+              <div class="hint" id="maskHint">Linear gradient tool active: <strong>drag the three dots on the canvas</strong> — cyan changes the range, white moves the axis. Settings apply only inside the mask, independent of global adjustments.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 界面演示 ================= -->
+  <section id="gallery" class="light">
+    <div class="wrap rv">
+      <p class="eyebrow"><span class="idx">02</span>Interface</p>
+      <h2>A workflow you can see.</h2>
+      <p class="lead">These five screenshots are from the real app and map to features that exist today — nothing invented. The workspace offers two layouts: <strong>A List</strong> for detailed one-at-a-time editing, <strong>B Filmstrip</strong> for continuous culling — both share the same edit state.</p>
+    </div>
+    <div class="wide">
+      <div class="gal">
+        <figure class="rv">
+          <img class="shot" src="../images/07-color-grading.jpg" width="1920" height="1192" loading="lazy" alt="Phos curves panel: an RGB composite curve with five control points, saturation compensation below, plus collapsible color grading, HSL, black &amp; white, calibration, and film CLUT sections">
+          <figcaption>
+            <div class="t">Curves · Tone</div>
+            <div class="d">A five-point RGB composite curve, switchable to luminance and individual R / G / B channels. Below it, saturation compensation, then color grading, HSL, black &amp; white, calibration, and film CLUT fold out as needed.</div>
+          </figcaption>
+        </figure>
+        <figure class="rv">
+          <img class="shot" src="../images/06-linear-gradient-mask.jpg" width="1920" height="1193" loading="lazy" alt="Phos linear gradient mask: three parallel guides and three control points on the canvas, with mask tools and an independent adjustment stack on the right">
+          <figcaption>
+            <div class="t">Linear gradient mask</div>
+            <div class="d">Three on-canvas guides mark the gradient’s start, end, and axis: drag the center to move it, an endpoint to change its width, or the rotation handle to change direction. Every mask carries its own adjustment stack.</div>
+          </figcaption>
+        </figure>
+        <figure class="rv">
+          <img class="shot" src="../images/08-radial-gradient-mask.jpg" width="1920" height="1192" loading="lazy" alt="Phos radial gradient mask: an elliptical selection and three control points on the canvas, with horizontal radius, vertical radius, rotation, and feather on the right">
+          <figcaption>
+            <div class="t">Radial gradient mask</div>
+            <div class="d">After you drag out an ellipse, three handles take over: the center moves it, the edges scale it, the rotation handle changes its angle. Horizontal and vertical radii are independent; feather controls the inner-to-outer transition.</div>
+          </figcaption>
+        </figure>
+        <figure class="rv">
+          <img class="shot" src="../images/12-b-filmstrip.jpg" width="1920" height="1192" loading="lazy" alt="Phos B Filmstrip layout: a horizontal filmstrip along the bottom for continuous culling, with the canvas above and the inspector on the right">
+          <figcaption>
+            <div class="t">B Filmstrip layout</div>
+            <div class="d">A horizontal filmstrip along the bottom for continuous culling; arrow keys step through frames, and the canvas automatically fits the area not covered by the panel and filmstrip. Switch back to A List and the edit state, viewport, and undo stack are exactly where you left them.</div>
+          </figcaption>
+        </figure>
+        <figure class="rv">
+          <img class="shot" src="../images/04-export-dialog.jpg" width="1920" height="1192" loading="lazy" alt="Phos export sheet: format and bit depth, color space, long-edge resizing, watermark overlays, and export folder settings">
+          <figcaption>
+            <div class="t">Pro export</div>
+            <div class="d">8-bit and 16-bit TIFF output in multiple color spaces, long-edge resizing, text and image watermarks with nine-point placement, and a pinned export folder.</div>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 设计语言 ================= -->
+  <section id="design" class="dark">
+    <div class="wrap rv">
+      <p class="eyebrow"><span class="idx">03</span>Design</p>
+      <h2>Graphite × champagne gold.</h2>
+      <p class="lead">The interface is built on neutral graphite panels; champagne gold marks only selection and editing states, while everything else stays restrained. The order comes from a strict grid: a fixed line-height rhythm, tabular figures, and hairline dividers.</p>
+      <div class="tiles">
+        <div class="tile rv-stagger">
+          <h3>Restrained gold</h3>
+          <p>Gold doesn’t decorate — it reports state: selection rings, slider fills, film cards, the primary export button. If it’s gold, you’re editing.</p>
+          <div class="chips"><span class="chip">#C9A876</span><span class="chip">selection / edit state only</span></div>
+        </div>
+        <div class="tile rv-stagger">
+          <h3>Strict grid</h3>
+          <p>A fixed 26 / 27 / 34 px line-height rhythm, 16 px padding throughout, right-aligned tabular figures. Dense, never messy.</p>
+          <div class="chips"><span class="chip">tabular-nums</span><span class="chip">hairline</span></div>
+        </div>
+        <div class="tile rv-stagger">
+          <h3>Masks you can read</h3>
+          <p>Guides are 1 px white dashed lines, and handle colors encode their job: linear gradient endpoints are cyan, the center is white, the rotation handle is amber; radial gradients are yellow. The color tells you what you can drag.</p>
+          <div class="chips"><span class="chip">color-coded handles</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wide">
+      <div class="anatomy rv">
+        <svg viewBox="0 0 1000 420" role="img" aria-label="Linear gradient mask diagram: three parallel dashed guides, two cyan endpoint handles, one white center handle, and one amber rotation handle">
+          <defs>
+            <linearGradient id="anatBg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#1d2a3c"/><stop offset="0.5" stop-color="#6b5a60"/>
+              <stop offset="0.78" stop-color="#c98a5c"/><stop offset="1" stop-color="#2a3026"/>
+            </linearGradient>
+            <linearGradient id="anatMask" gradientUnits="userSpaceOnUse" x1="250" y1="330" x2="760" y2="120">
+              <stop offset="0" stop-color="#ffd9a0" stop-opacity="0"/>
+              <stop offset="1" stop-color="#ffd9a0" stop-opacity="0.34"/>
+            </linearGradient>
+          </defs>
+          <rect width="1000" height="420" rx="14" fill="url(#anatBg)"/>
+          <rect width="1000" height="420" rx="14" fill="url(#anatMask)"/>
+          <!-- 三条参考线 -->
+          <g stroke="#fff" stroke-opacity="0.8" stroke-width="1.4" stroke-dasharray="7 6">
+            <line x1="118" y1="404" x2="612" y2="60"/>
+            <line x1="310" y1="430" x2="804" y2="86"/>
+            <line x1="500" y1="456" x2="994" y2="112"/>
+          </g>
+          <!-- 控制点 -->
+          <circle cx="161" cy="374" r="12" fill="#3ad0e0" stroke="#fff" stroke-width="2.5"/>
+          <circle cx="741" cy="126" r="12" fill="#3ad0e0" stroke="#fff" stroke-width="2.5"/>
+          <circle cx="451" cy="250" r="10" fill="#fff"/>
+          <circle cx="520" cy="196" r="9" fill="#e08b3a" stroke="#fff" stroke-width="2"/>
+          <!-- 标注 -->
+          <g font-family="-apple-system,BlinkMacSystemFont,PingFang SC,sans-serif" font-size="13" fill="rgba(255,255,255,.82)">
+            <line x1="161" y1="374" x2="92" y2="374" stroke="rgba(58,208,224,.6)" stroke-width="1"/>
+            <text x="20" y="362">Drag endpoint</text><text x="20" y="380" fill="rgba(255,255,255,.5)" font-size="11.5">range</text>
+
+            <line x1="741" y1="126" x2="880" y2="86" stroke="rgba(58,208,224,.6)" stroke-width="1"/>
+            <text x="888" y="82">Drag endpoint</text><text x="888" y="100" fill="rgba(255,255,255,.5)" font-size="11.5">range</text>
+
+            <line x1="451" y1="250" x2="300" y2="182" stroke="rgba(255,255,255,.4)" stroke-width="1"/>
+            <text x="212" y="172">Drag center to move</text>
+
+            <line x1="520" y1="196" x2="592" y2="300" stroke="rgba(224,139,58,.6)" stroke-width="1"/>
+            <text x="600" y="306">Rotation handle · direction</text>
+          </g>
+        </svg>
+        <div class="legend">
+          <div><i style="background:#3ad0e0"></i>Endpoint: sets the gradient width</div>
+          <div><i style="background:#fff"></i>Center: moves the whole gradient</div>
+          <div><i style="background:#e08b3a"></i>Rotation handle: changes direction</div>
+          <div><i style="background:#f5d94a"></i>Radial: ellipse and feather boundary</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 功能 ================= -->
+  <section id="features" class="light">
+    <div class="wrap rv">
+      <p class="eyebrow"><span class="idx">04</span>Features</p>
+      <h2>The everyday tools, made complete.</h2>
+      <p class="lead">No feature bloat. Every adjustment is written to a sidecar next to the original; the original file is never modified, and you can always go back.</p>
+      <div class="feats">
+        <div class="feat rv-stagger">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M4 15l4-4 4 4 3-3 5 5"/></svg></div>
+          <h3>RAW decoding</h3>
+          <p>Mainstream RAW formats such as ARW / CR3 / NEF, plus HEIF / HEIC / HIF, JPEG, PNG, TIFF, and AVIF.</p>
+        </div>
+        <div class="feat rv-stagger">
+          <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16"/></svg></div>
+          <h3>Tone &amp; color</h3>
+          <p>Exposure, contrast, highlights, shadows, whites and blacks, texture / clarity / dehaze, white-balance gray-point eyedropper, HDR; five-channel tone curve, HSL mixer, color grading, black &amp; white, and calibration.</p>
+        </div>
+        <div class="feat rv-stagger">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="7" cy="18" r="2"/></svg></div>
+          <h3>Film CLUT emulation</h3>
+          <p>HALD CLUT loading, including Kodak 2383 / 2393 print emulations, 64³ cube resampling, adjustable strength.</p>
+        </div>
+        <div class="feat rv-stagger">
+          <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18"/></svg></div>
+          <h3>Local masks</h3>
+          <p>Linear and radial gradients, brush, color range, luminance range, Select Subject, Select Person, subject cutout, and depth paint — nine in all. Each mask has its own adjustment stack and can be inverted, duplicated, or deleted.</p>
+        </div>
+        <div class="feat rv-stagger">
+          <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg></div>
+          <h3>Batch workflow</h3>
+          <p>Multi-select and sync adjustments, restore snapshots, named presets, named snapshots, and multi-exposure compositing.</p>
+        </div>
+        <div class="feat rv-stagger">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></svg></div>
+          <h3>Professional export</h3>
+          <p>8-bit and 16-bit TIFF in multiple color spaces, long-edge resizing, text and image watermarks with nine-point placement, pinned export folder.</p>
+        </div>
+        <div class="feat rv-stagger">
+          <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/><path d="M3 14h6"/></svg></div>
+          <h3>A / B dual-layout workspace</h3>
+          <p>The main window rebuilt in 4.0: A List for one-at-a-time editing, B Filmstrip for continuous culling. The toolbar shares a centerline with the system traffic lights, the list and inspector widths are draggable, and switching layouts doesn’t interrupt editing.</p>
+        </div>
+        <div class="feat rv-stagger">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3l2.2 5.4L20 10.6l-4.4 3.6L17 20l-5-3-5 3 1.4-5.8L4 10.6l5.8-2.2z"/></svg></div>
+          <h3>On-device AI editing</h3>
+          <p>Describe the change in Chinese; the model suggests global slider values and local masks, with a preview before anything is applied. Inference runs on-device — photos are never uploaded. Experimental; the model must be <a href="#ai-model">installed separately</a>.</p>
+        </div>
+      </div>
+
+      <div class="rv" id="ai" style="margin-top:72px">
+        <p class="eyebrow"><span class="idx">04</span>On-device AI · Experimental</p>
+        <h2>Say it in Chinese. It edits.</h2>
+        <p class="lead">Open AI Edit at the top of the adjustment panel and write your request in Chinese — for example, 「压暗天空，人物提亮一点，绿色别太艳」 (“darken the sky, brighten the subject a little, don’t make the greens too vivid”). The model outputs parameters only; it never generates or replaces your photo.</p>
+        <p class="note-sm" style="margin-top:16px">4.1 ships new fine-tuned weights: on the same 301 controlled validation prompts, first-pass strict completion rose from 51.8% to  <strong>94.0%</strong>. <strong>Only the 1.3 MB adapter bundled with the app changed — the base model does not need to be downloaded again.</strong> These numbers come from a development validation set, not an independent test, and say nothing about aesthetics.</p>
+      </div>
+      <div class="feats">
+        <div class="feat rv-stagger">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/></svg></div>
+          <h3>Say it precisely, it obeys</h3>
+          <p>Requests like “crop 5% off each side, keep the full height” are computed by code, not estimated by the model. Auto-crop first validates dimensions and retained area; an invalid plan is sent back for one retry, and after two failures nothing is applied.</p>
+        </div>
+        <div class="feat rv-stagger">
+          <div class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg></div>
+          <h3>Keep means keep</h3>
+          <p>When you explicitly ask to “leave exposure alone” or “keep white balance unchanged,” those sliders are removed from the model’s writable fields and checked again after decoding. Mixed global and local requests are supported just the same.</p>
+        </div>
+        <div class="feat rv-stagger">
+          <div class="ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></div>
+          <h3>Preview first, then decide</h3>
+          <p>Generated plans show a preview and are only written after you confirm; each apply is one undo. Local effects are checked against the direction of real rendered pixels and retried or blocked when they don’t match.</p>
+        </div>
+      </div>
+      <figure class="rv" style="margin-top:56px">
+        <img class="shot" src="../images/11-ai-panel.jpg" width="1920" height="1192" loading="lazy" alt="Phos AI editing panel: after a Chinese prompt, it suggests exposure, temperature, vibrance, and other parameters, with current and suggested results side by side; the top right is labeled “fine-tune experimental”">
+        <figcaption>
+          <div class="t">AI Edit · Fine-tune experimental</div>
+          <div class="d">Write a request and the model proposes exposure, temperature, vibrance, and local mask suggestions. The current result is on the left, the suggestion on the right; nothing is written until you confirm, and closing it leaves the original untouched — not a single byte.</div>
+        </figcaption>
+      </figure>
+      <p class="note-sm">AI requires a separately installed base model (~3.1 GB; internet needed for the first install); the small adapter bundled with the app is about 1.3 MB. <strong>All regular editing works without installing the model.</strong> The feature is still experimental: detail understanding, local adjustments, and auto-framing can all misjudge, so trust the preview. <a href="#ai-model">Installation steps →</a></p>
+    </div>
+  </section>
+
+  <!-- ================= 安装 ================= -->
+  <section id="install" class="dark">
+    <div class="wrap rv">
+      <p class="eyebrow"><span class="idx">05</span>Install</p>
+      <h2>Four steps to start editing.</h2>
+      <p class="lead">Phos isn’t notarized by Apple yet, so macOS asks for permission once on first launch and never again. This is how macOS treats every non-notarized app — not something unique to Phos.</p>
+    </div>
+    <div class="wide">
+      <div class="install-shots">
+        <figure class="rv">
+          <img class="shot" src="../images/09-gatekeeper-dialog.jpg" width="3024" height="1572" loading="lazy" alt="macOS dialog saying Phos can’t be opened because Apple can’t check it for malicious software, with Done and Move to Trash buttons">
+          <figcaption>Double-clicking Phos gets blocked once. This dialog has only two buttons — “Done” and “Move to Trash”. Click “Done”, not Trash.</figcaption>
+        </figure>
+        <figure class="rv">
+          <img class="shot" src="../images/10-system-settings-open-anyway.jpg" width="1920" height="998" loading="lazy" alt="Privacy &amp; Security pane in System Settings, showing Phos was blocked in the Security section with an Open Anyway button on the right">
+          <figcaption>If you’ve already double-clicked, you can also go to System Settings → Privacy &amp; Security and click “Open Anyway”.</figcaption>
+        </figure>
+      </div>
+    </div>
+    <div class="wrap">
+      <div class="steps">
+        <div class="step rv">
+          <div>
+            <h3>Download and open the disk image</h3>
+            <p>Click “Download for macOS” on this page, or use <a href="../download/Phos-macOS-apple-silicon.dmg">this direct link</a>, download <code>Phos-macOS-apple-silicon.dmg</code>, then double-click to open.</p>
+          </div>
+        </div>
+        <div class="step rv">
+          <div>
+            <h3>Drag it into Applications</h3>
+            <p>In the disk image window, drag <strong>Phos</strong> into the Applications folder next to it, then eject the image.</p>
+          </div>
+        </div>
+        <div class="step rv">
+          <div>
+            <h3>Allow it on first launch</h3>
+            <p>Phos is locally signed but not notarized by Apple, so it is blocked the first time. Double-click Phos, click “<strong>Done</strong>” to dismiss the dialog, then <strong>immediately</strong> open System Settings → Privacy &amp; Security, scroll to the bottom, and click “<strong>Open Anyway</strong>”.</p>
+            <p><em>That button disappears about an hour after the dialog appears, so click it right away. After that, double-clicking opens the app normally.</em></p>
+          </div>
+        </div>
+        <div class="step rv">
+          <div>
+            <h3>Or skip it with one command</h3>
+            <p>Run this line in Terminal to remove the quarantine flag; after that a double-click opens it:</p>
+            <p style="margin-top:10px"><code>xattr -dr com.apple.quarantine /Applications/Phos.app</code></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 常见问题 ================= -->
+  <section id="faq" class="light">
+    <div class="wrap rv">
+      <p class="eyebrow"><span class="idx">06</span>FAQ</p>
+      <h2>Questions you might have.</h2>
+      <p class="lead">Pricing, format support, privacy, and installation — the questions we hear most about Phos.</p>
+    </div>
+    <div class="wrap">
+      <div class="faq">
+        <details class="rv-stagger">
+          <summary>Is Phos free?</summary>
+          <div class="ans"><p>Free and open source under the MIT license. No subscription, no in-app purchases, no account, and no “Pro” tier.</p></div>
+        </details>
+        <details class="rv-stagger">
+          <summary>Which macOS versions and Macs are supported?</summary>
+          <div class="ans"><p>macOS 26.0 or later on an Apple-silicon (M-series) Mac. Since 3.2.5 the minimum is 26.0, up from 15.0; on older systems, keep using 3.2.4. Only Apple-silicon builds are provided — Intel Macs aren’t supported yet.</p></div>
+        </details>
+        <details class="rv-stagger">
+          <summary>Which cameras’ RAW files are supported?</summary>
+          <div class="ans"><p>Phos uses macOS’s built-in RAW decoding (Core Image and ImageIO), so any RAW file that Preview can open can be edited — including mainstream formats from Canon (CR2 / CR3), Nikon (NEF), Sony (ARW), Fujifilm (RAF), and Adobe DNG.</p><p>Support for newer cameras depends on whether the macOS version you’re running already includes a decoder for that model.</p></div>
+        </details>
+        <details class="rv-stagger">
+          <summary>Are my photos uploaded? What is the network used for?</summary>
+          <div class="ans"><p>No. Photos are processed entirely on your Mac — no cloud, no account, no telemetry.</p><p>The only network activity is a single check of the latest version number at launch; the request contains nothing about you, your photos, or this Mac.</p></div>
+        </details>
+        <details class="rv-stagger">
+          <summary>How is it different from Lightroom?</summary>
+          <div class="ans"><p>Phos is local-first: no subscription, no cloud sync, no mobile app, with a focus on doing RAW decoding, tone and color, film CLUT emulation, local masks, and batch export really well.</p><p>It’s built for personal photography workflows where photos stay entirely on your own machine.</p></div>
+        </details>
+        <details class="rv-stagger">
+          <summary>What if macOS blocks Phos on first launch?</summary>
+          <div class="ans"><p>This is the standard prompt every app without Apple notarization gets — not something specific to Phos. Double-click Phos → click “Done” → open System Settings → Privacy &amp; Security → scroll to the bottom and click “Open Anyway”.</p><p>You can also run <code>xattr -dr com.apple.quarantine /Applications/Phos.app</code> in Terminal to remove the quarantine flag for good.</p></div>
+        </details>
+        <details class="rv-stagger">
+          <summary>Does it support batch processing?</summary>
+          <div class="ans"><p>Yes. Batch import, syncing one photo’s adjustments to others, and batch export (including watermarks).</p></div>
+        </details>
+        <details class="rv-stagger">
+          <summary>Is there a Windows or iPad version?</summary>
+          <div class="ans"><p><strong>The macOS app is the primary platform.</strong> Windows has a separate <strong>experimental port</strong> (4.0.1, ported from the macOS 4.0.1 source), maintained separately from macOS: Apple’s Vision and Core Image are replaced with local implementations, <strong>there is no on-device AI editing</strong>, and it isn’t code-signed. It’s available from the  <a href="#windows">downloads section</a>.</p><p>An iPad version is still being assessed for feasibility, with no releasable timeline.</p></div>
+        </details>
+        <details class="rv-stagger">
+          <summary>How can I report issues or contribute?</summary>
+          <div class="ans"><p>File an Issue or a Pull Request at the  <a href="https://github.com/Zenodeng/Phos">GitHub repository</a>. The project is written in Swift, built on Core Image, Vision, and AppKit.</p></div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 下载 ================= -->
+  <section class="dl light">
+    <div class="wrap center rv">
+      <p class="eyebrow"><span class="idx">07</span>Get started</p>
+      <h2>Free, open source, offline.</h2>
+      <p class="lead">No account, no subscription, no cloud upload. Your photos stay on your Mac.</p>
+      <div class="btnrow">
+        <a class="btn btn-primary" href="../download/Phos-macOS-apple-silicon.dmg" download>Download for macOS</a>
+        <a class="btn btn-outline-l" href="https://github.com/Zenodeng/Phos">View on GitHub</a>
+      </div>
+      <p class="note">Requires macOS 26.0 or later · Apple silicon · MIT license · Version v4.2.0 (7.28 MB)</p>
+      <div class="channels">
+        <h3>Download mirrors · switch if one is slow</h3>
+        <ul>
+          <li><a href="../download/Phos-macOS-apple-silicon.dmg" download>Direct link</a><span>Cloudflare, recommended</span></li>
+          <li><a href="https://cdn.jsdelivr.net/gh/Zenodeng/Phos@gh-pages/download/Phos-macOS-apple-silicon.dmg">jsDelivr CDN</a><span>Nodes in China</span></li>
+          <li><a href="https://testingcf.jsdelivr.net/gh/Zenodeng/Phos@gh-pages/download/Phos-macOS-apple-silicon.dmg">jsDelivr (backup node)</a><span>Try another route</span></li>
+          <li><a href="https://zenodeng.github.io/Phos/download/Phos-macOS-apple-silicon.dmg">GitHub Pages</a><span>Backup</span></li>
+          <li><a href="https://github.com/Zenodeng/Phos/releases">GitHub Releases</a><span>Requires GitHub access</span></li>
+        </ul>
+        <p class="sum">All of the above serve the same file, with an identical SHA256: <code>2c94da0a…eb9d</code> (full value in  <a href="../download/SHA256.txt">SHA256.txt</a>). After downloading, verify it in Terminal with  <code>shasum -a 256 ~/Downloads/Phos-macOS-apple-silicon.dmg</code>.</p>
+        <p class="sum">Prefer a zip? <a href="../download/Phos-macOS-apple-silicon.zip">There’s one here too</a> (same contents).</p>
+      </div>
+
+      <div class="channels" id="ai-model" style="margin-top:40px">
+        <h3>Optional: on-device AI model</h3>
+        <ul>
+          <li><a href="../download/Phos-Optional-Model-Installer.zip" download>Phos-Optional-Model-Installer.zip</a><span>5.9 KB · scripts and checksums only</span></li>
+        </ul>
+
+        <p class="sum">The app already ships with a ~1.3 MB fine-tune adapter, so <strong>opening the AI panel requires no extra download</strong>; but for the AI to actually produce suggestions you also need a ~3.1 GB base model and an MLX runtime. This 5.9 KB package sets both up — it contains no weights itself and pulls a pinned version from Hugging Face, verifying the SHA256 of every file.</p>
+        <p class="sum" style="margin-top:14px"><strong>All regular editing works without installing it.</strong> AI is experimental; installing it or not doesn’t affect editing itself.</p>
+
+        <h3 style="margin-top:36px">Before you install</h3>
+        <p class="sum" style="margin-top:12px">
+          · An Apple-silicon (M-series) Mac running macOS 26 or later<br>
+          ·  <strong>Python 3.11 for arm64</strong> installed (from the <a href="https://www.python.org/downloads/macos/" target="_blank" rel="noopener">python.org downloads page</a>; choose the macOS 64-bit universal2 installer)<br>
+          · At least  <strong>8 GB of free disk space</strong> (weights are ~3.1 GB, plus Python and MLX dependencies)<br>
+          · The first install needs internet access to  <code>pypi.org</code>  and  <code>huggingface.co</code><br>
+          · 16 GB of unified memory is the configuration tested here; 8 GB is unverified
+        </p>
+
+        <h3 style="margin-top:36px">Three steps to install</h3>
+        <ol style="margin-top:12px;padding-left:22px;list-style:decimal;font-size:13px;line-height:1.85;letter-spacing:-.012em;color:var(--ink-64)">
+          <li style="display:list-item;border:0;padding:0;margin-bottom:12px"><strong>Install Python 3.11.</strong> Download the installer from the link above and double-click to install, then run  <code>python3.11 --version</code>  in Terminal — if it prints a version number, you’re set.</li>
+          <li style="display:list-item;border:0;padding:0;margin-bottom:12px"><strong>Unzip it and double-click “安装模型.command” (Install Model).</strong> If macOS says “cannot verify the developer”, <strong>right-click the file → “Open” → “Open” again</strong>. A Terminal window opens and installation begins.<br><strong>If you can’t reach Hugging Face from mainland China, double-click “国内网络安装.command” (China-network install) instead</strong> — see the next section.</li>
+          <li style="display:list-item;border:0;padding:0"><strong>Let it finish.</strong> It installs pinned MLX dependencies, downloads the model from Hugging Face (~3.1 GB, depending on your connection), then verifies each file’s SHA256. When you see “installation and verification complete,” you’re done.</li>
+        </ol>
+
+        <h3 style="margin-top:36px">Installing from mainland China</h3>
+        <p class="sum" style="margin-top:12px">The installer pulls the model from  <code>huggingface.co</code>  and dependencies from  <code>pypi.org</code>  by default. <strong>Both can be unreachable or very slow on some networks</strong>, especially Hugging Face. You can install without a proxy.</p>
+        <p class="sum" style="margin-top:12px"><strong>The simplest option: unzip and double-click “国内网络安装.command” (China-network install)</strong>. Bundled since 4.0.1, it swaps the two download sources for hf-mirror and the Tsinghua PyPI mirror; everything else is identical to the normal install, with no terminal needed.</p>
+        <p class="sum" style="margin-top:12px">To run it manually or choose other mirrors, open Terminal in the unzipped folder (right-click the folder → Services → New Terminal at Folder) and paste:</p>
+        <pre style="margin:12px 0 0;padding:14px 16px;background:rgba(0,0,0,.055);border-radius:10px;overflow-x:auto;font-size:12px;line-height:1.75"><code style="background:none;padding:0;font-size:12px;word-break:normal;white-space:pre">HF_ENDPOINT=https://hf-mirror.com \
+PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple \
+python3.11 install_model.py</code></pre>
+        <p class="sum" style="margin-top:12px"><strong>Mirrors only change where files come from, not verification</strong>: every model file is still checked against the manifest, and a single wrong byte stops the install with an error — no corrupt files get in. To test a mirror first, open  <a href="https://hf-mirror.com/mlx-community/Qwen3-VL-4B-Instruct-4bit" target="_blank" rel="noopener">the model page on hf-mirror.com</a>.</p>
+        <p class="sum" style="margin-top:12px">If the Python installer downloads slowly from python.org, use the Huawei Cloud mirror: <a href="https://mirrors.huaweicloud.com/python/" target="_blank" rel="noopener">mirrors.huaweicloud.com/python</a>, and pick a 3.11.x macOS universal2 installer.</p>
+
+        <h3 style="margin-top:36px">Using it after installation</h3>
+        <p class="sum" style="margin-top:12px">It installs to  <code>~/Library/Application Support/Phos/MLX</code> by default, and Phos finds it automatically — open any photo and click “AI Edit” at the top of the adjustment panel. No further configuration.</p>
+        <p class="sum" style="margin-top:12px">To install elsewhere, run  <code>python3.11 install_model.py --environment /absolute/path/Phos-MLX</code> in Terminal; afterwards use “AI Edit → Choose model environment” in the app and select the <strong>outer folder that contains both  <code>.venv</code>  and  <code>model</code>.</strong></p>
+        <p class="sum" style="margin-top:12px">To check the install, run <code>python3 install_model.py --verify-only</code>. To uninstall, just delete that folder.</p>
+
+        <h3 style="margin-top:36px">FAQ</h3>
+        <div class="faq" style="margin-top:14px">
+          <details>
+            <summary>It says “Please install Apple Silicon Python 3.11”</summary>
+            <div class="ans"><p>Either Python isn’t installed, or the Intel build was installed. Download the universal2 installer from python.org again; after installing, run  <code>python3.11 --version</code>  in Terminal to confirm, then double-click “安装模型.command” again.</p></div>
+          </details>
+          <details>
+            <summary>What if the download fails halfway?</summary>
+            <div class="ans"><p>The script won’t overwrite an existing environment, and partial progress is kept. Switch to a network that can reliably reach Hugging Face and double-click “安装模型.command” again; alternatively, use  <code>--environment</code>  to install into a brand-new empty directory. The script never switches to an unvetted mirror on its own.</p></div>
+          </details>
+          <details>
+            <summary>I downloaded the model files — why doesn’t it work?</summary>
+            <div class="ans"><p>Weights and runtime are two different things. Putting only the  <code>.safetensors</code>  files in a folder doesn’t provide the MLX dependencies; the installer must set up the  <code>.venv</code>. Phos needs both before it can start the local inference server.</p></div>
+          </details>
+          <details>
+            <summary>Can I move or copy that folder after installing?</summary>
+            <div class="ans"><p>Moving it isn’t recommended. The  <code>.venv</code>  records absolute interpreter paths and breaks if moved. To relocate, reinstall with  <code>--environment</code>.</p></div>
+          </details>
+          <details>
+            <summary>Does AI upload my photos anywhere?</summary>
+            <div class="ans"><p>No. Inference runs locally at  <code>127.0.0.1</code>  and photos never leave this Mac. Network access is needed only during installation, to download the model and dependencies.</p></div>
+          </details>
+        </div>
+
+        <p class="sum" style="margin-top:24px">The base model is  <a href="https://huggingface.co/mlx-community/Qwen3-VL-4B-Instruct-4bit" target="_blank" rel="noopener"><code>mlx-community/Qwen3-VL-4B-Instruct-4bit</code></a> (pinned version  <code>2fd8dacb…</code>; China mirror:  <a href="https://hf-mirror.com/mlx-community/Qwen3-VL-4B-Instruct-4bit" target="_blank" rel="noopener">hf-mirror</a>), licensed under  <strong>Apache-2.0</strong>. Attribution and the full license text ship inside the app’s  <code>PhotoAIAdapter</code>  directory. Phos’s academic-use notice does not change the licensing terms of third-party models.</p>
+      </div>
+
+      <div class="channels" id="windows" style="margin-top:40px">
+        <h3>Windows build · Experimental port</h3>
+        <ul>
+          <li><a href="https://github.com/Zenodeng/Phos/releases/download/windows-4.0.1/Phos-4.0.1-Windows-x64.zip">Phos-4.0.1-Windows-x64.zip</a><span>323 MB · Windows 11 x64</span></li>
+        </ul>
+        <p class="sum">Ported from the macOS 4.0.1 source, <strong>maintained separately from the macOS build</strong>, with its own version numbering. Unzip it and double-click  <code>Phos.exe</code> in the root folder; it must stay in the same directory as the  <code>app\</code>  folder.</p>
+        <p class="sum" style="margin-top:12px"><strong>It isn’t exactly the same as the macOS build.</strong> Apple’s Vision and Core Image are replaced with local implementations (MODNet / BiRefNet / OpenCV / D3D11), so subject segmentation, edges, and color can differ; <strong>it does not include on-device AI editing</strong>; it also lacks the macOS 4.1 interface update (advanced editing, unified glass, crop hot zones, auto-level).</p>
+        <p class="sum" style="margin-top:12px"><strong>It isn’t code-signed</strong>, so the first launch is blocked by Windows SmartScreen — click “More info → Run anyway”. Full differences and known limitations are in the  <a href="https://github.com/Zenodeng/Phos/releases/tag/windows-4.0.1" target="_blank" rel="noopener">release notes</a>.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>Phos — written in Swift, built on Core Image, Vision, and AppKit. No network, no account, no subscription. Formerly known as RawForge.</div>
+    <div><a href="https://github.com/Zenodeng/Phos">GitHub</a> · <a href="https://github.com/Zenodeng/Phos/releases">Releases</a> · MIT License</div>
+  </div>
+</footer>
+
+<script src="../assets/site.js"></script>
+</body>
+</html>

@@ -393,40 +393,41 @@ private final class LocalOnlyRedirects: NSObject, URLSessionTaskDelegate {
 }
 
 struct PhotoAISheet: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject private var state: AppState
     @Environment(\.dismiss) private var dismiss
     @StateObject private var editor = PhotoAIEditor()
     @State private var autoCrop = true
-    @State private var instruction = "自然通透，平衡明暗，保留现场氛围；必要时用蒙版做局部调整。"
+    @State private var instruction = L10n.tr("自然通透，平衡明暗，保留现场氛围；必要时用蒙版做局部调整。")
     var body: some View {
         VStack(alignment:.leading,spacing:14) {
             HStack {
-                Label("AI 修图",systemImage:"sparkles.rectangle.stack").font(.title2.bold())
-                Spacer(); Text("本地 · Qwen3-VL 4B · 微调实验版").font(.caption).foregroundStyle(.secondary)
+                Label(L10n.tr("AI 修图"),systemImage:"sparkles.rectangle.stack").font(.title2.bold())
+                Spacer(); Text(L10n.tr("本地 · Qwen3-VL 4B · 微调实验版")).font(.caption).foregroundStyle(.secondary)
             }
-            Text(state.current?.url.lastPathComponent ?? "请先打开照片").font(.caption).foregroundStyle(.secondary).lineLimit(1)
-            TextField("描述想要的效果…",text:$instruction,axis:.vertical).lineLimit(2...4).textFieldStyle(.roundedBorder).disabled(editor.busy)
-            Toggle("自动优化构图与裁切（实验性）",isOn:$autoCrop).disabled(editor.busy)
+            Text(state.current?.url.lastPathComponent ?? L10n.tr("请先打开照片")).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            TextField(L10n.tr("描述想要的效果…"),text:$instruction,axis:.vertical).lineLimit(2...4).textFieldStyle(.roundedBorder).disabled(editor.busy)
+            Toggle(L10n.tr("自动优化构图与裁切（实验性）"),isOn:$autoCrop).disabled(editor.busy)
             HStack(spacing:12) {
                 image(editor.before ?? state.preview,title:"当前效果")
                 image(editor.after,title:"AI 建议预览")
             }
-            if !editor.summary.isEmpty { Text(editor.summary).font(.callout).textSelection(.enabled) }
-            if !editor.detail.isEmpty { Text(editor.detail).font(.caption).foregroundStyle(.secondary) }
+            if !editor.summary.isEmpty { Text(L10n.tr(editor.summary)).font(.callout).textSelection(.enabled) }
+            if !editor.detail.isEmpty { Text(L10n.tr(editor.detail)).font(.caption).foregroundStyle(.secondary) }
             if let candidate = editor.candidate, let base = editor.base {
                 Text(PhotoAIPlan.keys.keys.sorted().compactMap { key -> String? in
                     guard let path = PhotoAIPlan.keys[key], candidate[keyPath:path] != base[keyPath:path] else { return nil }
-                    return "\(ParameterDescriptor.named(key).label) \(String(format:"%.2f",candidate[keyPath:path]))"
-                }.joined(separator:" · ") + " · 新增蒙版 \(candidate.masks.count-base.masks.count)")
+                    return "\(L10n.tr(ParameterDescriptor.named(key).label)) \(String(format:"%.2f",candidate[keyPath:path]))"
+                }.joined(separator:" · ") + L10n.tr(" · 新增蒙版 \(candidate.masks.count-base.masks.count)"))
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
             }
-            HStack { if editor.busy { ProgressView().controlSize(.small) }; Text(editor.message).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true) }
+            HStack { if editor.busy { ProgressView().controlSize(.small) }; Text(L10n.tr(editor.message)).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true) }
             HStack {
-                Button("选择模型环境") { chooseEnvironment() }.disabled(editor.busy)
+                Button(L10n.tr("选择模型环境")) { chooseEnvironment() }.disabled(editor.busy)
                 Spacer()
-                Button(editor.busy ? "取消分析" : "关闭") { if editor.busy { editor.cancel(); editor.message = "已取消。" } else { dismiss() } }.keyboardShortcut(.cancelAction)
-                Button("生成建议") { editor.generate(state:state,instruction:instruction,autoCrop:autoCrop) }.disabled(editor.busy || state.source == nil || state.previewing || state.syncRunning || instruction.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty)
-                Button("应用调整") {
+                Button(L10n.tr(editor.busy ? "取消分析" : "关闭")) { if editor.busy { editor.cancel(); editor.message = "已取消。" } else { dismiss() } }.keyboardShortcut(.cancelAction)
+                Button(L10n.tr("生成建议")) { editor.generate(state:state,instruction:instruction,autoCrop:autoCrop) }.disabled(editor.busy || state.source == nil || state.previewing || state.syncRunning || instruction.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty)
+                Button(L10n.tr("应用调整")) {
                     state.parameterEdits.finishCurrent()
                     guard let candidate = editor.candidate, state.current?.id == editor.photoID, state.params == editor.base, !state.syncRunning else { editor.candidate = nil; editor.message = "照片或参数已变化，请重新生成建议。"; return }
                     state.showBefore = false; state.cropMode = false; state.selectedMask = nil
@@ -437,7 +438,7 @@ struct PhotoAISheet: View {
     }
     private func image(_ cg: CGImage?,title: String) -> some View {
         VStack(alignment:.leading,spacing:6) {
-            Text(title).font(.caption).foregroundStyle(.secondary)
+            Text(L10n.tr(title)).font(.caption).foregroundStyle(.secondary)
             ZStack {
                 RoundedRectangle(cornerRadius:10).fill(.black.opacity(0.12))
                 if let cg { Image(decorative:cg,scale:1).resizable().scaledToFit().padding(4) }
@@ -447,7 +448,7 @@ struct PhotoAISheet: View {
     }
     private func chooseEnvironment() {
         let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.allowsMultipleSelection = false
-        panel.message = "选择包含 model 和 .venv 的模型环境文件夹"
+        panel.message = L10n.tr("选择包含 model 和 .venv 的模型环境文件夹")
         if panel.runModal() == .OK, let url = panel.url {
             guard FileManager.default.fileExists(atPath:url.appendingPathComponent(".venv/bin/python").path), FileManager.default.fileExists(atPath:url.appendingPathComponent("model/config.json").path) else { editor.message = "该文件夹缺少模型或启动脚本。"; return }
             UserDefaults.standard.set(url.path,forKey:"photoAIEnvironment"); editor.message = "本地模型环境已更新。"

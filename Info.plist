@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleDevelopmentRegion</key><string>zh-Hans</string>
+	<key>CFBundleLocalizations</key><array><string>zh-Hans</string><string>en</string></array>
 	<key>CFBundleDisplayName</key>
 	<string>Phos</string>
 	<key>CFBundleExecutable</key>
@@ -21,9 +23,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>4.2.0</string>
+	<string>4.3.0</string>
 	<key>CFBundleVersion</key>
-	<string>4.2.0</string>
+	<string>4.3.0</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.photography</string>
 	<key>LSMinimumSystemVersion</key>

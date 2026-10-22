@@ -92,7 +92,7 @@ final class WorkspacePhotoCell: NSButton {
     func configure(_ item: PhotoItem, current: Bool, multi: Bool, failed: Bool) {
         let title = item.url.lastPathComponent
         name.stringValue = item.url.deletingPathExtension().lastPathComponent
-        detail.stringValue = item.url.pathExtension.uppercased() + (item.picked ? " · 已标记" : "") + (failed ? " · 无法预览" : "")
+        detail.stringValue = item.url.pathExtension.uppercased() + (item.picked ? L10n.tr(" · 已标记") : "") + (failed ? L10n.tr(" · 无法预览") : "")
         thumbnail.image = item.thumb.map { NSImage(cgImage: $0, size: .zero) }
             ?? NSImage(systemSymbolName: failed ? "exclamationmark.triangle" : "photo", accessibilityDescription: failed ? "缩略图加载失败" : "缩略图加载中")
         thumbnail.contentTintColor = .tertiaryLabelColor
@@ -102,8 +102,8 @@ final class WorkspacePhotoCell: NSButton {
         layer?.borderColor = (current ? NSColor.rfGold.withAlphaComponent(0.55) : .clear).cgColor
         layer?.borderWidth = current ? 1 : 0
         toolTip = item.url.path
-        setAccessibilityLabel(title + (current ? "，当前照片" : "") + (multi ? "，已多选" : ""))
-        setAccessibilityHelp("\(item.url.pathExtension.uppercased())，\(item.rating)星\(item.picked ? "，已标记" : "")。Command切换多选，Shift选择范围。")
+        setAccessibilityLabel(title + (current ? L10n.tr("，当前照片") : "") + (multi ? L10n.tr("，已多选") : ""))
+        setAccessibilityHelp(L10n.isEnglish ? "\(item.url.pathExtension.uppercased()), \(item.rating) stars\(item.picked ? ", flagged" : ""). Command-click to toggle selection; Shift-click to select a range." : "\(item.url.pathExtension.uppercased())，\(item.rating)星\(item.picked ? "，已标记" : "")。Command切换多选，Shift选择范围。")
         needsLayout = true
     }
     override func layout() {
@@ -135,6 +135,7 @@ private final class WorkspaceFilmDocument: NSView {
     private var pool: [WorkspacePhotoCell] = []
     override var isFlipped: Bool { true }
     func refresh() {
+
         guard let browser else { return }
         let indices = browser.indices
         let visible = enclosingScrollView?.contentView.bounds ?? .zero
@@ -183,15 +184,15 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
         film.browser = self
         heading.font = .systemFont(ofSize: 13, weight: .semibold)
         folder.font = .systemFont(ofSize: 11); folder.textColor = .secondaryLabelColor; folder.lineBreakMode = .byTruncatingMiddle
-        search.placeholderString = "搜索照片"; search.font = .systemFont(ofSize: 11); search.controlSize = .small; search.delegate = self
-        search.setAccessibilityLabel("搜索照片")
+        search.placeholderString = L10n.tr("搜索照片"); search.font = .systemFont(ofSize: 11); search.controlSize = .small; search.delegate = self
+        search.setAccessibilityLabel(L10n.tr("搜索照片"))
         filter.isBordered = false; filter.imagePosition = .imageOnly; (filter.cell as? NSPopUpButtonCell)?.arrowPosition = .noArrow
-        filter.setAccessibilityLabel("筛选与选择操作")
+        filter.setAccessibilityLabel(L10n.tr("筛选与选择操作"))
         table.headerView = nil; table.backgroundColor = .clear; table.rowHeight = 46; table.intercellSpacing = .zero
         table.selectionHighlightStyle = .none
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("photo")); column.resizingMask = .autoresizingMask
         table.addTableColumn(column); table.columnAutoresizingStyle = .lastColumnOnlyAutoresizingStyle
-        table.delegate = self; table.dataSource = self; table.setAccessibilityLabel("照片列表")
+        table.delegate = self; table.dataSource = self; table.setAccessibilityLabel(L10n.tr("照片列表"))
         for scroll in [listScroll, filmScroll] {
             scroll.drawsBackground = false; scroll.borderType = .noBorder
             scroll.contentView.postsBoundsChangedNotifications = true
@@ -201,19 +202,19 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
         }
         listScroll.hasVerticalScroller = true; listScroll.autohidesScrollers = true; listScroll.documentView = table
         filmScroll.hasHorizontalScroller = true; filmScroll.autohidesScrollers = true; filmScroll.documentView = film
-        filmScroll.setAccessibilityLabel("胶片条")
+        filmScroll.setAccessibilityLabel(L10n.tr("胶片条"))
         empty.alignment = .center; empty.font = .systemFont(ofSize: 12); empty.textColor = .secondaryLabelColor
         footer.font = .monospacedDigitSystemFont(ofSize: 10, weight: .regular); footer.textColor = .secondaryLabelColor
         for value in 1...5 {
             let button = WorkspaceToolButton("star", "评分\(value)星", action: {})
             button.target = self; button.action = #selector(rate(_:))
-            button.isBordered = false; button.tag = value; button.toolTip = "\(value)星，再点一次清除"; button.setAccessibilityLabel("评分\(value)星")
+            button.isBordered = false; button.tag = value; button.toolTip = L10n.tr("\(value)星，再点一次清除"); button.setAccessibilityLabel(L10n.tr("评分\(value)星"))
             stars.append(button); addSubview(button)
         }
         pick.image = NSImage(systemSymbolName: "flag", accessibilityDescription: "标记当前照片")
-        pick.isBordered = false; pick.target = self; pick.action = #selector(togglePick); pick.toolTip = "标记当前照片"; pick.setAccessibilityLabel("标记当前照片")
+        pick.isBordered = false; pick.target = self; pick.action = #selector(togglePick); pick.toolTip = L10n.tr("标记当前照片"); pick.setAccessibilityLabel(L10n.tr("标记当前照片"))
         sync.image = NSImage(systemSymbolName: "arrow.triangle.2.circlepath", accessibilityDescription: "同步所选照片")
-        sync.isBordered = false; sync.target = self; sync.action = #selector(synchronize); sync.toolTip = "同步所选照片"; sync.setAccessibilityLabel("同步所选照片")
+        sync.isBordered = false; sync.target = self; sync.action = #selector(synchronize); sync.toolTip = L10n.tr("同步所选照片"); sync.setAccessibilityLabel(L10n.tr("同步所选照片"))
         for view in [heading, folder, search, filter, listScroll, filmScroll, empty, footer, pick, sync] { addSubview(view) }
         model.state.objectWillChange.debounce(for: .milliseconds(1), scheduler: RunLoop.main).sink { [weak self] _ in self?.refresh() }.store(in: &observations)
         model.session.objectWillChange.debounce(for: .milliseconds(1), scheduler: RunLoop.main).sink { [weak self] _ in self?.refresh() }.store(in: &observations)
@@ -240,6 +241,10 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
         }
     }
     func refresh() {
+        search.placeholderString = L10n.tr("搜索照片"); search.setAccessibilityLabel(L10n.tr("搜索照片"))
+        table.setAccessibilityLabel(L10n.tr("照片列表")); filmScroll.setAccessibilityLabel(L10n.tr("胶片条"))
+        filter.setAccessibilityLabel(L10n.tr("筛选与选择操作"))
+        (stars + [pick,sync]).compactMap { $0 as? WorkspaceToolButton }.forEach { $0.refreshLanguage() }
         for button in (stars + [pick, sync]).compactMap({ $0 as? WorkspaceToolButton }) {
             button.motionReduced = model.environment.accessibility.reduceMotion
         }
@@ -254,13 +259,13 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
                 configure(cell, row: row)
             }
         }
-        heading.stringValue = isFilm ? (s.folder?.lastPathComponent ?? "照片") : "照片"
-        folder.stringValue = "\(s.folder?.lastPathComponent ?? "尚未打开文件夹") · \(indices.count)张"
+        heading.stringValue = isFilm ? (s.folder?.lastPathComponent ?? L10n.tr("照片")) : L10n.tr("照片")
+        folder.stringValue = (s.folder?.lastPathComponent ?? L10n.tr("尚未打开文件夹")) + " · " + L10n.tr("\(indices.count)张")
         folder.toolTip = s.folder?.path; heading.toolTip = s.folder?.path
         if search.stringValue != s.searchText { search.stringValue = s.searchText }
         let position = s.visiblePhotoPosition.map { "\($0) / \(indices.count)" } ?? (s.current == nil ? "\(indices.count)张" : "当前照片已被筛选隐藏")
-        footer.stringValue = s.selectedPhotos.isEmpty ? position : "已选 \(s.selectedPhotos.count) · \(position)"
-        empty.stringValue = s.folderLoading ? "正在读取文件夹…" : s.folderFailure ?? (s.items.isEmpty ? (s.folder == nil ? "打开文件夹开始选片" : "文件夹里没有支持的图像") : "没有符合筛选条件的照片")
+        footer.stringValue = L10n.tr(s.selectedPhotos.isEmpty ? position : "已选 \(s.selectedPhotos.count) · \(position)")
+        empty.stringValue = L10n.tr(s.folderLoading ? "正在读取文件夹…" : s.folderFailure ?? (s.items.isEmpty ? (s.folder == nil ? "打开文件夹开始选片" : "文件夹里没有支持的图像") : "没有符合筛选条件的照片"))
         empty.isHidden = !indices.isEmpty
         for button in stars {
             button.isEnabled = s.current != nil && !s.syncRunning
@@ -336,22 +341,22 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
     @objc private func synchronize() { model.perform(.sync) }
     private func updateFilter() {
         let s = model.state
-        let filterState = "\(s.filterRating)-\(s.filterPicked)"
+        let filterState = AppLanguage.shared.code + "\(s.filterRating)-\(s.filterPicked)"
         guard lastFilterState != filterState else { return }
         lastFilterState = filterState
         let menu = NSMenu()
-        let title = NSMenuItem(title: "筛选", action: nil, keyEquivalent: "")
+        let title = NSMenuItem(title: L10n.tr("筛选"), action: nil, keyEquivalent: "")
         title.image = NSImage(systemSymbolName: "line.3.horizontal.decrease", accessibilityDescription: "筛选")
         menu.addItem(title)
         for value in 0...5 {
-            let item = NSMenuItem(title: value == 0 ? "所有星级" : "至少\(value)星", action: #selector(filterRating(_:)), keyEquivalent: "")
+            let item = NSMenuItem(title: L10n.tr(value == 0 ? "所有星级" : "至少\(value)星"), action: #selector(filterRating(_:)), keyEquivalent: "")
             item.tag = value; item.target = self; item.state = s.filterRating == value ? .on : .off; menu.addItem(item)
         }
         menu.addItem(.separator())
-        let picked = NSMenuItem(title: "仅已标记", action: #selector(filterPicked), keyEquivalent: ""); picked.target = self; picked.state = s.filterPicked ? .on : .off; menu.addItem(picked)
+        let picked = NSMenuItem(title: L10n.tr("仅已标记"), action: #selector(filterPicked), keyEquivalent: ""); picked.target = self; picked.state = s.filterPicked ? .on : .off; menu.addItem(picked)
         menu.addItem(.separator())
         for (title, action) in [("全选筛选结果", #selector(selectAllPhotos)), ("清除多选", #selector(clearSelection))] {
-            let item = NSMenuItem(title: title, action: action, keyEquivalent: ""); item.target = self; menu.addItem(item)
+            let item = NSMenuItem(title: L10n.tr(title), action: action, keyEquivalent: ""); item.target = self; menu.addItem(item)
         }
         filter.menu = menu
         filter.contentTintColor = s.filterRating > 0 || s.filterPicked ? .rfGold : .secondaryLabelColor

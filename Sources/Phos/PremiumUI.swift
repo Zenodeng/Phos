@@ -5,6 +5,7 @@ import SwiftUI
 // so the high-frequency editing controls stay stable while the workspace gains hierarchy.
 
 struct PremiumMainWindow: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
 
     var body: some View {
@@ -29,12 +30,13 @@ struct PremiumMainWindow: View {
         .sheet(isPresented: $s.showSync) { SyncSheet() }
         .sheet(isPresented: $s.showSnapshots) { SnapshotSheet() }
         .alert("操作未完成", isPresented: Binding(get: { s.workflowError != nil }, set: { if !$0 { s.workflowError = nil } })) {
-            Button("好") { s.workflowError = nil }
-        } message: { Text(s.workflowError ?? "") }
+            Button(L10n.tr("好")) { s.workflowError = nil }
+        } message: { Text(L10n.tr(s.workflowError ?? "")) }
     }
 }
 
 struct PremiumTopBar: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
 
     var body: some View {
@@ -50,7 +52,7 @@ struct PremiumTopBar: View {
                             .foregroundStyle(.white)
                     }
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("PHOS")
+                        Text(L10n.tr("PHOS"))
                             .font(.system(size: 12, weight: .bold, design: .rounded))
                             .tracking(1.4)
                         Text(s.folder?.lastPathComponent ?? "编辑工作区")
@@ -83,9 +85,9 @@ struct PremiumTopBar: View {
                     Menu {
                         ForEach(s.loadPresets()) { preset in Button(preset.name) { s.commit(preset.params) } }
                         Divider()
-                        Button("保存当前为预设…") { savePreset() }
+                        Button(L10n.tr("保存当前为预设…")) { savePreset() }
                     } label: {
-                        Label("预设", systemImage: "wand.and.stars")
+                        Label(L10n.tr("预设"), systemImage: "wand.and.stars")
                             .font(.system(size: 11, weight: .semibold))
                     }
                     .menuStyle(.borderlessButton)
@@ -113,8 +115,8 @@ struct PremiumTopBar: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                 if s.source != nil {
-                    Text("•").foregroundStyle(.tertiary)
-                    Text(s.showBefore ? "原图预览" : "调整预览")
+                    Text(L10n.tr("•")).foregroundStyle(.tertiary)
+                    Text(L10n.tr(s.showBefore ? "原图预览" : "调整预览"))
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(s.showBefore ? .orange : .accentColor)
                 }
@@ -133,10 +135,10 @@ struct PremiumTopBar: View {
     }
 
     private func savePreset() {
-        let alert = NSAlert(); alert.messageText = "预设名称"
-        alert.addButton(withTitle: "保存"); alert.addButton(withTitle: "取消")
+        let alert = NSAlert(); alert.messageText = L10n.tr("预设名称")
+        alert.addButton(withTitle: L10n.tr("保存")); alert.addButton(withTitle: L10n.tr("取消"))
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
-        field.placeholderString = "我的风格"; alert.accessoryView = field
+        field.placeholderString = L10n.tr("我的风格"); alert.accessoryView = field
         guard alert.runModal() == .alertFirstButtonReturn, !field.stringValue.isEmpty else { return }
         var presets = s.loadPresets()
         presets.append(Preset(name: field.stringValue, params: s.params)); s.savePresets(presets)
@@ -144,6 +146,7 @@ struct PremiumTopBar: View {
 }
 
 struct PremiumToolButton: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     let icon: String
     let label: String
     var active = false
@@ -155,17 +158,18 @@ struct PremiumToolButton: View {
         Button(action: action) {
             HStack(spacing: 5) {
                 Image(systemName: icon).font(.system(size: 11, weight: .semibold))
-                Text(label).font(.system(size: 10.5, weight: .semibold))
+                Text(L10n.tr(label)).font(.system(size: 10.5, weight: .semibold))
             }
             .foregroundStyle(active ? Color.accentColor : Color.primary)
             .padding(.horizontal, 9).frame(height: 26)
             .background((active ? Color.accentColor.opacity(0.13) : hovering ? Color.primary.opacity(0.07) : .clear), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
         }
-        .buttonStyle(.plain).help(help).onHover { hovering = $0 }
+        .buttonStyle(.plain).help(L10n.tr(help)).onHover { hovering = $0 }
     }
 }
 
 struct PremiumIconButton: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     let icon: String
     let help: String
     var disabled = false
@@ -179,11 +183,12 @@ struct PremiumIconButton: View {
                 .foregroundStyle(disabled ? Color.secondary.opacity(0.35) : Color.primary)
                 .background(hovering ? Color.primary.opacity(0.08) : .clear, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
         }
-        .buttonStyle(.plain).disabled(disabled).help(help).onHover { hovering = $0 }
+        .buttonStyle(.plain).disabled(disabled).help(L10n.tr(help)).onHover { hovering = $0 }
     }
 }
 
 struct PremiumActionButton: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     let title: String
     let icon: String
     let action: () -> Void
@@ -195,11 +200,12 @@ struct PremiumActionButton: View {
                 .padding(.horizontal, 11).frame(height: 28)
                 .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
         }
-        .buttonStyle(.plain).help(title)
+        .buttonStyle(.plain).help(L10n.tr(title))
     }
 }
 
 struct PremiumToggle: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     let title: String
     @Binding var isOn: Bool
     var onTurnOn: (() -> Void)? = nil
@@ -207,7 +213,7 @@ struct PremiumToggle: View {
         Button {
             isOn.toggle(); if isOn { onTurnOn?() }
         } label: {
-            Text(title).font(.system(size: 10, weight: .semibold))
+            Text(L10n.tr(title)).font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(isOn ? .white : .secondary)
                 .padding(.horizontal, 9).frame(height: 23)
                 .background(isOn ? Color.accentColor : Color.primary.opacity(0.06), in: Capsule())
@@ -216,6 +222,7 @@ struct PremiumToggle: View {
 }
 
 struct PremiumBrowserPane: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     private let columns = [GridItem(.adaptive(minimum: 116, maximum: 166), spacing: 12)]
     private var count: Int { s.items.filter { s.filterRating == 0 || $0.rating >= s.filterRating }.count }
@@ -225,26 +232,26 @@ struct PremiumBrowserPane: View {
             HStack(spacing: 9) {
                 Image(systemName: "square.stack.3d.up.fill").foregroundStyle(Color.accentColor)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("素材浏览").font(.system(size: 12, weight: .bold))
-                    Text("\(count) 张照片").font(.system(size: 10)).foregroundStyle(.secondary)
+                    Text(L10n.tr("素材浏览")).font(.system(size: 12, weight: .bold))
+                    Text(L10n.tr("\(count) 张照片")).font(.system(size: 10)).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Menu {
-                    Button("全部照片") { s.filterRating = 0 }
-                    ForEach(1...5, id: \.self) { rating in Button("≥ \(rating) 星") { s.filterRating = rating } }
+                    Button(L10n.tr("全部照片")) { s.filterRating = 0 }
+                    ForEach(1...5, id: \.self) { rating in Button(L10n.tr("≥ \(rating) 星")) { s.filterRating = rating } }
                 } label: {
                     Image(systemName: s.filterRating == 0 ? "line.3.horizontal.decrease.circle" : "star.fill")
                         .foregroundStyle(s.filterRating == 0 ? Color.secondary : Color.yellow)
                         .frame(width: 28, height: 28)
-                }.menuStyle(.borderlessButton).help("筛选照片")
+                }.menuStyle(.borderlessButton).help(L10n.tr("筛选照片"))
             }
             .padding(.horizontal, 18).padding(.vertical, 16)
 
             if s.items.isEmpty {
                 VStack(spacing: 11) {
                     Image(systemName: "photo.stack").font(.system(size: 30, weight: .light)).foregroundStyle(.tertiary)
-                    Text("还没有照片").font(.system(size: 12, weight: .semibold))
-                    Text("从顶部打开一个素材文件夹").font(.system(size: 10)).foregroundStyle(.secondary)
+                    Text(L10n.tr("还没有照片")).font(.system(size: 12, weight: .semibold))
+                    Text(L10n.tr("从顶部打开一个素材文件夹")).font(.system(size: 10)).foregroundStyle(.secondary)
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
@@ -265,7 +272,7 @@ struct PremiumBrowserPane: View {
             }
 
             HStack(spacing: 8) {
-                Label("已选 \(s.selectedPhotos.count)", systemImage: "checkmark.circle")
+                Label(L10n.tr("已选 \(s.selectedPhotos.count)"), systemImage: "checkmark.circle")
                     .font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
                 Spacer()
                 PremiumIconButton(icon: "checkmark.square", help: "选择当前筛选的所有照片") {
@@ -281,6 +288,7 @@ struct PremiumBrowserPane: View {
 }
 
 struct PremiumThumbCell: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     let item: PhotoItem
     let selected: Bool
     let checked: Bool
@@ -306,7 +314,7 @@ struct PremiumThumbCell: View {
                     Image(systemName: checked ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 16, weight: .semibold)).foregroundStyle(checked ? Color.accentColor : .white)
                         .shadow(radius: 2).padding(7)
-                }.buttonStyle(.plain).help("选择用于同步")
+                }.buttonStyle(.plain).help(L10n.tr("选择用于同步"))
             }
             .background(Color.black.opacity(0.12), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
             .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
@@ -322,6 +330,7 @@ struct PremiumThumbCell: View {
 }
 
 struct PremiumWorkspace: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     var body: some View {
         VStack(spacing: 0) {
@@ -330,8 +339,8 @@ struct PremiumWorkspace: View {
                     if s.source != nil {
                         HStack(spacing: 7) {
                             Circle().fill(s.showBefore ? .orange : .green).frame(width: 6, height: 6)
-                            Text(s.showBefore ? "原图" : "实时预览").font(.system(size: 10, weight: .bold))
-                            Text(s.oneToOne ? "100%" : "适合窗口").font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
+                            Text(L10n.tr(s.showBefore ? "原图" : "实时预览")).font(.system(size: 10, weight: .bold))
+                            Text(L10n.tr(s.oneToOne ? "100%" : "适合窗口")).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
                         }
                         .padding(.horizontal, 10).frame(height: 27)
                         .background(.ultraThinMaterial, in: Capsule()).padding(14)
@@ -346,19 +355,20 @@ struct PremiumWorkspace: View {
 }
 
 struct PremiumHistogramBar: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     var body: some View {
         HStack(spacing: 12) {
             HistogramView(bins: s.hist).frame(width: 238, height: 54)
             VStack(alignment: .leading, spacing: 2) {
-                Text(s.showBefore ? "原始影像" : "调整后影像").font(.system(size: 11, weight: .bold))
+                Text(L10n.tr(s.showBefore ? "原始影像" : "调整后影像")).font(.system(size: 11, weight: .bold))
                 Text(s.sourceSize == .zero ? "等待载入" : String(format: "%d × %d", Int(s.sourceSize.width), Int(s.sourceSize.height)))
                     .font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
-                Text("预览质量").font(.system(size: 9, weight: .medium)).foregroundStyle(.secondary)
-                Text(s.lastPreviewScale >= 0.999 ? "全像素" : String(format: "%d%% 代理", Int(s.lastPreviewScale * 100)))
+                Text(L10n.tr("预览质量")).font(.system(size: 9, weight: .medium)).foregroundStyle(.secondary)
+                Text(s.lastPreviewScale >= 0.999 ? "全像素" : String(format: L10n.tr("%d%% 代理"), Int(s.lastPreviewScale * 100)))
                     .font(.system(size: 10, weight: .bold, design: .monospaced)).foregroundStyle(s.lastPreviewScale >= 0.999 ? .green : .secondary)
             }
         }
@@ -369,15 +379,16 @@ struct PremiumHistogramBar: View {
 }
 
 struct PremiumStatusBar: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     var body: some View {
         HStack(spacing: 10) {
             Circle().fill(s.previewing ? .orange : .green).frame(width: 6, height: 6)
-            Text(s.status).font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary).lineLimit(1)
+            Text(L10n.tr(s.status)).font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary).lineLimit(1)
             if s.jobRunning {
                 if s.batchRunning || s.syncRunning { ProgressView(value:s.batchRunning ? s.batchProgress : s.syncProgress).frame(width:80) }
                 else { ProgressView().controlSize(.mini) }
-                Button("取消处理") { s.cancelJobs() }.buttonStyle(.borderless).font(.system(size:10)).disabled(s.jobCancellation?.cancelled == true)
+                Button(L10n.tr("取消处理")) { s.cancelJobs() }.buttonStyle(.borderless).font(.system(size:10)).disabled(s.jobCancellation?.cancelled == true)
             }
             Spacer()
             if let current = s.current {
@@ -388,7 +399,7 @@ struct PremiumStatusBar: View {
                             .font(.system(size: 10)).foregroundStyle(index <= current.rating ? .yellow : .secondary.opacity(0.45))
                             .onTapGesture { s.setRating(index == current.rating ? 0 : index) }
                     }
-                    Button { s.togglePick() } label: { Image(systemName: current.picked ? "flag.fill" : "flag") }.buttonStyle(.plain).help("标记照片")
+                    Button { s.togglePick() } label: { Image(systemName: current.picked ? "flag.fill" : "flag") }.buttonStyle(.plain).help(L10n.tr("标记照片"))
                 }
             }
         }

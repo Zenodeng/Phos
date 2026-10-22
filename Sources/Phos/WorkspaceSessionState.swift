@@ -78,7 +78,7 @@ struct WorkspaceLayout {
         let safe = CGRect(x: left, y: bodyY, width: max(1, right - left), height: max(100, safeBottom - bodyY))
         let navigation = CGRect(x: 88, y: y, width: 100, height: toolHeight)
         let viewing = CGRect(x: 200, y: y, width: 144, height: toolHeight)
-        let actions = CGRect(x: w - 176, y: y, width: 164, height: toolHeight)
+        let actions = CGRect(x: w - 240, y: y, width: 228, height: toolHeight)
         return Self(canvas: CGRect(x: 0, y: 0, width: w, height: h), safeCanvas: safe,
                     browser: browser, inspector: inspector,
                     rail: CGRect(x: w - 48, y: bodyY, width: 36, height: 196),

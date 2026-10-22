@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import Combine
 import UniformTypeIdentifiers
 
 @MainActor
@@ -11,6 +12,7 @@ final class WorkspaceWindowModel: ObservableObject {
     let router: WorkspaceSheetRouter
     weak var window: NSWindow?
     private(set) var folderPanel: NSOpenPanel?
+    private var languageObservation: AnyCancellable?
 
     init(state: AppState, session: WorkspaceSessionState? = nil) {
         self.state = state
@@ -18,6 +20,9 @@ final class WorkspaceWindowModel: ObservableObject {
         selection = PhotoSelectionController(state: state)
         router = WorkspaceSheetRouter(state: state)
         state.workspaceSession = self.session
+        languageObservation = NotificationCenter.default.publisher(for: AppLanguage.didChange).sink { [weak self] _ in
+            self?.state.objectWillChange.send(); self?.objectWillChange.send()
+        }
     }
 
     func finishEditing() { selection.finishEditing() }
@@ -48,7 +53,7 @@ final class WorkspaceWindowModel: ObservableObject {
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
         panel.allowedContentTypes = [.folder]
-        panel.prompt = "选择文件夹"
+        panel.prompt = L10n.tr("选择文件夹")
         panel.directoryURL = directory
         return panel
     }
@@ -59,10 +64,10 @@ final class WorkspaceWindowModel: ObservableObject {
     func savePreset() {
         guard let window, window.attachedSheet == nil, router.presented == nil, state.source != nil else { return }
         finishEditing()
-        let alert = NSAlert(); alert.messageText = "保存预设"
-        alert.addButton(withTitle: "保存"); alert.addButton(withTitle: "取消")
+        let alert = NSAlert(); alert.messageText = L10n.tr("保存预设")
+        alert.addButton(withTitle: L10n.tr("保存")); alert.addButton(withTitle: L10n.tr("取消"))
         let field = NSTextField(frame: CGRect(x: 0, y: 0, width: 240, height: 24))
-        field.placeholderString = "预设名称"; alert.accessoryView = field
+        field.placeholderString = L10n.tr("预设名称"); alert.accessoryView = field
         alert.beginSheetModal(for: window) { [weak self] response in
             guard let self, response == .alertFirstButtonReturn else { return }
             let name = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -82,6 +87,7 @@ extension FocusedValues {
 }
 
 struct WorkspaceWindow: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @StateObject private var model: WorkspaceWindowModel
     init(state: AppState) { _model = StateObject(wrappedValue: WorkspaceWindowModel(state: state)) }
     var body: some View {
@@ -93,6 +99,7 @@ struct WorkspaceWindow: View {
 }
 
 private struct WorkspaceWindowContent: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @ObservedObject var model: WorkspaceWindowModel
     @ObservedObject var router: WorkspaceSheetRouter
     @AppStorage("rf.appearance") private var appearance = "system"
@@ -100,6 +107,7 @@ private struct WorkspaceWindowContent: View {
         WorkspaceHost(model: model)
             .ignoresSafeArea()
             .frame(minWidth: WorkspaceLayout.minimumSize.width, minHeight: WorkspaceLayout.minimumSize.height)
+            .environment(\.locale, AppLanguage.shared.locale)
             .preferredColorScheme(appearance == "dark" ? .dark : appearance == "light" ? .light : nil)
             .sheet(item: Binding(get: { router.presented }, set: { if $0 == nil { router.beginDismissal() } }),
                    onDismiss: { router.didDismiss() }) { route in
@@ -115,6 +123,7 @@ private struct WorkspaceWindowContent: View {
 }
 
 private struct WorkspaceSheetContent: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     let route: WorkspacePresentation
     @ObservedObject var model: WorkspaceWindowModel
     @Environment(\.dismiss) private var dismiss
@@ -128,15 +137,15 @@ private struct WorkspaceSheetContent: View {
         case .snapshots: SnapshotSheet()
         case .error, .update:
             VStack(alignment: .leading, spacing: 16) {
-                Label(route == .error ? "操作未完成" : "检查更新", systemImage: route == .error ? "exclamationmark.triangle" : "arrow.down.circle")
+                Label(L10n.tr(route == .error ? "操作未完成" : "检查更新"), systemImage: route == .error ? "exclamationmark.triangle" : "arrow.down.circle")
                     .font(.headline)
-                Text(message).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                Text(L10n.tr(message)).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
                 HStack {
                     Spacer()
                     if route == .update, model.state.availableUpdate != nil {
-                        Button("前往下载") { model.state.openUpdatePage(); dismiss() }
+                        Button(L10n.tr("前往下载")) { model.state.openUpdatePage(); dismiss() }
                     }
-                    Button("好") { dismiss() }.keyboardShortcut(.defaultAction)
+                    Button(L10n.tr("好")) { dismiss() }.keyboardShortcut(.defaultAction)
                 }
             }.padding(24).frame(width: 390).workspaceGlassPanel()
         }

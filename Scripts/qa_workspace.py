@@ -153,6 +153,7 @@ phos_verify_ui_binary "$PHOS_QA_BUILD_OUT/.work/PhosQA" "$PHOS_QA_BUILD_OUT/bina
     (stage / 'Contents/MacOS').mkdir(parents=True)
     resources = stage / 'Contents/Resources'
     resources.mkdir()
+    shutil.copytree(source / "Resources/Localization", resources / "Localization")
     info = plistlib.loads((source / 'Info.plist').read_bytes())
     qa_id = QA_ID + '.run' + hashlib.sha256(str(out).encode()).hexdigest()[:10]
     executable = 'PhosQA' + qa_id.rsplit('.', 1)[-1]

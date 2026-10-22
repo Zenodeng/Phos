@@ -13,6 +13,7 @@ enum StudioStyle {
 #if PHOS_TESTING || PHOS_BASELINE || PHOS_APPEARANCE_TEST || DEBUG
 // The shipping editor has one root: WorkspaceWindow.
 struct StudioMainWindow: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     @AppStorage("rf.appearance") private var appearance = "system"
     var initialInspectorCategory: InspectorCategory = .light
@@ -26,13 +27,13 @@ struct StudioMainWindow: View {
             }
             // 手动「检查更新…」的结果。挂在 HSplitView 上，和上面的 workflowError 弹窗分开
             .alert("检查更新", isPresented: $s.showUpdateResult) {
-                if s.availableUpdate != nil { Button("前往下载") { s.openUpdatePage() } }
-                Button("好", role: .cancel) {}
+                if s.availableUpdate != nil { Button(L10n.tr("前往下载")) { s.openUpdatePage() } }
+                Button(L10n.tr("好"), role: .cancel) {}
             } message: {
                 if let info = s.availableUpdate {
-                    Text("发现新版本 \(info.version)（当前 \(UpdateChecker.currentVersion)）。")
+                    Text(L10n.tr("发现新版本 \(info.version)（当前 \(UpdateChecker.currentVersion)）。"))
                 } else {
-                    Text("已是最新版本 \(UpdateChecker.currentVersion)。")
+                    Text(L10n.tr("已是最新版本 \(UpdateChecker.currentVersion)。"))
                 }
             }
             PremiumStatusBar()
@@ -49,18 +50,19 @@ struct StudioMainWindow: View {
         .sheet(isPresented: $s.showSnapshots) { SnapshotSheet().tint(StudioStyle.accent) }
         .onExitCommand { s.cancelMaskDrawing() }
         .alert("操作未完成", isPresented: Binding(get: { s.workflowError != nil }, set: { if !$0 { s.workflowError = nil } })) {
-            Button("好") { s.workflowError = nil }
-        } message: { Text(s.workflowError ?? "") }
+            Button(L10n.tr("好")) { s.workflowError = nil }
+        } message: { Text(L10n.tr(s.workflowError ?? "")) }
     }
 }
 
 #endif
 
 struct StudioToolbar: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     private func savePreset() {
-        let alert = NSAlert(); alert.messageText = "预设名称"
-        alert.addButton(withTitle: "保存"); alert.addButton(withTitle: "取消")
+        let alert = NSAlert(); alert.messageText = L10n.tr("预设名称")
+        alert.addButton(withTitle: L10n.tr("保存")); alert.addButton(withTitle: L10n.tr("取消"))
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24)); alert.accessoryView = field
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         let name = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -73,41 +75,41 @@ struct StudioToolbar: View {
             Label("Phos", systemImage: "camera.aperture").font(.system(size: 13, weight: .semibold)).foregroundStyle(StudioStyle.accent)
             if let update = s.availableUpdate { UpdateBadge(info: update) }
             ToolDivider()
-            ToolButton(systemImage: "folder", title: "打开文件夹") {
+            ToolButton(systemImage: "folder", title: L10n.tr("打开文件夹")) {
                 let p = NSOpenPanel(); p.canChooseDirectories = true; p.canChooseFiles = false
                 if p.runModal() == .OK, let url = p.url { s.openFolder(url) }
             }
-            ToolButton(systemImage: "crop", title: "裁剪", active: s.cropMode, disabled: s.source == nil) { s.toggleCropMode() }
-            ToolButton(systemImage: "sparkles", title: "自动影调（强度滑杆在右侧检查器）",
+            ToolButton(systemImage: "crop", title: L10n.tr("裁剪"), active: s.cropMode, disabled: s.source == nil) { s.toggleCropMode() }
+            ToolButton(systemImage: "sparkles", title: L10n.tr("自动影调（强度滑杆在右侧检查器）"),
                        disabled: s.source == nil || s.autoRunning || s.syncRunning) { s.runAutoTone() }
             StudioHistoryButtons(history: s.history)
             Text(s.current?.url.lastPathComponent ?? "Phos Studio").font(.system(size: 12, weight: .medium))
                 .lineLimit(1).truncationMode(.middle).frame(minWidth: 60, maxWidth: .infinity)
-            Picker("前后对比", selection: $s.showBefore) {
-                Text("原图").tag(true); Text("调整").tag(false)
+            Picker(L10n.tr("前后对比"), selection: $s.showBefore) {
+                Text(L10n.tr("原图")).tag(true); Text(L10n.tr("调整")).tag(false)
             }.labelsHidden().pickerStyle(.segmented).frame(width: 108).disabled(s.source == nil)
             ToolDivider()
             Menu {
                 ForEach(s.loadPresets()) { preset in Button(preset.name) { s.commit(preset.params) } }
                 Divider()
-                Button("保存当前为预设…") { savePreset() }
+                Button(L10n.tr("保存当前为预设…")) { savePreset() }
             } label: { Image(systemName: "wand.and.stars").frame(width: 26) }
-                .menuStyle(.borderlessButton).fixedSize().help("预设").disabled(s.source == nil)
-            ToolButton(systemImage: "clock.arrow.circlepath", title: "命名快照", disabled: s.source == nil) { s.showSnapshots = true }
-            ToolButton(systemImage: "doc.on.doc", title: "复制调整", disabled: s.source == nil) { s.copyAdjustments() }
-            ToolButton(systemImage: "arrow.triangle.2.circlepath", title: "同步调整", disabled: s.source == nil) { s.showSync = true }
+                .menuStyle(.borderlessButton).fixedSize().help(L10n.tr("预设")).disabled(s.source == nil)
+            ToolButton(systemImage: "clock.arrow.circlepath", title: L10n.tr("命名快照"), disabled: s.source == nil) { s.showSnapshots = true }
+            ToolButton(systemImage: "doc.on.doc", title: L10n.tr("复制调整"), disabled: s.source == nil) { s.copyAdjustments() }
+            ToolButton(systemImage: "arrow.triangle.2.circlepath", title: L10n.tr("同步调整"), disabled: s.source == nil) { s.showSync = true }
             Menu {
-                Button("批量导出…") { s.showBatch = true }.disabled(s.items.isEmpty)
-                Button("多重曝光合成…") { s.showMerge = true }
+                Button(L10n.tr("批量导出…")) { s.showBatch = true }.disabled(s.items.isEmpty)
+                Button(L10n.tr("多重曝光合成…")) { s.showMerge = true }
                 Divider()
-                Picker("外观", selection: $appearance) {
-                    Text("跟随系统").tag("system"); Text("深色").tag("dark"); Text("浅色").tag("light")
+                Picker(L10n.tr("外观"), selection: $appearance) {
+                    Text(L10n.tr("跟随系统")).tag("system"); Text(L10n.tr("深色")).tag("dark"); Text(L10n.tr("浅色")).tag("light")
                 }
                 Divider()
-                Button("检查更新…") { s.checkForUpdates(silent: false) }
+                Button(L10n.tr("检查更新…")) { s.checkForUpdates(silent: false) }
             } label: { Image(systemName: "ellipsis").frame(width: 24) }
-                .menuStyle(.borderlessButton).fixedSize().help("更多操作与外观")
-            Button { s.showExport = true } label: { Label("导出", systemImage: "square.and.arrow.up") }
+                .menuStyle(.borderlessButton).fixedSize().help(L10n.tr("更多操作与外观"))
+            Button { s.showExport = true } label: { Label(L10n.tr("导出"), systemImage: "square.and.arrow.up") }
                 .buttonStyle(.borderedProminent).disabled(s.source == nil || s.exportRunning)
         }.padding(.horizontal, 14).frame(height: 50).background(StudioStyle.panel)
             .overlay(alignment: .bottom) { Divider() }
@@ -115,18 +117,20 @@ struct StudioToolbar: View {
 }
 
 private struct StudioHistoryButtons: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     @ObservedObject var history: History
     var body: some View {
         HStack(spacing: 2) {
-            ToolButton(systemImage: "arrow.uturn.backward", title: "撤销", disabled: !history.canUndo || s.source == nil) { s.undo() }
-            ToolButton(systemImage: "arrow.uturn.forward", title: "重做", disabled: !history.canRedo || s.source == nil) { s.redo() }
+            ToolButton(systemImage: "arrow.uturn.backward", title: L10n.tr("撤销"), disabled: !history.canUndo || s.source == nil) { s.undo() }
+            ToolButton(systemImage: "arrow.uturn.forward", title: L10n.tr("重做"), disabled: !history.canRedo || s.source == nil) { s.redo() }
         }
     }
 }
 
 /// 发现新版本时才出现的小提示。平时完全不存在，不占位置。
 private struct UpdateBadge: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     let info: UpdateInfo
     @State private var hover = false
@@ -135,7 +139,7 @@ private struct UpdateBadge: View {
         Button { s.openUpdatePage() } label: {
             HStack(spacing: 4) {
                 Image(systemName: "arrow.down.circle.fill").font(.system(size: 11.5, weight: .semibold))
-                Text(info.version).font(.system(size: 10.5, weight: .semibold))
+                Text(L10n.tr(info.version)).font(.system(size: 10.5, weight: .semibold))
             }
             .padding(.horizontal, 7)
             .frame(height: 20)
@@ -145,11 +149,12 @@ private struct UpdateBadge: View {
         }
         .buttonStyle(.plain)
         .onHover { hover = $0 }
-        .help("Phos \(info.version) 已发布，点击前往下载")
+        .help(L10n.tr("Phos \(info.version) 已发布，点击前往下载"))
     }
 }
 
 struct StudioBrowser: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     var transparent = false
     private var visible: [Int] { s.visiblePhotoIndices }
@@ -157,22 +162,22 @@ struct StudioBrowser: View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 9) {
                 HStack {
-                    Text("素材浏览").font(.system(size: 13, weight: .semibold))
+                    Text(L10n.tr("素材浏览")).font(.system(size: 13, weight: .semibold))
                     Spacer()
                     Menu {
-                        Button("全部星级") { s.filterRating = 0 }
-                        ForEach(1...5, id: \.self) { n in Button("至少 \(n) 星") { s.filterRating = n } }
-                        Toggle("仅已标记", isOn: $s.filterPicked)
+                        Button(L10n.tr("全部星级")) { s.filterRating = 0 }
+                        ForEach(1...5, id: \.self) { n in Button(L10n.tr("至少 \(n) 星")) { s.filterRating = n } }
+                        Toggle(L10n.tr("仅已标记"), isOn: $s.filterPicked)
                     } label: { Image(systemName: "line.3.horizontal.decrease").frame(width: 22) }
-                        .menuStyle(.borderlessButton).fixedSize().help("筛选照片")
+                        .menuStyle(.borderlessButton).fixedSize().help(L10n.tr("筛选照片"))
                 }
                 Text(s.folder?.lastPathComponent ?? "未打开文件夹").font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                 HStack {
-                    Text("\(visible.count) 张 · 已选 \(s.selectedPhotos.count)").font(.system(size: 10)).foregroundStyle(.secondary)
+                    Text(L10n.tr("\(visible.count) 张 · 已选 \(s.selectedPhotos.count)")).font(.system(size: 10)).foregroundStyle(.secondary)
                     Spacer()
                     if s.filterRating > 0 || s.filterPicked {
                         Button { s.filterRating = 0; s.filterPicked = false } label: { Image(systemName: "xmark.circle.fill") }
-                            .buttonStyle(.plain).help("清除筛选")
+                            .buttonStyle(.plain).help(L10n.tr("清除筛选"))
                     }
                 }
             }.padding(14)
@@ -193,7 +198,7 @@ struct StudioBrowser: View {
                         }
                     }.padding(12)
                 }.overlay {
-                    if visible.isEmpty { Text(s.items.isEmpty ? "暂无照片" : "无匹配照片").font(.system(size: 12)).foregroundStyle(.secondary) }
+                    if visible.isEmpty { Text(L10n.tr(s.items.isEmpty ? "暂无照片" : "无匹配照片")).font(.system(size: 12)).foregroundStyle(.secondary) }
                 }
                 .onChange(of: s.currentIndex) { _, _ in
                     if let current = s.current, visible.contains(s.currentIndex) { proxy.scrollTo(current.id, anchor: .center) }
@@ -201,12 +206,12 @@ struct StudioBrowser: View {
             }
             Divider()
             HStack {
-                ToolButton(systemImage: "checkmark.square", title: "选择筛选结果", disabled: visible.isEmpty) {
+                ToolButton(systemImage: "checkmark.square", title: L10n.tr("选择筛选结果"), disabled: visible.isEmpty) {
                     s.selectedPhotos = Set(visible.map { s.items[$0].id })
                 }
-                ToolButton(systemImage: "xmark", title: "取消多选", disabled: s.selectedPhotos.isEmpty) { s.selectedPhotos = [] }
+                ToolButton(systemImage: "xmark", title: L10n.tr("取消多选"), disabled: s.selectedPhotos.isEmpty) { s.selectedPhotos = [] }
                 Spacer()
-                ToolButton(systemImage: "arrow.triangle.2.circlepath", title: "同步所选照片", disabled: s.selectedPhotos.isEmpty || s.source == nil) { s.showSync = true }
+                ToolButton(systemImage: "arrow.triangle.2.circlepath", title: L10n.tr("同步所选照片"), disabled: s.selectedPhotos.isEmpty || s.source == nil) { s.showSync = true }
             }.padding(.horizontal, 10).frame(height: 40)
         }.background(transparent ? Color.clear : StudioStyle.panel).clipped()
     }
@@ -216,6 +221,7 @@ struct StudioBrowser: View {
 }
 
 struct StudioThumbnail: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     let item: PhotoItem
     let selected: Bool
@@ -239,7 +245,7 @@ struct StudioThumbnail: View {
                         Image(systemName: checked ? "checkmark.square.fill" : "square")
                             .foregroundStyle(checked ? StudioStyle.accent : .white).frame(width: 24, height: 24)
                             .background(.black.opacity(0.5), in: RoundedRectangle(cornerRadius: 4))
-                    }.buttonStyle(.plain).padding(4).help("选择用于同步")
+                    }.buttonStyle(.plain).padding(4).help(L10n.tr("选择用于同步"))
                 }
             HStack(spacing: 2) {
                 ForEach(1...5, id: \.self) { n in
@@ -259,30 +265,31 @@ struct StudioThumbnail: View {
 }
 
 struct StudioWorkspace: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 6) {
-                ToolButton(systemImage: "chevron.left", title: "上一张", disabled: s.previousVisiblePhotoIndex == nil) {
+                ToolButton(systemImage: "chevron.left", title: L10n.tr("上一张"), disabled: s.previousVisiblePhotoIndex == nil) {
                     if let index = s.previousVisiblePhotoIndex { s.select(index) }
                 }
-                ToolButton(systemImage: "chevron.right", title: "下一张", disabled: s.nextVisiblePhotoIndex == nil) {
+                ToolButton(systemImage: "chevron.right", title: L10n.tr("下一张"), disabled: s.nextVisiblePhotoIndex == nil) {
                     if let index = s.nextVisiblePhotoIndex { s.select(index) }
                 }
-                Text(s.visiblePhotoPosition.map { "\($0) / \(s.visiblePhotoIndices.count)" } ?? "— / \(s.visiblePhotoIndices.count)")
+                Text(L10n.tr(s.visiblePhotoPosition.map { "\($0) / \(s.visiblePhotoIndices.count)" } ?? "— / \(s.visiblePhotoIndices.count)"))
                     .font(.system(size: 10)).monospacedDigit().foregroundStyle(.secondary)
                     .help(s.visiblePhotoPosition == nil ? "当前照片不在筛选结果中" : "筛选结果中的位置")
                 Spacer(minLength: 0)
-                Toggle("全像素", isOn: $s.fullResPreview).toggleStyle(.checkbox).font(.system(size: 10)).disabled(s.source == nil)
-                ToolButton(systemImage: "1.magnifyingglass", title: "1:1 检查", active: s.oneToOne, disabled: s.source == nil || s.cropMode) { s.oneToOne.toggle() }
-                ToolButton(systemImage: "arrow.up.left.and.arrow.down.right", title: "适合窗口", disabled: s.source == nil) { s.oneToOne = false; s.canvasResetID = UUID() }
+                Toggle(L10n.tr("全像素"), isOn: $s.fullResPreview).toggleStyle(.checkbox).font(.system(size: 10)).disabled(s.source == nil)
+                ToolButton(systemImage: "1.magnifyingglass", title: L10n.tr("1:1 检查"), active: s.oneToOne, disabled: s.source == nil || s.cropMode) { s.oneToOne.toggle() }
+                ToolButton(systemImage: "arrow.up.left.and.arrow.down.right", title: L10n.tr("适合窗口"), disabled: s.source == nil) { s.oneToOne = false; s.canvasResetID = UUID() }
             }.padding(.horizontal, 10).frame(height: 38)
             CanvasPane().clipped()
             HStack(spacing: 12) {
                 HistogramView(bins: s.hist).frame(width: 155, height: 42)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("调整后直方图").font(.system(size: 11, weight: .medium))
-                    Text(s.source == nil ? "—" : "\(Int(s.sourceSize.width)) × \(Int(s.sourceSize.height))")
+                    Text(L10n.tr("调整后直方图")).font(.system(size: 11, weight: .medium))
+                    Text(L10n.tr(s.source == nil ? "—" : "\(Int(s.sourceSize.width)) × \(Int(s.sourceSize.height))"))
                         .font(.system(size: 10)).monospacedDigit().foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)

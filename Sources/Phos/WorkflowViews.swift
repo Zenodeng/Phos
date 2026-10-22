@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SyncSheet: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     @Environment(\.dismiss) var dismiss
     @State private var useCopied = false
@@ -11,26 +12,26 @@ struct SyncSheet: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("同步调整").font(.headline)
-            Picker("来源", selection: $useCopied) {
-                Text("当前照片").tag(false)
-                Text("已复制的调整").tag(true)
+            Text(L10n.tr("同步调整")).font(.headline)
+            Picker(L10n.tr("来源"), selection: $useCopied) {
+                Text(L10n.tr("当前照片")).tag(false)
+                Text(L10n.tr("已复制的调整")).tag(true)
             }.pickerStyle(.segmented).disabled(s.copiedParams == nil)
             Text(useCopied ? s.copiedName : (s.current?.url.lastPathComponent ?? ""))
                 .font(.callout).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
             Divider()
             ForEach(EditGroup.allCases) { group in
-                Toggle(group.label, isOn: Binding(
+                Toggle(L10n.tr(group.label), isOn: Binding(
                     get: { groups.contains(group) },
                     set: { if $0 { groups.insert(group) } else { groups.remove(group) } }
                 ))
             }
             Divider()
             HStack {
-                Text("\(targets.count) 张目标照片").foregroundStyle(.secondary)
+                Text(L10n.tr("\(targets.count) 张目标照片")).foregroundStyle(.secondary)
                 Spacer()
-                Button("取消", role: .cancel) { dismiss() }.keyboardShortcut(.cancelAction)
-                Button("同步") {
+                Button(L10n.tr("取消"), role: .cancel) { dismiss() }.keyboardShortcut(.cancelAction)
+                Button(L10n.tr("同步")) {
                     let params = useCopied ? s.copiedParams! : s.params
                     let urls = targets, selectedGroups = groups
                     s.syncGroups = selectedGroups
@@ -46,6 +47,7 @@ struct SyncSheet: View {
 }
 
 struct SnapshotSheet: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     @Environment(\.dismiss) private var dismiss
     @State private var drafts:[EditSnapshot] = []
@@ -54,32 +56,32 @@ struct SnapshotSheet: View {
     @State private var error:String?
     var body: some View {
         VStack(alignment:.leading,spacing:14) {
-            Text("命名快照").font(.system(size:17,weight:.semibold))
-            Text("保存调整的不同版本，原始照片始终保留").font(.caption).foregroundStyle(WorkspaceTokens.secondaryText)
+            Text(L10n.tr("命名快照")).font(.system(size:17,weight:.semibold))
+            Text(L10n.tr("保存调整的不同版本，原始照片始终保留")).font(.caption).foregroundStyle(WorkspaceTokens.secondaryText)
             HStack {
-                TextField("快照名称",text:$name).textFieldStyle(.roundedBorder).onSubmit { add() }
-                Button("添加") { add() }.disabled(name.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty || s.source == nil)
+                TextField(L10n.tr("快照名称"),text:$name).textFieldStyle(.roundedBorder).onSubmit { add() }
+                Button(L10n.tr("添加")) { add() }.disabled(name.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty || s.source == nil)
             }
             ScrollView {
                 VStack(spacing:8) {
                     ForEach($drafts) { $snapshot in
                         HStack {
                             VStack(alignment:.leading,spacing:4) {
-                                TextField("名称",text:$snapshot.name).textFieldStyle(.roundedBorder).accessibilityLabel("快照名称")
+                                TextField(L10n.tr("名称"),text:$snapshot.name).textFieldStyle(.roundedBorder).accessibilityLabel(L10n.tr("快照名称"))
                                 Text(snapshot.created.formatted(date:.abbreviated,time:.shortened)).font(.caption).foregroundStyle(WorkspaceTokens.secondaryText)
                             }
-                            Button("恢复") { if persist() { s.commit(snapshot.params); dismiss() } }
+                            Button(L10n.tr("恢复")) { if persist() { s.commit(snapshot.params); dismiss() } }
                                 .disabled(snapshot.name.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty)
-                            Button { drafts.removeAll { $0.id == snapshot.id } } label: { Image(systemName:"trash") }.help("移除快照").accessibilityLabel("移除快照")
+                            Button { drafts.removeAll { $0.id == snapshot.id } } label: { Image(systemName:"trash") }.help(L10n.tr("移除快照")).accessibilityLabel(L10n.tr("移除快照"))
                         }.padding(8).background(WorkspaceTokens.readoutColor,in:RoundedRectangle(cornerRadius:8))
                     }
-                    if drafts.isEmpty { Text("暂无快照").foregroundStyle(WorkspaceTokens.secondaryText).padding(.vertical,50) }
+                    if drafts.isEmpty { Text(L10n.tr("暂无快照")).foregroundStyle(WorkspaceTokens.secondaryText).padding(.vertical,50) }
                 }
             }.frame(height:260)
-            if let error { Text(error).font(.caption).foregroundStyle(WorkspaceTokens.error) }
+            if let error { Text(L10n.tr(error)).font(.caption).foregroundStyle(WorkspaceTokens.error) }
             HStack {
-                Button("取消",role:.cancel) { dismiss() }.keyboardShortcut(.cancelAction); Spacer()
-                Button("保存") { if persist() { dismiss() } }.keyboardShortcut(.defaultAction).buttonStyle(WorkspaceButtonStyle(prominent:true))
+                Button(L10n.tr("取消"),role:.cancel) { dismiss() }.keyboardShortcut(.cancelAction); Spacer()
+                Button(L10n.tr("保存")) { if persist() { dismiss() } }.keyboardShortcut(.defaultAction).buttonStyle(WorkspaceButtonStyle(prominent:true))
                     .disabled(drafts.contains { $0.name.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty })
             }
         }.padding(20).frame(width:450).workspaceGlassPanel()
@@ -99,32 +101,34 @@ struct SnapshotSheet: View {
 }
 
 struct OutputPrecisionControls: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @Binding var settings: ExportSettings
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if settings.format == "tiff" {
-                Picker("位深", selection: $settings.tiffBitDepth) {
-                    Text("8 位").tag(8)
-                    Text("16 位").tag(16)
+                Picker(L10n.tr("位深"), selection: $settings.tiffBitDepth) {
+                    Text(L10n.tr("8 位")).tag(8)
+                    Text(L10n.tr("16 位")).tag(16)
                 }.pickerStyle(.segmented)
             }
-            Picker("色彩空间", selection: $settings.colorSpace) {
-                ForEach(ExportColorSpace.allCases, id: \.self) { color in Text(color.label).tag(color) }
+            Picker(L10n.tr("色彩空间"), selection: $settings.colorSpace) {
+                ForEach(ExportColorSpace.allCases, id: \.self) { color in Text(L10n.tr(color.label)).tag(color) }
             }
         }
     }
 }
 
 struct MaskEditingControls: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     var body: some View {
         VStack(spacing: 8) {
             HStack {
-                Toggle("显示选区", isOn: $s.showMaskOverlay).toggleStyle(.checkbox)
+                Toggle(L10n.tr("显示选区"), isOn: $s.showMaskOverlay).toggleStyle(.checkbox)
                 Spacer()
-                Picker("蒙版工具", selection: $s.maskTool) {
+                Picker(L10n.tr("蒙版工具"), selection: $s.maskTool) {
                     ForEach(MaskTool.allCases, id: \.self) { tool in
-                        Image(systemName: tool.symbol).tag(tool).help(tool.label).accessibilityLabel(tool.label)
+                        Image(systemName: tool.symbol).tag(tool).help(L10n.tr(tool.label)).accessibilityLabel(L10n.tr(tool.label))
                     }
                 }.labelsHidden().pickerStyle(.segmented).frame(width: 112)
             }

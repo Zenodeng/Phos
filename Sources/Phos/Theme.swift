@@ -57,6 +57,7 @@ extension View {
 
 // MARK: - 顶栏图标按钮
 struct ToolButton: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     let systemImage: String
     let title: String
     var active: Bool = false
@@ -84,7 +85,7 @@ struct ToolButton: View {
         }
         .buttonStyle(WorkspaceButtonStyle(chrome: false))
         .disabled(disabled)
-        .help(title)
+        .help(L10n.tr(title))
         .onHover { hover = $0 && !disabled }
         .modifier(ShortcutModifier(shortcut: shortcut, modifiers: modifiers))
     }
@@ -104,6 +105,7 @@ private struct ShortcutModifier: ViewModifier {
 
 // MARK: - 顶栏分组分隔线
 struct ToolDivider: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     var body: some View {
         Rectangle()
             .fill(Color(nsColor: .rfCardBorder))
@@ -113,6 +115,7 @@ struct ToolDivider: View {
 
 // MARK: - 胶囊开关（全像素）
 struct PillToggle: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     let title: String
     @Binding var isOn: Bool
     var helpText: String = ""
@@ -122,7 +125,7 @@ struct PillToggle: View {
         Button {
             isOn.toggle()
         } label: {
-            Text(title)
+            Text(L10n.tr(title))
                 .font(.system(size: 11, weight: .medium))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
@@ -138,13 +141,14 @@ struct PillToggle: View {
                 )
         }
         .buttonStyle(.plain)
-        .help(helpText)
+        .help(L10n.tr(helpText))
         .onHover { hover = $0 }
     }
 }
 
 // MARK: - 胶囊按钮（1:1 这类有独立激活态的）
 struct PillButton: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     let title: String
     let active: Bool
     var helpText: String = ""
@@ -153,7 +157,7 @@ struct PillButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title)
+            Text(L10n.tr(title))
                 .font(.system(size: 11, weight: .medium))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
@@ -169,7 +173,7 @@ struct PillButton: View {
                 )
         }
         .buttonStyle(.plain)
-        .help(helpText)
+        .help(L10n.tr(helpText))
         .onHover { hover = $0 }
     }
 }

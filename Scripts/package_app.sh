@@ -8,6 +8,7 @@ cd "$SCRIPT_DIR/.."
 
 APP_NAME="Phos"
 MIN_MACOS="26.0"
+python3 Scripts/generate_localization.py
 mkdir -p build
 
 . ./Scripts/ui_compile_flags.sh
@@ -26,6 +27,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "build/$APP_NAME" "$APP/Contents/MacOS/$APP_NAME"
 cp Info.plist "$APP/Contents/Info.plist"
 cp -R Resources/PhotoAIAdapter "$APP/Contents/Resources/PhotoAIAdapter"
+cp -R Resources/Localization "$APP/Contents/Resources/Localization"
 sh Scripts/package_icon.sh "$APP/Contents/Resources"
 chmod +x "$APP/Contents/MacOS/$APP_NAME"
 

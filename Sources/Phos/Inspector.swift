@@ -13,6 +13,7 @@ let contrastResponse = 1.8
 
 enum InspectorCategory: String, CaseIterable {
     case light = "明暗", color = "色彩", detail = "细节", geometry = "变换", masks = "蒙版"
+    var localizedTitle: String { L10n.isEnglish && self == .geometry ? "Crop" : L10n.tr(rawValue) }
     var symbol: String {
         switch self {
         case .light: return "sun.max"
@@ -47,6 +48,7 @@ extension EnvironmentValues {
 // 一键自动 + 强度滑杆。滑杆按增量调，所以拖回 0% 等于把自动加的那部分减掉，
 // 中途手动改过的滑块不会被覆盖（见 AppState.setAutoStrength）。
 private struct AutoToneRow: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
 
     private var strengthBinding: Binding<Double> {
@@ -65,7 +67,7 @@ private struct AutoToneRow: View {
                         } else {
                             Image(systemName: "sparkles").font(.system(size: 11.5))
                         }
-                        Text(busy ? "分析中…" : "自动").font(.system(size: 11.5, weight: .medium))
+                        Text(L10n.tr(busy ? "分析中…" : "自动")).font(.system(size: 11.5, weight: .medium))
                     }
                     .frame(maxWidth: .infinity).frame(height: 26)
                     .foregroundStyle(blocked ? Color.secondary.opacity(0.5) : WorkspaceTokens.primaryText)
@@ -74,10 +76,10 @@ private struct AutoToneRow: View {
                 }
                 .buttonStyle(WorkspaceButtonStyle(chrome: false))
                 .disabled(blocked)
-                .help("按画面直方图自动给出曝光、对比、高光阴影、去朦胧、鲜艳度与白平衡")
+                .help(L10n.tr("按画面直方图自动给出曝光、对比、高光阴影、去朦胧、鲜艳度与白平衡"))
 
                 if s.autoSolution != nil || s.autoScene != nil {
-                    ToolButton(systemImage: "arrow.uturn.backward", title: "撤销自动调整") {
+                    ToolButton(systemImage: "arrow.uturn.backward", title: L10n.tr("撤销自动调整")) {
                         s.setAutoStrength(0, persist: true)
                         s.clearAutoTone()
                     }
@@ -85,30 +87,30 @@ private struct AutoToneRow: View {
             }
             if let guess = s.autoScene {
                 HStack(spacing: 8) {
-                    Text("场景")
+                    Text(L10n.tr("场景"))
                         .frame(width: 58, alignment: .leading)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
                     // 识别错了可以自己换一个重跑 —— 不让「魔法」不可控
                     Menu {
                         ForEach(PhotoScene.allCases) { scene in
-                            Button(scene.label) { s.runAutoTone(forcedScene: scene) }
+                            Button(L10n.tr(scene.label)) { s.runAutoTone(forcedScene: scene) }
                         }
                     } label: {
                         HStack(spacing: 3) {
-                            Text(guess.scene.label).font(.system(size: 11, weight: .medium))
+                            Text(L10n.tr(guess.scene.label)).font(.system(size: 11, weight: .medium))
                             Image(systemName: "chevron.down").font(.system(size: 8, weight: .semibold))
                         }
                         .foregroundStyle(StudioStyle.accent)
                     }
                     .menuStyle(.borderlessButton).fixedSize()
                     .disabled(s.autoRunning)
-                    .help("识别有误？从这里选一个题材重新自动")
-                    Text("\(Int((guess.confidence * 100).rounded()))%")
+                    .help(L10n.tr("识别有误？从这里选一个题材重新自动"))
+                    Text(L10n.tr("\(Int((guess.confidence * 100).rounded()))%"))
                         .font(.system(size: 10, weight: .medium, design: .monospaced))
                         .foregroundStyle(.secondary)
                     Spacer(minLength: 0)
-                    Text(guess.scene.hint)
+                    Text(L10n.tr(guess.scene.hint))
                         .font(.system(size: 10)).foregroundStyle(.tertiary)
                         .lineLimit(1).truncationMode(.tail)
                 }
@@ -116,14 +118,14 @@ private struct AutoToneRow: View {
             }
             if s.autoSolution != nil {
                 HStack(spacing: 10) {
-                    Text("自动强度")
+                    Text(L10n.tr("自动强度"))
                         .frame(width: 58, alignment: .leading)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
                     Slider(value: strengthBinding, in: 0...1) { editing in
                         if !editing { s.setAutoStrength(s.autoStrength, persist: true) }
                     }.controlSize(.small)
-                    Text("\(Int((s.autoStrength * 100).rounded()))%")
+                    Text(L10n.tr("\(Int((s.autoStrength * 100).rounded()))%"))
                         .font(.system(size: 10, weight: .medium, design: .monospaced))
                         .foregroundStyle(StudioStyle.accent)
                         .frame(width: 52, alignment: .trailing)
@@ -137,6 +139,7 @@ private struct AutoToneRow: View {
 
 // MARK: - 分组容器
 struct GroupBox<Content: View>: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     let title: String
     @ViewBuilder var content: Content
     @EnvironmentObject private var s: AppState
@@ -154,18 +157,18 @@ struct GroupBox<Content: View>: View {
                         HStack(spacing:7) {
                             Image(systemName:ui.isExpanded(title) ? "chevron.down" : "chevron.right")
                                 .font(.system(size:8,weight:.semibold)).frame(width:10)
-                            Text(title).font(.system(size:12,weight:.semibold))
-                            if modified { Circle().fill(WorkspaceTokens.accent).frame(width:4,height:4).accessibilityLabel("已修改") }
+                            Text(L10n.tr(title)).font(.system(size:12,weight:.semibold))
+                            if modified { Circle().fill(WorkspaceTokens.accent).frame(width:4,height:4).accessibilityLabel(L10n.tr("已修改")) }
                             Spacer(minLength:0)
                         }.contentShape(Rectangle())
-                    }.buttonStyle(.plain).accessibilityLabel(title+"分组")
+                    }.buttonStyle(.plain).accessibilityLabel(L10n.tr(title+"分组"))
                     if title == "白平衡" {
                         Button {
                             s.parameterEdits.finishCurrent(); s.showBefore = false; s.whiteBalancePicker.toggle()
                         } label: { Image(systemName:"eyedropper").font(.system(size:11)).frame(width:24,height:24) }
                             .buttonStyle(.plain).foregroundStyle(s.whiteBalancePicker ? WorkspaceTokens.accent : WorkspaceTokens.secondaryText)
                             .disabled(s.source == nil || s.previewing || s.whiteBalanceRunning || s.cropMode)
-                            .help("白平衡灰点取样").accessibilityLabel("白平衡灰点取样")
+                            .help(L10n.tr("白平衡灰点取样")).accessibilityLabel(L10n.tr("白平衡灰点取样"))
                     }
                     Button {
                         s.parameterEdits.invalidate()
@@ -173,7 +176,7 @@ struct GroupBox<Content: View>: View {
                         s.commit(ParameterGroupSchema.reset(title,in:s.params))
                     } label: { Image(systemName:"arrow.counterclockwise").font(.system(size:11)).frame(width:24,height:24) }
                         .buttonStyle(WorkspaceButtonStyle()).disabled(!modified).opacity(modified ? 1 : 0.35)
-                        .help("复位"+title).accessibilityLabel("复位"+title)
+                        .help(L10n.tr("复位"+title)).accessibilityLabel(L10n.tr("复位"+title))
                 }.frame(height:34)
                 if ui.isExpanded(title) { VStack(spacing:0) { content }.padding(.bottom,10) }
             }.padding(.horizontal,12)
@@ -184,6 +187,7 @@ struct GroupBox<Content: View>: View {
 
 // MARK: - 检视器
 @MainActor struct InspectorPane: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     @ObservedObject private var ui: WorkspaceInspectorState
     private var category: InspectorCategory { ui.category }
@@ -204,10 +208,10 @@ struct GroupBox<Content: View>: View {
         VStack(spacing: 0) {
             if !transparent {
             HStack {
-                Text("参数").font(.system(size:10,weight:.medium)).foregroundStyle(WorkspaceTokens.secondaryText)
+                Text(L10n.tr("参数")).font(.system(size:10,weight:.medium)).foregroundStyle(WorkspaceTokens.secondaryText)
                 Spacer()
                 Button { s.parameterEdits.invalidate(); confirmReset = true } label: { Image(systemName:"arrow.counterclockwise").font(.system(size:11)) }
-                    .buttonStyle(.plain).disabled(s.source == nil).help("恢复所有默认参数").accessibilityLabel("恢复所有默认参数")
+                    .buttonStyle(.plain).disabled(s.source == nil).help(L10n.tr("恢复所有默认参数")).accessibilityLabel(L10n.tr("恢复所有默认参数"))
             }.padding(.horizontal,12).frame(height:24)
             }
             HStack(spacing: 0) {
@@ -215,7 +219,7 @@ struct GroupBox<Content: View>: View {
                     Button { s.parameterEdits.finishCurrent(); ui.category = tab } label: {
                         VStack(spacing: 7) {
                             Image(systemName: tab.symbol).font(.system(size: 13)).frame(height: 18)
-                            Text(tab.rawValue).font(.system(size: 10, weight: .medium)).lineLimit(1).frame(height: 13)
+                            Text(tab.localizedTitle).font(.system(size: 10, weight: .medium)).lineLimit(1).frame(height: 13)
                         }.frame(maxWidth: .infinity).frame(height: 52)
                         .foregroundStyle(category == tab ? (transparent ? WorkspaceTokens.primaryText : StudioStyle.accent) : Color.secondary)
                         .background {
@@ -224,11 +228,12 @@ struct GroupBox<Content: View>: View {
                                     .matchedGeometryEffect(id: "inspectorCategory", in: categoryGlass)
                             }
                         }
-                    }.buttonStyle(WorkspaceButtonStyle(chrome:false)).help(tab.rawValue)
+                    }.buttonStyle(WorkspaceButtonStyle(chrome:false)).help(L10n.tr(tab.rawValue)).accessibilityLabel(L10n.tr(tab.rawValue))
                 }
             }
             .animation(reduceMotion || glassOptions.reduceMotion ? nil : .spring(response: 0.36, dampingFraction: 0.82), value: category)
             Divider()
+        GeometryReader { viewport in
         ScrollView {
             VStack(spacing: 0) {
                 GroupBox(title: "白平衡") {
@@ -251,7 +256,7 @@ struct GroupBox<Content: View>: View {
                     WorkspacePhotoParameter(id: "vibrance")
                     WorkspacePhotoParameter(id: "saturation")
                     Divider().padding(.vertical, 2)
-                    Toggle("HDR（压高光、拉暗部）",
+                    Toggle(L10n.tr("HDR（压高光、拉暗部）"),
                            isOn: Binding(get: { s.params.hdrMode },
                                          set: { s.set(\.hdrMode, $0); s.endEdit() }))
                         .font(.system(size: 11))
@@ -273,7 +278,7 @@ struct GroupBox<Content: View>: View {
                 }
 
                 GroupBox(title: "黑白") {
-                    Toggle("转为黑白", isOn: Binding(get: { s.params.mono }, set: { s.set(\.mono, $0); s.endEdit() }))
+                    Toggle(L10n.tr("转为黑白"), isOn: Binding(get: { s.params.mono }, set: { s.set(\.mono, $0); s.endEdit() }))
                         .font(.system(size: 11))
                     if s.params.mono {
                         WorkspacePhotoParameter(id: "monoRed")
@@ -309,11 +314,11 @@ struct GroupBox<Content: View>: View {
                     let hasPaintedDepth = s.params.masks.contains {
                         $0.kind == .depth && $0.enabled
                     }
-                    Label(hasPaintedDepth
+                    Label(L10n.tr(hasPaintedDepth
                           ? "深度来源：深度涂绘蒙版（白=虚化）"
                           : (s.hasDisparity
                              ? "深度来源：人像 disparity 辅助数据"
-                             : "无深度数据：在下方局部调整里新建「深度涂绘」，把背景涂白"),
+                             : "无深度数据：在下方局部调整里新建「深度涂绘」，把背景涂白")),
                           systemImage: hasPaintedDepth || s.hasDisparity
                               ? "checkmark.circle.fill" : "info.circle.fill")
                         .font(.system(size: 9.5))
@@ -325,12 +330,12 @@ struct GroupBox<Content: View>: View {
 
                 GroupBox(title: "镜头校正") {
                     WorkspacePhotoParameter(id: "caAmount")
-                    Text("横向色差：R/B 通道反向微缩放（正=收红边）")
+                    Text(L10n.tr("横向色差：R/B 通道反向微缩放（正=收红边）"))
                         .font(.system(size: 9.5)).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     WorkspacePhotoParameter(id: "purpleFringe")
-                    Text("抑制高亮度区域的蓝紫镶边（向灰度收敛）")
+                    Text(L10n.tr("抑制高亮度区域的蓝紫镶边（向灰度收敛）"))
                         .font(.system(size: 9.5)).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -348,21 +353,21 @@ struct GroupBox<Content: View>: View {
                 GroupBox(title: "变换与裁剪") {
                     HStack(spacing: 6) {
                         Button { s.toggleCropMode() } label: {
-                            Text("裁剪").font(.system(size:11)).frame(height:14)
+                            Text(L10n.tr("裁剪")).font(.system(size:11)).frame(height:14)
                         }.controlSize(.small)
-                            .help("进入画布裁剪模式（R）：拖角/边裁剪、切画幅、自动校直")
+                            .help(L10n.tr("进入画布裁剪模式（R）：拖角/边裁剪、切画幅、自动校直"))
                         Button { s.autoStraighten() } label: {
-                            Text(s.autoLevelRunning ? "检测中…" : "自动水平").font(.system(size:11)).frame(height:14)
+                            Text(L10n.tr(s.autoLevelRunning ? "检测中…" : "自动水平")).font(.system(size:11)).frame(height:14)
                         }.controlSize(.small)
                             .disabled(s.source == nil || s.autoLevelRunning)
-                            .help("本地检测地平线并校正倾斜，可撤销")
+                            .help(L10n.tr("本地检测地平线并校正倾斜，可撤销"))
                         Spacer()
                     }.padding(.bottom,6)
                     HStack(spacing: 6) {
                         Button("↺") { s.set(\.rotation, (s.params.rotation + 270) % 360 == 0 ? 0 : ((s.params.rotation + 270) % 360)); s.endEdit() }
                         Button("↻") { s.set(\.rotation, (s.params.rotation + 90) % 360); s.endEdit() }
                         Button("⇋") { s.set(\.flipped, !s.params.flipped); s.endEdit() }
-                        Button("复位") {
+                        Button(L10n.tr("复位")) {
                             s.set(\.cropX, 0); s.set(\.cropY, 0)
                             s.set(\.cropW, 1); s.set(\.cropH, 1)
                             s.set(\.straighten, 0); s.set(\.rotation, 0); s.set(\.flipped, false)
@@ -374,7 +379,7 @@ struct GroupBox<Content: View>: View {
                     .controlSize(.small)
                     WorkspacePhotoParameter(id: "straighten")
                     Divider().padding(.vertical, 2)
-                    Toggle("自动透视（Vision 检测画面内四边形）",
+                    Toggle(L10n.tr("自动透视（Vision 检测画面内四边形）"),
                            isOn: Binding(get: { s.params.perspectiveAuto },
                                          set: { s.set(\.perspectiveAuto, $0); s.endEdit() }))
                         .font(.system(size: 11))
@@ -382,7 +387,7 @@ struct GroupBox<Content: View>: View {
                         WorkspacePhotoParameter(id: "perspectiveV")
                         WorkspacePhotoParameter(id: "perspectiveH")
                     } else {
-                        Text("已按画面内检测到的四边形自动校正；手动滑块仅在关闭自动时生效")
+                        Text(L10n.tr("已按画面内检测到的四边形自动校正；手动滑块仅在关闭自动时生效"))
                             .font(.system(size: 9.5)).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -400,6 +405,8 @@ struct GroupBox<Content: View>: View {
             .environment(\.inspectorCategory, category)
             .disabled(s.source == nil)
             .padding(.bottom, 16)
+            .frame(width: viewport.size.width)
+        }
         }
         
         }
@@ -407,15 +414,16 @@ struct GroupBox<Content: View>: View {
         .background(transparent ? Color.clear : StudioStyle.panel)
         .onChange(of: s.cropMode) { _, active in if active { s.parameterEdits.finishCurrent(); ui.category = .geometry } }
         .onChange(of: s.selectedMask) { _, id in if id != nil { s.parameterEdits.finishCurrent(); ui.category = .masks } }
-        .alert("恢复所有默认参数？", isPresented: $confirmReset) {
-            Button("取消", role: .cancel) {}
-            Button("恢复默认", role: .destructive) { s.selectedMask = nil; s.commit(EditParams()) }
-        } message: { Text("此操作可撤销，原始照片不会改变。") }
+        .alert(L10n.tr("恢复所有默认参数？"), isPresented: $confirmReset) {
+            Button(L10n.tr("取消"), role: .cancel) {}
+            Button(L10n.tr("恢复默认"), role: .destructive) { s.selectedMask = nil; s.commit(EditParams()) }
+        } message: { Text(L10n.tr("此操作可撤销，原始照片不会改变。")) }
     }
 }
 
 // MARK: - 曲线（色调 / 亮度 / 单通道）
 struct CurvePane: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     @EnvironmentObject private var ui: WorkspaceInspectorState
     private var mode: Int { ui.curveChannel }
@@ -446,8 +454,8 @@ struct CurvePane: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            Picker("曲线通道", selection: Binding(get:{mode},set:{s.parameterEdits.finishCurrent(); ui.curveChannel = $0})) {
-                ForEach(0..<5, id: \.self) { i in Text(names[i]).tag(i) }
+            Picker(L10n.tr("曲线通道"), selection: Binding(get:{mode},set:{s.parameterEdits.finishCurrent(); ui.curveChannel = $0})) {
+                ForEach(0..<5, id: \.self) { i in Text(L10n.isEnglish ? (i == 0 ? "RGB" : i == 1 ? "Luma" : names[i]) : names[i]).help(L10n.tr(names[i])).accessibilityLabel(L10n.tr(names[i])).tag(i) }
             }
             .labelsHidden().pickerStyle(.segmented).controlSize(.small)
 
@@ -458,32 +466,32 @@ struct CurvePane: View {
                 .frame(height: 200)
 
             HStack {
-                Text("输入 → 输出").font(.system(size:10)).foregroundStyle(WorkspaceTokens.secondaryText)
+                Text(L10n.tr("输入 → 输出")).font(.system(size:10)).foregroundStyle(WorkspaceTokens.secondaryText)
                 Spacer()
-                Button("展开曲线…") { s.parameterEdits.finishCurrent(); showExpanded = true }.controlSize(.small)
+                Button(L10n.tr("展开曲线…")) { s.parameterEdits.finishCurrent(); showExpanded = true }.controlSize(.small)
                     .popover(isPresented:$showExpanded) {
                         VStack(spacing:12) {
-                            HStack { Text("曲线 · \(names[mode])").font(.headline); Spacer(); Button("完成") { s.parameterEdits.finishCurrent(); showExpanded = false } }
+                            HStack { Text(L10n.tr("曲线 · \(names[mode])")).font(.headline); Spacer(); Button(L10n.tr("完成")) { s.parameterEdits.finishCurrent(); showExpanded = false } }
                             CurveEditor(points:Binding(get:{s.params[keyPath:keyPath(mode)].points},set:{s.set(keyPath(mode),ToneCurve(points:$0))}),color:colors[mode]) { s.endEdit() }
                                 .frame(width:320,height:320)
                         }.padding(16).environmentObject(s)
                     }
             }.padding(.vertical,5)
             WorkspacePhotoParameter(id: "refineSat")
-            Text("Refine Sat：曲线改完调子后把饱和度拉回来（只改明暗不改颜色浓淡）")
+            Text(L10n.tr("Refine Sat：曲线改完调子后把饱和度拉回来（只改明暗不改颜色浓淡）"))
                 .font(.system(size: 9.5)).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.bottom, 2)
 
             HStack(spacing: 6) {
-                Button("复位") { s.parameterEdits.invalidate(); s.set(keyPath(mode), ToneCurve()); s.endEdit() }
+                Button(L10n.tr("复位")) { s.parameterEdits.invalidate(); s.set(keyPath(mode), ToneCurve()); s.endEdit() }
                     .controlSize(.small)
-                Text("单击空白加点 · 拖动任意移动 · 双击点删除")
+                Text(L10n.tr("单击空白加点 · 拖动任意移动 · 双击点删除"))
                     .font(.system(size: 9.5)).foregroundStyle(.secondary)
                 Spacer()
             }
-            Text(hints[mode])
+            Text(L10n.tr(hints[mode]))
                 .font(.system(size: 9.5)).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -493,6 +501,7 @@ struct CurvePane: View {
 
 // MARK: - 曲线编辑器（正方形、控制点自由拖，像 Lightroom）
 struct CurveEditor: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @Binding var points: [[Double]]
     var color: Color = WorkspaceTokens.accent
     var onEnd: () -> Void
@@ -569,14 +578,14 @@ struct CurveEditor: View {
                         .position(x: inset + CGFloat(points[i][0]) * plot,
                                   y: inset + CGFloat(1 - points[i][1]) * plot)
                         .accessibilityElement(children:.ignore)
-                        .accessibilityLabel("曲线控制点 \(i+1)")
-                        .accessibilityValue(String(format:"输入 %.2f，输出 %.2f",points[i][0],points[i][1]))
+                        .accessibilityLabel(L10n.tr("曲线控制点 \(i+1)"))
+                        .accessibilityValue(String(format:L10n.tr("输入 %.2f，输出 %.2f"),points[i][0],points[i][1]))
                         .accessibilityAdjustableAction { direction in
                             s.parameterEdits.finishCurrent()
                             var next = points; next[i][1] = min(max(next[i][1] + (direction == .increment ? 0.01 : -0.01),0),1); points = next; onEnd()
                         }
                         .contextMenu {
-                            Button("删除该控制点") {
+                            Button(L10n.tr("删除该控制点")) {
                                 guard i != 0, i != points.count - 1 else { return }
                                 var pts = points; pts.remove(at: i); points = pts; onEnd()
                             }
@@ -634,6 +643,7 @@ struct CurveEditor: View {
 
 // MARK: - 颜色分级（LR 式色轮：一次一个大球，三个圆点切换）
 struct ColorGradePane: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     @EnvironmentObject private var ui: WorkspaceInspectorState
     private var band: Int { ui.gradeBand }
@@ -655,15 +665,15 @@ struct ColorGradePane: View {
                         .frame(width: 22, height: 22)
                         .overlay(Circle().stroke(band == i ? WorkspaceTokens.primaryText : WorkspaceTokens.secondaryText.opacity(0.4),
                                                  lineWidth: band == i ? 2 : 1))
-                    }.buttonStyle(.plain).accessibilityLabel(names[i])
-                        .accessibilityAddTraits(band == i ? .isSelected : []).help(names[i])
+                    }.buttonStyle(.plain).accessibilityLabel(L10n.tr(names[i]))
+                        .accessibilityAddTraits(band == i ? .isSelected : []).help(L10n.tr(names[i]))
                 }
                 Spacer()
-                Button("复位") { s.parameterEdits.invalidate(); s.set(keyPath(band), ColorGrade()); s.endEdit() }
+                Button(L10n.tr("复位")) { s.parameterEdits.invalidate(); s.set(keyPath(band), ColorGrade()); s.endEdit() }
                     .controlSize(.small)
             }
 
-            Text(names[band])
+            Text(L10n.tr(names[band]))
                 .font(.system(size: 11, weight: .medium))
 
             // 大色轮：拖到哪就是哪个色相/饱和度，双击复位
@@ -672,10 +682,10 @@ struct ColorGradePane: View {
                 set: { s.set(keyPath(band), $0) })) { s.endEdit() }
                 .aspectRatio(1, contentMode: .fit)
                 .frame(maxWidth: 176)
-            Button("展开色轮…") { s.parameterEdits.finishCurrent(); showExpanded = true }.controlSize(.small)
+            Button(L10n.tr("展开色轮…")) { s.parameterEdits.finishCurrent(); showExpanded = true }.controlSize(.small)
                 .popover(isPresented:$showExpanded) {
                     VStack(spacing:12) {
-                        HStack { Text("颜色分级 · \(names[band])").font(.headline); Spacer(); Button("完成") { s.parameterEdits.finishCurrent(); showExpanded = false } }
+                        HStack { Text(L10n.tr("颜色分级 · \(names[band])")).font(.headline); Spacer(); Button(L10n.tr("完成")) { s.parameterEdits.finishCurrent(); showExpanded = false } }
                         GradeWheel(grade:Binding(get:{s.params[keyPath:keyPath(band)]},set:{s.set(keyPath(band),$0)})) { s.endEdit() }.frame(width:280,height:280)
                     }.padding(16).environmentObject(s)
                 }
@@ -691,7 +701,7 @@ struct ColorGradePane: View {
             Divider().padding(.vertical, 2)
             WorkspacePhotoParameter(id: "gradeBlend")
             WorkspacePhotoParameter(id: "gradeBalance")
-            Text("混合 50 = 标准量，0 不上色；平衡决定三档分界往哪边挪")
+            Text(L10n.tr("混合 50 = 标准量，0 不上色；平衡决定三档分界往哪边挪"))
                 .font(.system(size: 9.5)).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -708,6 +718,7 @@ struct ColorGradePane: View {
 
 /// LR 式色轮：色相沿圆周、饱和度沿半径（外圈最浓，圆心无色）
 struct GradeWheel: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @Binding var grade: ColorGrade
     var onEnd: () -> Void
     @State private var dragging = false
@@ -777,6 +788,7 @@ struct GradeWheel: View {
 
 // MARK: - 校准（改 RGB 三原色的原色）
 struct CalibrationPane: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     @EnvironmentObject private var ui: WorkspaceInspectorState
     private var band: Int { ui.calibrationBand }
@@ -788,8 +800,8 @@ struct CalibrationPane: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            Picker("校准原色", selection: Binding(get:{band},set:{s.parameterEdits.finishCurrent(); ui.calibrationBand = $0})) {
-                ForEach(0..<3, id: \.self) { i in Text(names[i]).tag(i) }
+            Picker(L10n.tr("校准原色"), selection: Binding(get:{band},set:{s.parameterEdits.finishCurrent(); ui.calibrationBand = $0})) {
+                ForEach(0..<3, id: \.self) { i in Text(L10n.tr(names[i])).tag(i) }
             }
             .labelsHidden().pickerStyle(.segmented).controlSize(.small)
             SliderRow(label: "色相", value: Binding(
@@ -803,9 +815,9 @@ struct CalibrationPane: View {
             Divider().padding(.vertical, 2)
             WorkspacePhotoParameter(id: "calibShadowTint")
             HStack(spacing: 6) {
-                Text("正值偏绿 · 负值偏洋红").font(.system(size: 9.5)).foregroundStyle(.secondary)
+                Text(L10n.tr("正值偏绿 · 负值偏洋红")).font(.system(size: 9.5)).foregroundStyle(.secondary)
                 Spacer()
-                Button("全部复位") {
+                Button(L10n.tr("全部复位")) {
                     s.parameterEdits.invalidate()
                     s.set(\.primRed, PrimaryAdj()); s.set(\.primGreen, PrimaryAdj())
                     s.set(\.primBlue, PrimaryAdj()); s.set(\.calibShadowTint, 0); s.endEdit()
@@ -818,15 +830,16 @@ struct CalibrationPane: View {
 
 // MARK: - HSL
 struct HSLPane: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     @EnvironmentObject private var ui: WorkspaceInspectorState
     private var band: Int { ui.hslBand }
     var body: some View {
         VStack(spacing: 4) {
-            Picker("HSL 颜色", selection: Binding(get:{band},set:{s.parameterEdits.finishCurrent(); ui.hslBand = $0})) {
-                ForEach(0..<8, id: \.self) { i in Text(HSLMix.names[i]).tag(i) }
+            Picker(L10n.tr("HSL 颜色"), selection: Binding(get:{band},set:{s.parameterEdits.finishCurrent(); ui.hslBand = $0})) {
+                ForEach(0..<8, id: \.self) { i in Text(L10n.tr(HSLMix.names[i])).tag(i) }
             }
-            .labelsHidden().controlSize(.small)
+            .labelsHidden().controlSize(.small).id(interfaceLanguage.code)
             SliderRow(label: "色相", value: Binding(
                 get: { s.params.hsl[band].hue },
                 set: { var h = s.params.hsl; h[band].hue = $0; s.set(\.hsl, h) }), range: -60...60) { s.endEdit() }
@@ -836,23 +849,24 @@ struct HSLPane: View {
             SliderRow(label: "明亮", value: Binding(
                 get: { s.params.hsl[band].lum },
                 set: { var h = s.params.hsl; h[band].lum = $0; s.set(\.hsl, h) }), range: -100...100) { s.endEdit() }
-            Button("清空 HSL") { s.parameterEdits.invalidate(); s.set(\.hsl, HSLMix()); s.endEdit() }.controlSize(.small)
+            Button(L10n.tr("清空 HSL")) { s.parameterEdits.invalidate(); s.set(\.hsl, HSLMix()); s.endEdit() }.controlSize(.small)
         }
     }
 }
 
 // MARK: - CLUT 选择
 struct ClutPicker: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     @EnvironmentObject private var ui: WorkspaceInspectorState
     private var q: String { ui.clutQuery }
     var body: some View {
         VStack(spacing: 4) {
             HStack {
-                TextField("搜索胶片…", text: $ui.clutQuery).textFieldStyle(.roundedBorder).controlSize(.small)
-                Button("清除") { s.set(\.clutName, ""); s.endEdit() }.controlSize(.small)
-                Button("刷新") { s.cluts.invalidate(); s.render() }.controlSize(.small)
-                    .help("重新扫描 HaldCLUT 目录：往 ~/Documents/RawTherapee/HaldCLUT 里放了新 LUT 后点这里（HALD 的 PNG/TIF 与 .cube 都认）")
+                TextField(L10n.tr("搜索胶片…"), text: $ui.clutQuery).textFieldStyle(.roundedBorder).controlSize(.small)
+                Button(L10n.tr("清除")) { s.set(\.clutName, ""); s.endEdit() }.controlSize(.small)
+                Button(L10n.tr("刷新")) { s.cluts.invalidate(); s.render() }.controlSize(.small)
+                    .help(L10n.tr("重新扫描 HaldCLUT 目录：往 ~/Documents/RawTherapee/HaldCLUT 里放了新 LUT 后点这里（HALD 的 PNG/TIF 与 .cube 都认）"))
             }
             let all = s.cluts.list()
             // 不再截断到前 60 个：LUT 超过 300 个时，新放进去的会排在后头，不搜索就永远看不到
@@ -864,7 +878,7 @@ struct ClutPicker: View {
                 }
             } label: {
                 HStack {
-                    Text(s.params.clutName.isEmpty ? "选择胶片…" : s.params.clutName)
+                    Text(s.params.clutName.isEmpty ? L10n.tr("选择胶片…") : s.params.clutName)
                         .font(.system(size: 11)).lineLimit(1)
                     Spacer()
                     Image(systemName: "chevron.down").font(.system(size: 9))
@@ -873,7 +887,7 @@ struct ClutPicker: View {
                 .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 4))
             }
             .buttonStyle(.plain)
-            Text(all.isEmpty ? "暂无胶片 LUT，可添加 HALD 或 cube 文件后刷新" : shown.isEmpty ? "没有匹配的胶片" : "共 \(all.count) 个可用 · 搜索结果 \(shown.count) 个").font(.system(size: 9.5)).foregroundStyle(.secondary)
+            Text(L10n.tr(all.isEmpty ? "暂无胶片 LUT，可添加 HALD 或 cube 文件后刷新" : shown.isEmpty ? "没有匹配的胶片" : "共 \(all.count) 个可用 · 搜索结果 \(shown.count) 个")).font(.system(size: 9.5)).foregroundStyle(.secondary)
         }
     }
 }
@@ -896,6 +910,7 @@ extension MaskKind {
 }
 
 struct MaskAddButton: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     let kind: MaskKind
     var body: some View {
@@ -903,7 +918,7 @@ struct MaskAddButton: View {
             HStack(spacing: 5) {
                 Image(systemName: kind.icon)
                     .frame(width: 14)
-                Text(kind.label)
+                Text(L10n.tr(kind.label))
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
             }
@@ -913,11 +928,12 @@ struct MaskAddButton: View {
         }
         .buttonStyle(WorkspaceButtonStyle())
         .controlSize(.small)
-        .help(kind.label)
+        .help(L10n.tr(kind.label))
     }
 }
 
 struct MaskPane: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
 
     @State private var renameID: UUID?
@@ -945,15 +961,15 @@ struct MaskPane: View {
             HStack {
                 Menu {
                     ForEach(MaskKind.allCases,id:\.self) { kind in
-                        Button { s.createMask(kind) } label: { Label(kind.label,systemImage:kind.icon) }
+                        Button { s.createMask(kind) } label: { Label(L10n.tr(kind.label),systemImage:kind.icon) }
                     }
-                } label: { Label("新建蒙版",systemImage:"plus") }
+                } label: { Label(L10n.tr("新建蒙版"),systemImage:"plus") }
                 .menuStyle(.borderlessButton).fixedSize()
                 Spacer()
                 Button { s.showMaskOverlay.toggle() } label: { Image(systemName:"square.3.layers.3d") }
-                    .buttonStyle(WorkspaceButtonStyle()).accessibilityLabel("显示或隐藏当前蒙版").help("显示或隐藏当前蒙版").disabled(s.selectedMask == nil)
+                    .buttonStyle(WorkspaceButtonStyle()).accessibilityLabel(L10n.tr("显示或隐藏当前蒙版")).help(L10n.tr("显示或隐藏当前蒙版")).disabled(s.selectedMask == nil)
             }.font(.system(size:11,weight:.medium))
-            Label(maskHint, systemImage: "text.bubble")
+            Label(L10n.tr(maskHint), systemImage: "text.bubble")
                 .font(.system(size: 9.5))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -979,11 +995,11 @@ struct MaskPane: View {
                             .foregroundStyle(.secondary)
                         Button(maskName) { s.selectedMask = isSel ? nil : m.id }
                             .buttonStyle(.plain).font(.system(size:11,weight:.medium)).lineLimit(1)
-                            .help("选择蒙版；右键重命名")
-                            .contextMenu { Button("重命名…") { renameID = m.id; renameText = m.name; renaming = true } }
+                            .help(L10n.tr("选择蒙版；右键重命名"))
+                            .contextMenu { Button(L10n.tr("重命名…")) { renameID = m.id; renameText = m.name; renaming = true } }
                         Spacer()
                         Toggle("", isOn: Binding(get: { m.enabled }, set: { var x = m; x.enabled = $0; s.updateMask(x) }))
-                            .labelsHidden().controlSize(.mini).accessibilityLabel("启用蒙版：" + maskName)
+                            .labelsHidden().controlSize(.mini).accessibilityLabel(L10n.tr("启用蒙版：") + maskName)
                         Button {
                             var x = m; x.inverted.toggle(); s.updateMask(x)
                         } label: {
@@ -992,7 +1008,7 @@ struct MaskPane: View {
                         }
                         .buttonStyle(WorkspaceButtonStyle())
                         .controlSize(.mini)
-                        .help(m.inverted ? "取消反转" : "反转蒙版").accessibilityLabel(m.inverted ? "取消反转蒙版" : "反转蒙版")
+                        .help(L10n.tr(m.inverted ? "取消反转" : "反转蒙版")).accessibilityLabel(L10n.tr(m.inverted ? "取消反转蒙版" : "反转蒙版"))
                         Button {
                             s.duplicateMask(m.id)
                         } label: {
@@ -1002,7 +1018,7 @@ struct MaskPane: View {
                         }
                         .buttonStyle(WorkspaceButtonStyle())
                         .controlSize(.mini)
-                        .help("复制蒙版").accessibilityLabel("复制蒙版")
+                        .help(L10n.tr("复制蒙版")).accessibilityLabel(L10n.tr("复制蒙版"))
                         Button {
                             s.removeMask(m.id)
                         } label: {
@@ -1012,18 +1028,18 @@ struct MaskPane: View {
                         }
                         .buttonStyle(WorkspaceButtonStyle())
                         .controlSize(.mini)
-                        .help("删除蒙版").accessibilityLabel("删除蒙版")
+                        .help(L10n.tr("删除蒙版")).accessibilityLabel(L10n.tr("删除蒙版"))
                     }
                     if s.selectedMask == m.id {
                         HStack {
-                            Button("重命名…") { renameID = m.id; renameText = m.name; renaming = true }
+                            Button(L10n.tr("重命名…")) { renameID = m.id; renameText = m.name; renaming = true }
                             Spacer()
-                            Button("复位调整") { var x = m; x.adjust = LocalAdjust(); s.updateMask(x) }
+                            Button(L10n.tr("复位调整")) { var x = m; x.adjust = LocalAdjust(); s.updateMask(x) }
                         }.font(.system(size:10)).buttonStyle(WorkspaceButtonStyle())
                         MaskEditingControls()
                         if m.kind.usesVision {
                             HStack(spacing: 6) {
-                                Button("重算 AI 蒙版") {
+                                Button(L10n.tr("重算 AI 蒙版")) {
                                     s.recomputeMask(m.id)
                                 }
                                 .controlSize(.small)
@@ -1036,7 +1052,7 @@ struct MaskPane: View {
                                     .fill(Color(red: m.sampleRGB[0], green: m.sampleRGB[1], blue: m.sampleRGB[2]))
                                     .frame(width: 30, height: 18)
                                     .overlay(RoundedRectangle(cornerRadius: 3).stroke(.white.opacity(0.3), lineWidth: 1))
-                                Text("取样色（也可直接在画布上拖）")
+                                Text(L10n.tr("取样色（也可直接在画布上拖）"))
                                     .font(.system(size: 9.5)).foregroundStyle(.secondary).lineLimit(1)
                                 Spacer()
                             }
@@ -1125,10 +1141,10 @@ struct MaskPane: View {
                             : Color(nsColor: .rfCardBorder), lineWidth: isSel ? 1 : 0.5))
             }
         }
-        .alert("重命名蒙版",isPresented:$renaming) {
-            TextField("蒙版名称",text:$renameText)
-            Button("取消",role:.cancel) {}
-            Button("保存") { if let id = renameID { s.renameMask(id,name:renameText) } }
+        .alert(L10n.tr("重命名蒙版"),isPresented:$renaming) {
+            TextField(L10n.tr("蒙版名称"),text:$renameText)
+            Button(L10n.tr("取消"),role:.cancel) {}
+            Button(L10n.tr("保存")) { if let id = renameID { s.renameMask(id,name:renameText) } }
                 .disabled(renameText.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty)
         }
     }
@@ -1137,23 +1153,24 @@ struct MaskPane: View {
 // MARK: - 导出
 /// 水印设置（导出 / 批量导出共用）：文字或图片，九宫格定位、大小、不透明度、旋转
 struct WatermarkControls: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @Binding var settings: ExportSettings
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Picker("类型", selection: $settings.watermarkKind) {
-                Text("文字").tag("text"); Text("图片").tag("image")
+            Picker(L10n.tr("类型"), selection: $settings.watermarkKind) {
+                Text(L10n.tr("文字")).tag("text"); Text(L10n.tr("图片")).tag("image")
             }.pickerStyle(.segmented)
 
             if settings.watermarkKind == "text" {
-                TextField("水印文字", text: $settings.watermarkText)
+                TextField(L10n.tr("水印文字"), text: $settings.watermarkText)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(size: 11))
-                Toggle("黑字（浅色画面用）", isOn: $settings.watermarkDarkText)
+                Toggle(L10n.tr("黑字（浅色画面用）"), isOn: $settings.watermarkDarkText)
                     .font(.system(size: 10.5))
             } else {
                 HStack(spacing: 6) {
-                    Button("选择图片…") {
+                    Button(L10n.tr("选择图片…")) {
                         let p = NSOpenPanel()
                         p.allowedContentTypes = [.png, .jpeg, .tiff, .heic]
                         if p.runModal() == .OK, let u = p.url {
@@ -1172,23 +1189,23 @@ struct WatermarkControls: View {
 
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("位置").font(.system(size: 10)).foregroundStyle(.secondary)
+                    Text(L10n.tr("位置")).font(.system(size: 10)).foregroundStyle(.secondary)
                     WMPosGrid(pos: $settings.watermarkPosition)
                 }
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(settings.watermarkKind == "text" ? "字号（占长边）" : "宽度（占长边）")
+                    Text(L10n.tr(settings.watermarkKind == "text" ? "字号（占长边）" : "宽度（占长边）"))
                         .font(.system(size: 10)).foregroundStyle(.secondary)
                     Slider(value: $settings.watermarkScale, in: 0.01...0.30)
-                    Text("不透明度 \(Int(settings.watermarkOpacity * 100))%")
+                    Text(L10n.tr("不透明度 \(Int(settings.watermarkOpacity * 100))%"))
                         .font(.system(size: 10)).foregroundStyle(.secondary)
                     Slider(value: $settings.watermarkOpacity, in: 0.05...1)
-                    Text("旋转 \(Int(settings.watermarkRotation))°")
+                    Text(L10n.tr("旋转 \(Int(settings.watermarkRotation))°"))
                         .font(.system(size: 10)).foregroundStyle(.secondary)
                     Slider(value: $settings.watermarkRotation, in: -45...45)
                 }
             }
             SliderRow(label: "边距", value: $settings.watermarkMargin, range: 0...0.12, photoScoped:false)
-            Text("水印只叠在导出文件上，不进预览、不进副档")
+            Text(L10n.tr("水印只叠在导出文件上，不进预览、不进副档"))
                 .font(.system(size: 9))
                 .foregroundStyle(.secondary)
         }
@@ -1202,6 +1219,7 @@ struct WatermarkControls: View {
 
 /// 3×3 九宫格位置选择
 struct WMPosGrid: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @Binding var pos: String
     private let rows = [["topLeft", "topCenter", "topRight"],
                         ["midLeft", "center", "midRight"],
@@ -1217,7 +1235,7 @@ struct WMPosGrid: View {
                                 .frame(width: 22, height: 14)
                         }
                         .buttonStyle(.plain)
-                        .help(p)
+                        .help(L10n.tr(p))
                     }
                 }
             }
@@ -1228,6 +1246,7 @@ struct WMPosGrid: View {
 // MARK: - 导出目录行
 /// 显示当前固定导出文件夹，可更改（写进 UserDefaults，源码不含个人路径）/ 在访达中显示
 struct ExportDirRow: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @AppStorage(ExportPaths.key) private var dir: String = ""
 
     var body: some View {
@@ -1240,9 +1259,9 @@ struct ExportDirRow: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.middle)
-                .help(ExportPaths.defaultDir.path)
+                .help(L10n.tr(ExportPaths.defaultDir.path))
             Spacer()
-            Button("更改…") {
+            Button(L10n.tr("更改…")) {
                 let p = NSOpenPanel()
                 p.canChooseDirectories = true
                 p.canChooseFiles = false
@@ -1256,7 +1275,7 @@ struct ExportDirRow: View {
             }
             .controlSize(.small)
             .buttonStyle(WorkspaceButtonStyle())
-            .help("在访达中显示")
+            .help(L10n.tr("在访达中显示"))
         }
     }
 }

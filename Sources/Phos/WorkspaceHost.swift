@@ -14,12 +14,14 @@ private final class WorkspaceTransparentHost<Content: View>: NSHostingView<Conte
 }
 
 private struct WorkspaceHostedContent<Content: View>: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @ObservedObject var state: AppState
     @ObservedObject var environment: WorkspaceEnvironment
     let content: Content
     var blocksDuringSync = true
     var body: some View {
         content.environmentObject(state).tint(WorkspaceTokens.accent)
+            .environment(\.locale, AppLanguage.shared.locale)
             .environment(\.workspaceAccessibility, environment.accessibility)
             .environment(\.workspaceNativeGlassDisabled, environment.disableNativeGlass)
             .buttonStyle(WorkspaceButtonStyle())
@@ -86,6 +88,7 @@ final class WorkspaceSurfaceSlot: NSView {
 @MainActor
 final class WorkspaceToolButton: NSButton {
     var perform: () -> Void = {}
+    private var sourceTitle = ""
     private var hovered = false
     private var tracking: NSTrackingArea?
     override var acceptsFirstResponder: Bool { false }
@@ -95,10 +98,11 @@ final class WorkspaceToolButton: NSButton {
             .withSymbolConfiguration(.init(pointSize: 15, weight: .regular))
         imagePosition = .imageOnly
         isBordered = false; bezelStyle = .regularSquare
-        toolTip = title; setAccessibilityLabel(title)
+        sourceTitle = title; refreshLanguage()
         target = self; self.action = #selector(invoke); perform = action
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+    func refreshLanguage() { toolTip = L10n.tr(sourceTitle); setAccessibilityLabel(L10n.tr(sourceTitle)) }
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         if let tracking { removeTrackingArea(tracking) }
@@ -137,7 +141,7 @@ final class WorkspaceToolButton: NSButton {
         contentTintColor = selected ? .rfGold : .labelColor
         state = selected ? .on : .off
         needsDisplay = true
-        setAccessibilityValue(selected ? "已选中" : "未选中")
+        setAccessibilityValue(L10n.tr(selected ? "已选中" : "未选中"))
     }
 }
 
@@ -201,6 +205,7 @@ private final class WorkspaceModeHighlight: NSView {
 final class WorkspaceModeSwitch: NSView {
     private let buttons: [WorkspaceModeSegmentButton]
     private var tips: [String?]
+    private let sourceLabels: [String]
     private var tracking: NSTrackingArea?
     private var hovered: Int?
     private weak var externalTarget: AnyObject?
@@ -235,6 +240,7 @@ final class WorkspaceModeSwitch: NSView {
     }
 
     init(labels: [String], target: AnyObject?, action: Selector?) {
+        sourceLabels = labels
         buttons = labels.enumerated().map { index, label in
             let button = WorkspaceModeSegmentButton(title: label, target: nil, action: nil)
             button.setButtonType(.toggle)
@@ -256,7 +262,7 @@ final class WorkspaceModeSwitch: NSView {
             button.action = #selector(segmentClicked(_:))
         }
         setAccessibilityRole(.radioGroup)
-        setAccessibilityLabel("工作区布局")
+        setAccessibilityLabel(L10n.tr("工作区布局"))
         highlight.wantsLayer = true
         highlight.layer?.masksToBounds = false
         focusOutline.fillColor = nil; focusOutline.lineWidth = 1.5; focusOutline.zPosition = 10
@@ -275,10 +281,17 @@ final class WorkspaceModeSwitch: NSView {
         super.viewDidChangeEffectiveAppearance(); syncSelection(); styleHighlight()
     }
 
+    func refreshLanguage() {
+        for (i,button) in buttons.enumerated() {
+            button.title = L10n.tr(sourceLabels[i]); button.setAccessibilityLabel(L10n.tr(sourceLabels[i]))
+            button.toolTip = tips[i].map { L10n.tr($0) }
+        }
+        setAccessibilityLabel(L10n.tr("工作区布局")); needsDisplay = true
+    }
     func setToolTip(_ tip: String?, forSegment index: Int) {
         guard tips.indices.contains(index) else { return }
         tips[index] = tip
-        buttons[index].toolTip = tip
+        buttons[index].toolTip = tip.map { L10n.tr($0) }
     }
 
     @objc private func segmentClicked(_ sender: NSButton) {
@@ -422,12 +435,13 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
     private let rail = WorkspaceToolGroup(vertical: true)
     private let zoom = NSPopUpButton(frame: .zero, pullsDown: true)
     private let more = NSPopUpButton(frame: .zero, pullsDown: true)
+    private let languagePicker = NSPopUpButton(frame: .zero, pullsDown: true)
     private var keyMonitor: Any?
     private let modeSwitch = WorkspaceModeSwitch(labels: ["A 沉浸", "B 选片"], target: nil, action: nil)
     private let title = WorkspaceTitleLabel(labelWithString: "Phos")
     let titleDrag = WorkspaceTitlebarDragView()
     private var menuActions: [Int: () -> Void] = [:]
-    private let moreMenu = NSMenu(title: "更多")
+    private let moreMenu = NSMenu(title: L10n.tr("更多"))
     private var materialMode: WorkspaceMode?
     private var appearanceObservation: NSKeyValueObservation?
     private var windowObservations: [AnyCancellable] = []
@@ -455,7 +469,7 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         title.alignment = .center; title.lineBreakMode = .byTruncatingMiddle
         title.textColor = .secondaryLabelColor; addSubview(title)
         modeSwitch.target = self; modeSwitch.action = #selector(changeWorkspace)
-        modeSwitch.setAccessibilityLabel("工作区布局")
+        modeSwitch.setAccessibilityLabel(L10n.tr("工作区布局"))
         modeSwitch.setToolTip("A 沉浸编辑：铺满画布与紧凑列表", forSegment: 0)
         modeSwitch.setToolTip("B 连续选片：完整画布与横向胶片条", forSegment: 1)
         addSubview(modeSwitch)
@@ -467,6 +481,13 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         model.session.objectWillChange.debounce(for: .milliseconds(1), scheduler: RunLoop.main).sink { [weak self] _ in self?.needsLayout = true; self?.refresh() }.store(in: &observations)
         model.environment.objectWillChange.debounce(for: .milliseconds(1), scheduler: RunLoop.main).sink { [weak self] _ in self?.refreshMaterials() }.store(in: &observations)
         refreshMaterials(); refresh()
+        NotificationCenter.default.publisher(for: AppLanguage.didChange).sink { [weak self] _ in
+            self?.refreshLanguage(); self?.refresh()
+        }.store(in: &observations)
+        NotificationCenter.default.publisher(for: NSMenu.didBeginTrackingNotification).sink { _ in
+            LocalizedApplicationMenus.refresh()
+        }.store(in: &observations)
+        refreshLanguage()
         model.state.resumePreviewWork()
         #if PHOS_QA
         qaRecorder = WorkspaceQARecorder(root: self)
@@ -552,6 +573,37 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         }
         needsLayout = true
     }
+    private func refreshLanguage() {
+        LocalizedApplicationMenus.refresh()
+        DispatchQueue.main.async { LocalizedApplicationMenus.refresh() }
+        for group in [navigation,viewing,actions,rail] { group.buttons.forEach { $0.refreshLanguage() } }
+        modeSwitch.refreshLanguage()
+        for (index,name) in ["铺满","适合窗口","铺满窗口","跟随布局","1:1 检查","全像素预览"].enumerated() { zoom.item(at:index)?.title = L10n.tr(name) }
+        zoom.setAccessibilityLabel(L10n.tr("画布观看方式"))
+        more.toolTip = L10n.tr("更多操作与外观"); more.setAccessibilityLabel(L10n.tr("更多操作与外观"))
+        refreshLanguagePicker()
+        needsLayout = true
+    }
+    private func refreshLanguagePicker() {
+        let current = AppLanguage.shared
+        let shortName = current.code == "en" ? "EN" : "简中"
+        let menu = NSMenu(title: L10n.tr("语言"))
+        menu.autoenablesItems = false
+        menu.addItem(NSMenuItem(title: shortName, action: nil, keyEquivalent: ""))
+        for (name, value) in [("跟随系统", "system"), ("简体中文", "zh-Hans"), ("English", "en")] {
+            let option = NSMenuItem(title: L10n.tr(name), action: #selector(selectToolbarLanguage(_:)), keyEquivalent: "")
+            option.target = self; option.representedObject = value
+            option.state = current.choice == value ? .on : .off
+            menu.addItem(option)
+        }
+        languagePicker.menu = menu
+        let label = L10n.tr("语言") + ": " + shortName + (current.choice == "system" ? " · " + L10n.tr("跟随系统") : "")
+        languagePicker.toolTip = label; languagePicker.setAccessibilityLabel(label)
+    }
+    @objc private func selectToolbarLanguage(_ sender: NSMenuItem) {
+        guard let value = sender.representedObject as? String else { return }
+        model.finishEditing(); AppLanguage.shared.select(value)
+    }
     func refresh() {
         if materialMode != model.session.mode { refreshMaterials() }
         let s = model.state
@@ -562,7 +614,7 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         viewing.buttons[1].isEnabled = s.nextVisiblePhotoIndex != nil && !s.syncRunning
         zoom.isEnabled = s.source != nil && !s.syncRunning
         zoom.item(at: 4)?.isEnabled = s.source != nil && !s.cropMode && !s.syncRunning
-        zoom.item(at: 0)?.title = s.oneToOne ? (s.displayFrame?.fullResolution == true ? "1:1" : "准备1:1…") : (s.cropMode ? "裁剪" : model.session.viewingTitle)
+        zoom.item(at: 0)?.title = L10n.tr(s.oneToOne ? (s.displayFrame?.fullResolution == true ? "1:1" : "准备1:1…") : (s.cropMode ? "裁剪" : model.session.viewingTitle))
         modeSwitch.selectedSegment = model.session.mode == .immersive ? 0 : 1
         actions.buttons[0].select(s.showBefore); actions.buttons[0].isEnabled = model.enabled(.beforeOriginal)
         actions.buttons[1].isEnabled = !s.syncRunning
@@ -576,7 +628,7 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         rail.buttons[5].isEnabled = model.enabled(.brush)
         rail.buttons[5].image = NSImage(systemSymbolName:s.maskTool == .erase ? "eraser" : "paintbrush.pointed",accessibilityDescription:"局部画笔")
         rail.buttons[4].select(s.oneToOne); rail.buttons[4].isEnabled = s.source != nil && !s.cropMode && !s.syncRunning
-        title.stringValue = s.current?.url.lastPathComponent ?? "Phos · 打开文件夹开始编辑"
+        title.stringValue = s.current?.url.lastPathComponent ?? L10n.tr("Phos · 打开文件夹开始编辑")
         title.toolTip = s.current?.url.path
         slots["browser"]?.setDisplayed(model.session.browserVisible)
         slots["inspector"]?.setDisplayed(model.session.inspectorVisible)
@@ -601,7 +653,8 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         title.frame = CGRect(x: layout.title.minX + 168, y: layout.title.minY + 10,
                              width: max(0, layout.title.width - 168), height: 16)
         zoom.frame = CGRect(x: 68, y: 4, width: 72, height: 28)
-        more.frame = WorkspaceLayout.buttonFrame(4)
+        languagePicker.frame = CGRect(x: 132, y: 4, width: 64, height: 28)
+        more.frame = WorkspaceLayout.buttonFrame(6)
         for slot in slots.values { slot.layoutSubtreeIfNeeded() }
         WorkspaceWindowChrome.positionStandardButtons(in: self)
     }
@@ -618,7 +671,7 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         })
         zoom.isBordered = false; zoom.font = .systemFont(ofSize: 11, weight: .medium)
         zoom.menu?.autoenablesItems = false
-        zoom.setAccessibilityLabel("画布观看方式")
+        zoom.setAccessibilityLabel(L10n.tr("画布观看方式"))
         for name in ["铺满", "适合窗口", "铺满窗口", "跟随布局", "1:1 检查", "全像素预览"] { zoom.addItem(withTitle: name) }
         zoom.target = self; zoom.action = #selector(changeZoom)
         viewing.addSubview(zoom)
@@ -627,9 +680,12 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         actions.add(WorkspaceToolButton("square.and.arrow.up", "导出当前照片") { [weak self] in self?.model.perform(.export) })
         actions.add(WorkspaceToolButton("sidebar.right", "显示或隐藏调整面板") { [weak self] in self?.model.session.inspectorVisible.toggle() })
         more.isBordered = false; more.imagePosition = .imageOnly
-        more.toolTip = "更多操作与外观"; more.setAccessibilityLabel("更多操作与外观")
+        more.toolTip = L10n.tr("更多操作与外观"); more.setAccessibilityLabel(L10n.tr("更多操作与外观"))
         (more.cell as? NSPopUpButtonCell)?.arrowPosition = .noArrow
         addMoreTitle(); more.menu = moreMenu; actions.addSubview(more)
+        languagePicker.isBordered = false
+        languagePicker.font = .systemFont(ofSize: 12, weight: .medium)
+        refreshLanguagePicker(); actions.addSubview(languagePicker)
         rail.add(WorkspaceToolButton("crop", "裁剪") { [weak self] in self?.model.perform(.crop) })
         rail.add(WorkspaceToolButton("eyedropper", "白平衡灰点取样") { [weak self] in self?.model.perform(.whiteBalance) })
         rail.add(WorkspaceToolButton("sparkles", "自动影调") { [weak self] in self?.model.perform(.autoTone) })
@@ -652,7 +708,7 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         model.session.mode = modeSwitch.selectedSegment == 0 ? .immersive : .filmstrip
     }
     private func addMoreTitle() {
-        let title = NSMenuItem(title: "更多", action: nil, keyEquivalent: "")
+        let title = NSMenuItem(title: L10n.tr("更多"), action: nil, keyEquivalent: "")
         title.image = NSImage(systemSymbolName: "ellipsis", accessibilityDescription: "更多操作与外观")?
             .withSymbolConfiguration(.init(pointSize: 15, weight: .regular))
         moreMenu.addItem(title)
@@ -671,50 +727,58 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         addMoreTitle()
         let s = model.state, ready = model.state.source != nil && !model.state.syncRunning
         for mode in WorkspaceMode.allCases {
-            item(mode.title, in: menu, checked: model.session.mode == mode) { [weak self] in self?.model.session.mode = mode }
+            item(L10n.tr(mode.title), in: menu, checked: model.session.mode == mode) { [weak self] in self?.model.session.mode = mode }
         }
-        let widths = NSMenu(title: "面板宽度")
+        let widths = NSMenu(title: L10n.tr("面板宽度"))
         for width: CGFloat in [196, 212, 240, 260] {
-            item("照片列表 \(Int(width))", in: widths, checked: model.session.browserWidth == width) { [weak self] in self?.model.session.browserWidth = width }
+            item(L10n.tr("照片列表 \(Int(width))"), in: widths, checked: model.session.browserWidth == width) { [weak self] in self?.model.session.browserWidth = width }
         }
         widths.addItem(.separator())
         for width: CGFloat in [248, 264, 304] {
-            item("调整面板 \(Int(width))", in: widths, checked: model.session.inspectorWidth == width) { [weak self] in self?.model.session.inspectorWidth = width }
+            item(L10n.tr("调整面板 \(Int(width))"), in: widths, checked: model.session.inspectorWidth == width) { [weak self] in self?.model.session.inspectorWidth = width }
         }
-        let widthsItem = NSMenuItem(title: "面板宽度", action: nil, keyEquivalent: ""); widthsItem.submenu = widths; menu.addItem(widthsItem)
+        let widthsItem = NSMenuItem(title: L10n.tr("面板宽度"), action: nil, keyEquivalent: ""); widthsItem.submenu = widths; menu.addItem(widthsItem)
         menu.addItem(.separator())
-        item("浏览预设…", in: menu, enabled: ready) { s.parameterEdits.finishCurrent(); self.model.session.inspectorVisible = true; s.inspectorUI.showPresets = true }
-        item("照片信息…", in: menu, enabled: s.current != nil) { self.model.session.inspectorVisible = true; s.inspectorUI.showInformation = true }
-        let presets = NSMenu(title: "预设")
+        item(L10n.tr("浏览预设…"), in: menu, enabled: ready) { s.parameterEdits.finishCurrent(); self.model.session.inspectorVisible = true; s.inspectorUI.showPresets = true }
+        item(L10n.tr("照片信息…"), in: menu, enabled: s.current != nil) { self.model.session.inspectorVisible = true; s.inspectorUI.showInformation = true }
+        let presets = NSMenu(title: L10n.tr("预设"))
         for preset in s.loadPresets() {
-            item(preset.name, in: presets, enabled: ready) { [weak self] in s.commit(preset.params) }
+            item(preset.builtin ? L10n.tr(preset.name) : preset.name, in: presets, enabled: ready) { [weak self] in s.commit(preset.params) }
         }
         presets.addItem(.separator())
-        item("保存当前调整为预设…", in: presets, enabled: ready) { [weak self] in self?.model.savePreset() }
-        let presetItem = NSMenuItem(title: "预设", action: nil, keyEquivalent: ""); presetItem.submenu = presets; menu.addItem(presetItem)
+        item(L10n.tr("保存当前调整为预设…"), in: presets, enabled: ready) { [weak self] in self?.model.savePreset() }
+        let presetItem = NSMenuItem(title: L10n.tr("预设"), action: nil, keyEquivalent: ""); presetItem.submenu = presets; menu.addItem(presetItem)
         for (name, command) in [("命名快照…", WorkspaceCommandID.snapshots), ("同步调整…", .sync), ("批量导出…", .batch), ("多重曝光合成…", .merge), ("同几何分割对比", .beforeGeometry), ("局部画笔", .brush), ("显示或隐藏当前蒙版", .overlay), ("取消当前处理", .cancelJob)] {
-            item(name, in: menu, enabled: model.enabled(command),checked:command == .beforeGeometry && s.splitComparison) { [weak self] in self?.model.perform(command) }
+            item(L10n.tr(name), in: menu, enabled: model.enabled(command),checked:command == .beforeGeometry && s.splitComparison) { [weak self] in self?.model.perform(command) }
         }
-        item("复制调整", in: menu, enabled: model.enabled(.copy)) { [weak self] in self?.model.perform(.copy) }
-        item("全像素预览", in: menu, enabled: ready, checked: s.fullResPreview) { s.fullResPreview.toggle() }
+        item(L10n.tr("复制调整"), in: menu, enabled: model.enabled(.copy)) { [weak self] in self?.model.perform(.copy) }
+        item(L10n.tr("全像素预览"), in: menu, enabled: ready, checked: s.fullResPreview) { s.fullResPreview.toggle() }
         menu.addItem(.separator())
-        let appearance = NSMenu(title: "外观")
+        let appearance = NSMenu(title: L10n.tr("外观"))
         for (name, value) in [("跟随系统", "system"), ("浅色", "light"), ("深色", "dark")] {
-            item(name, in: appearance, checked: (UserDefaults.standard.string(forKey: "rf.appearance") ?? "system") == value) {
+            item(L10n.tr(name), in: appearance, checked: (UserDefaults.standard.string(forKey: "rf.appearance") ?? "system") == value) {
                 UserDefaults.standard.set(value, forKey: "rf.appearance")
             }
         }
-        let appearanceItem = NSMenuItem(title: "外观", action: nil, keyEquivalent: ""); appearanceItem.submenu = appearance; menu.addItem(appearanceItem)
+        let appearanceItem = NSMenuItem(title: L10n.tr("外观"), action: nil, keyEquivalent: ""); appearanceItem.submenu = appearance; menu.addItem(appearanceItem)
+        let language = NSMenu(title:L10n.tr("语言"))
+        for (name,value) in [("跟随系统","system"),("简体中文","zh-Hans"),("English","en")] {
+            item(L10n.tr(name),in:language,checked:AppLanguage.shared.choice == value) { [weak self] in
+                self?.model.finishEditing(); AppLanguage.shared.select(value)
+            }
+        }
+        let languageItem = NSMenuItem(title:L10n.tr("语言"),action:nil,keyEquivalent:"")
+        languageItem.submenu = language; menu.addItem(languageItem)
         #if PHOS_QA
-        let qa = NSMenu(title:"QA辅助功能")
+        let qa = NSMenu(title:L10n.tr("QA辅助功能"))
         for (label,value) in [("系统","system"),("减少透明度","reduceTransparency"),("增强对比度","increaseContrast"),("减少动态效果","reduceMotion")] {
             item(label,in:qa) { [weak self] in self?.model.environment.setQAAccessibilityMode(value) }
         }
-        item("R5性能检查",in:menu) { [weak self] in guard let self else { return }; Task { await WorkspaceReviewBench.run(root:self) } }
-        let qaItem = NSMenuItem(title:"QA辅助功能",action:nil,keyEquivalent:""); qaItem.submenu = qa; menu.addItem(qaItem)
+        item(L10n.tr("R5性能检查"),in:menu) { [weak self] in guard let self else { return }; Task { await WorkspaceReviewBench.run(root:self) } }
+        let qaItem = NSMenuItem(title:L10n.tr("QA辅助功能"),action:nil,keyEquivalent:""); qaItem.submenu = qa; menu.addItem(qaItem)
         #endif
-        item("检查更新…", in: menu) { s.checkForUpdates(silent: false) }
-        if let update = s.availableUpdate { item("下载新版本 \(update.version)…", in: menu) { s.openUpdatePage() } }
+        item(L10n.tr("检查更新…"), in: menu) { s.checkForUpdates(silent: false) }
+        if let update = s.availableUpdate { item(L10n.tr("下载新版本 \(update.version)…"), in: menu) { s.openUpdatePage() } }
     }
 
     /// Real hierarchy diagnostics shared by lifecycle tests and the opt-in QA recorder.

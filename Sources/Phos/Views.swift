@@ -27,6 +27,7 @@ enum SliderRoundTripPolicy {
 }
 
 struct SliderRow: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject private var photoState: AppState
     let label: String
     @Binding var value: Double
@@ -79,12 +80,12 @@ struct SliderRow: View {
     var body: some View {
         VStack(spacing:0) {
             HStack(spacing:6) {
-                Text(label).font(.system(size:12)).foregroundStyle(WorkspaceTokens.primaryText)
-                    .lineLimit(1).help(label)
-                if modified { Circle().fill(WorkspaceTokens.accent).frame(width:3,height:3).accessibilityLabel("已修改") }
+                Text(L10n.tr(label)).font(.system(size:12)).foregroundStyle(WorkspaceTokens.primaryText)
+                    .lineLimit(1).help(L10n.tr(label))
+                if modified { Circle().fill(WorkspaceTokens.accent).frame(width:3,height:3).accessibilityLabel(L10n.tr("已修改")) }
                 Spacer(minLength:4)
-                if !unit.isEmpty { Text(unit).font(.system(size:10)).foregroundStyle(WorkspaceTokens.secondaryText) }
-                TextField(label,text:$draft)
+                if !unit.isEmpty { Text(L10n.tr(unit)).font(.system(size:10)).foregroundStyle(WorkspaceTokens.secondaryText) }
+                TextField(L10n.tr(label),text:$draft)
                     .textFieldStyle(.plain).multilineTextAlignment(.trailing)
                     .font(.system(size:11,design:.monospaced)).monospacedDigit()
                     .foregroundStyle(invalid ? WorkspaceTokens.error : WorkspaceTokens.primaryText)
@@ -94,20 +95,20 @@ struct SliderRow: View {
                     .focused($focused).onSubmit { commitInput(leaving:false) }
                     .onExitCommand { cancelInput() }
                     .onChange(of:focused) { _, active in if active { startInput() } else { commitInput(leaving:true) } }
-                    .accessibilityLabel(label+"数值").accessibilityHint(invalid ? "请输入有效数字" : "Enter确认，Esc取消")
-                    .help("输入数值，Enter确认，Esc取消；范围 \(range.lowerBound) 至 \(range.upperBound)")
+                    .accessibilityLabel(L10n.tr(label+"数值")).accessibilityHint(L10n.tr(invalid ? "请输入有效数字" : "Enter确认，Esc取消"))
+                    .help(L10n.tr("输入数值，Enter确认，Esc取消；范围 \(range.lowerBound) 至 \(range.upperBound)"))
             }.frame(height:24)
             ZStack(alignment:.leading) {
                 Slider(value:sliderBinding,in:0...1) { editing in
                     if editing { sliderCancelled = false; beginSlider() }
                     else { if sliderActive { finishSlider() }; sliderCancelled = false }
-                }.controlSize(.mini).tint(WorkspaceTokens.accent).accessibilityLabel(label+"滑杆")
+                }.controlSize(.mini).tint(WorkspaceTokens.accent).accessibilityLabel(L10n.tr(label+"滑杆"))
                 GeometryReader { g in
                     Rectangle().fill(WorkspaceTokens.secondaryText.opacity(0.5)).frame(width:1,height:4)
                         .position(x:6+CGFloat(position(defaultValue))*(g.size.width-12),y:g.size.height/2)
                 }.allowsHitTesting(false)
             }.frame(height:18)
-            if invalid { Text("请输入有效数字").font(.system(size:10)).foregroundStyle(WorkspaceTokens.error).frame(maxWidth:.infinity,alignment:.trailing) }
+            if invalid { Text(L10n.tr("请输入有效数字")).font(.system(size:10)).foregroundStyle(WorkspaceTokens.error).frame(maxWidth:.infinity,alignment:.trailing) }
         }.frame(minHeight:44)
         .onAppear { draft = formatted }
         .onChange(of:value) { _, _ in if !focused { draft = formatted } }
@@ -116,7 +117,7 @@ struct SliderRow: View {
             if numericActive { cancelInput() }
             else if sliderToken != nil { photoState.parameterEdits.invalidate(); sliderToken = nil }
         }
-        .contextMenu { Button("复位"+label) { photoState.parameterEdits.invalidate(); if value != defaultValue { value = defaultValue; onEdit() } }.disabled(!modified) }
+        .contextMenu { Button(L10n.tr("复位")+label) { photoState.parameterEdits.invalidate(); if value != defaultValue { value = defaultValue; onEdit() } }.disabled(!modified) }
     }
     private func startInput() {
         initialDraft = String(value); draft = initialDraft; invalid = false; numericActive = true
@@ -160,6 +161,7 @@ struct SliderRow: View {
 #if PHOS_TESTING || PHOS_BASELINE || PHOS_APPEARANCE_TEST || DEBUG
 // Retained only for historical baselines and developer previews.
 struct MainWindow: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     var body: some View {
         VStack(spacing: 0) {
@@ -187,10 +189,10 @@ struct MainWindow: View {
         .sheet(isPresented: $s.showMerge) { MergeSheet() }
         .sheet(isPresented: $s.showSync) { SyncSheet() }
         .sheet(isPresented: $s.showSnapshots) { SnapshotSheet() }
-        .alert("操作未完成", isPresented: Binding(get: { s.workflowError != nil },
+        .alert(L10n.tr("操作未完成"), isPresented: Binding(get: { s.workflowError != nil },
                                                 set: { if !$0 { s.workflowError = nil } })) {
-            Button("好") { s.workflowError = nil }
-        } message: { Text(s.workflowError ?? "") }
+            Button(L10n.tr("好")) { s.workflowError = nil }
+        } message: { Text(L10n.tr(s.workflowError ?? "")) }
     }
 }
 
@@ -198,15 +200,16 @@ struct MainWindow: View {
 
 // MARK: - 顶栏
 struct TopBar: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     var body: some View {
         HStack(spacing: 6) {
-            ToolButton(systemImage: "folder", title: "打开文件夹（⌘O）") {
+            ToolButton(systemImage: "folder", title: L10n.tr("打开文件夹（⌘O）")) {
                 let p = NSOpenPanel(); p.canChooseDirectories = true; p.canChooseFiles = false
                 if p.runModal() == .OK, let u = p.url { s.openFolder(u) }
             }
             ToolDivider()
-            ToolButton(systemImage: "square.on.square", title: "前后对比（⌘B）",
+            ToolButton(systemImage: "square.on.square", title: L10n.tr("前后对比（⌘B）"),
                        active: s.showBefore) { s.showBefore.toggle() }
             ToolDivider()
             PillToggle(title: "全像素", isOn: $s.fullResPreview,
@@ -217,9 +220,9 @@ struct TopBar: View {
                 s.oneToOne.toggle()
             }
             ToolDivider()
-            ToolButton(systemImage: "arrow.uturn.backward", title: "撤销（⌘Z）",
+            ToolButton(systemImage: "arrow.uturn.backward", title: L10n.tr("撤销（⌘Z）"),
                        disabled: !s.history.canUndo) { s.undo() }
-            ToolButton(systemImage: "arrow.uturn.forward", title: "重做（⇧⌘Z）",
+            ToolButton(systemImage: "arrow.uturn.forward", title: L10n.tr("重做（⇧⌘Z）"),
                        disabled: !s.history.canRedo) { s.redo() }
             ToolDivider()
             Menu {
@@ -227,7 +230,7 @@ struct TopBar: View {
                     Button(p.name) { s.commit(p.params) }
                 }
                 Divider()
-                Button("保存当前为预设…") { savePreset() }
+                Button(L10n.tr("保存当前为预设…")) { savePreset() }
             } label: {
                 Image(systemName: "wand.and.stars")
                     .font(.system(size: 13.5, weight: .medium))
@@ -236,24 +239,24 @@ struct TopBar: View {
             }
             .menuStyle(.borderlessButton)
             .fixedSize()
-            .help("预设")
-            ToolButton(systemImage: "clock.arrow.circlepath", title: "命名快照",
+            .help(L10n.tr("预设"))
+            ToolButton(systemImage: "clock.arrow.circlepath", title: L10n.tr("命名快照"),
                        disabled: s.source == nil) { s.showSnapshots = true }
-            ToolButton(systemImage: "doc.on.doc", title: "复制调整",
+            ToolButton(systemImage: "doc.on.doc", title: L10n.tr("复制调整"),
                        disabled: s.source == nil) { s.copyAdjustments() }
-            ToolButton(systemImage: "arrow.triangle.2.circlepath", title: "同步调整",
+            ToolButton(systemImage: "arrow.triangle.2.circlepath", title: L10n.tr("同步调整"),
                        disabled: s.source == nil) { s.showSync = true }
             ToolDivider()
-            ToolButton(systemImage: "square.and.arrow.down", title: "导出当前照片（⌘E）") {
+            ToolButton(systemImage: "square.and.arrow.down", title: L10n.tr("导出当前照片（⌘E）")) {
                 s.showExport = true
             }
-            ToolButton(systemImage: "tray.and.arrow.down", title: "批量导出") {
+            ToolButton(systemImage: "tray.and.arrow.down", title: L10n.tr("批量导出")) {
                 s.showBatch = true
             }
             ToolDivider()
-            ToolButton(systemImage: "scissors", title: "裁剪（⌘R）",
+            ToolButton(systemImage: "scissors", title: L10n.tr("裁剪（⌘R）"),
                        active: s.cropMode, shortcut: "r") { s.toggleCropMode() }
-            ToolButton(systemImage: "rectangle.stack", title: "多重曝光合成（⇧⌘M）") {
+            ToolButton(systemImage: "rectangle.stack", title: L10n.tr("多重曝光合成（⇧⌘M）")) {
                 s.showMerge = true
             }
             Spacer()
@@ -275,9 +278,9 @@ struct TopBar: View {
     func savePreset() {
         let a = NSAlert()
         a.messageText = "预设名称"
-        a.addButton(withTitle: "保存"); a.addButton(withTitle: "取消")
+        a.addButton(withTitle: L10n.tr("保存")); a.addButton(withTitle: L10n.tr("取消"))
         let tf = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
-        tf.placeholderString = "我的风格"
+        tf.placeholderString = L10n.tr("我的风格")
         a.accessoryView = tf
         guard a.runModal() == .alertFirstButtonReturn, !tf.stringValue.isEmpty else { return }
         var ps = s.loadPresets()
@@ -288,6 +291,7 @@ struct TopBar: View {
 
 // MARK: - 浏览器
 struct BrowserPane: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     let cols = [GridItem(.adaptive(minimum: 92), spacing: 8)]
     var visibleCount: Int {
@@ -304,15 +308,15 @@ struct BrowserPane: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Spacer()
-                Text("\(visibleCount)")
+                Text(L10n.tr("\(visibleCount)"))
                     .font(.system(size: 9.5, weight: .medium, design: .monospaced))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 5).padding(.vertical, 1)
                     .background(Capsule().fill(Color(nsColor: .rfPill)))
                 Menu {
-                    Button("全部") { s.filterRating = 0 }
+                    Button(L10n.tr("全部")) { s.filterRating = 0 }
                     ForEach(1...5, id: \.self) { r in
-                        Button("≥ \(r) 星") { s.filterRating = r }
+                        Button(L10n.tr("≥ \(r) 星")) { s.filterRating = r }
                     }
                 } label: {
                     Image(systemName: s.filterRating == 0 ? "line.3.horizontal.decrease" : "star.fill")
@@ -348,7 +352,7 @@ struct BrowserPane: View {
                                         Image(systemName: s.selectedPhotos.contains(it.id) ? "checkmark.square.fill" : "square")
                                             .foregroundStyle(.white)
                                             .padding(4).background(.black.opacity(0.5), in: RoundedRectangle(cornerRadius: 4))
-                                    }.buttonStyle(.plain).help("选择用于同步：\(it.url.lastPathComponent)")
+                                    }.buttonStyle(.plain).help(L10n.tr("选择用于同步：\(it.url.lastPathComponent)"))
                                         .padding(3)
                                 }
                         }
@@ -358,13 +362,13 @@ struct BrowserPane: View {
             }
             Divider()
             HStack {
-                Text("已选 \(s.selectedPhotos.count)").font(.caption).monospacedDigit()
+                Text(L10n.tr("已选 \(s.selectedPhotos.count)")).font(.caption).monospacedDigit()
                 Spacer()
-                ToolButton(systemImage: "checkmark.square", title: "选择当前筛选的所有照片") {
+                ToolButton(systemImage: "checkmark.square", title: L10n.tr("选择当前筛选的所有照片")) {
                     s.selectedPhotos = Set(s.items.filter { s.filterRating == 0 || $0.rating >= s.filterRating }.map(\.id))
                 }
-                ToolButton(systemImage: "xmark", title: "清除选择") { s.selectedPhotos = [] }
-                ToolButton(systemImage: "arrow.triangle.2.circlepath", title: "同步所选照片",
+                ToolButton(systemImage: "xmark", title: L10n.tr("清除选择")) { s.selectedPhotos = [] }
+                ToolButton(systemImage: "arrow.triangle.2.circlepath", title: L10n.tr("同步所选照片"),
                            disabled: s.selectedPhotos.isEmpty || s.source == nil) { s.showSync = true }
             }.padding(6)
         }
@@ -373,6 +377,7 @@ struct BrowserPane: View {
 }
 
 struct ThumbCell: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let item: PhotoItem
     let selected: Bool
@@ -425,6 +430,7 @@ struct ThumbCell: View {
 
 // MARK: - 画布
 struct CanvasPane: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     @ObservedObject var session: WorkspaceSessionState = WorkspaceSessionState(persist: false)
     @State private var canvasSize: CGSize = .zero
@@ -507,8 +513,8 @@ struct CanvasPane: View {
                     VStack(spacing: 12) {
                         if s.previewing || s.folderLoading { ProgressView().controlSize(.small) }
                         else { Image(systemName: s.current == nil ? "photo.on.rectangle.angled" : "exclamationmark.triangle").font(.system(size: 32, weight: .light)) }
-                        Text(s.previewing ? "正在准备照片…" : s.current == nil ? "打开文件夹开始编辑" : s.status).font(.system(size: 13))
-                        if s.current == nil { Text("RAW · HEIF · JPEG · PNG · TIFF · AVIF").font(.system(size: 11)).foregroundStyle(.secondary) }
+                        Text(L10n.tr(s.previewing ? "正在准备照片…" : s.current == nil ? "打开文件夹开始编辑" : s.status)).font(.system(size: 13))
+                        if s.current == nil { Text(L10n.tr("RAW · HEIF · JPEG · PNG · TIFF · AVIF")).font(.system(size: 11)).foregroundStyle(.secondary) }
                     }
                     .frame(width: shell.safeCanvas.width, height: shell.safeCanvas.height)
                     .position(x: shell.safeCanvas.midX, y: shell.safeCanvas.midY)
@@ -519,7 +525,7 @@ struct CanvasPane: View {
                         .offset(x: shell.safeCanvas.minX, y: shell.safeCanvas.minY)
                 }
                 if s.oneToOne && !pixelReady && displayed != nil {
-                    Label("正在准备完整像素…", systemImage: "arrow.triangle.2.circlepath")
+                    Label(L10n.tr("正在准备完整像素…"), systemImage: "arrow.triangle.2.circlepath")
                         .font(.system(size: 11)).padding(8).background(.regularMaterial, in: Capsule())
                         .position(x: shell.safeCanvas.midX, y: shell.safeCanvas.minY + 20)
                 }
@@ -539,9 +545,9 @@ struct CanvasPane: View {
             .overlay(alignment:.topLeading) {
                 if s.splitComparison, displayed != nil {
                     VStack(spacing:0) {
-                        HStack { Text("同几何 · 调整前"); Spacer(); Text("调整后") }.font(.system(size:11,weight:.medium)).padding(8).background(.regularMaterial)
+                        HStack { Text(L10n.tr("同几何 · 调整前")); Spacer(); Text(L10n.tr("调整后")) }.font(.system(size:11,weight:.medium)).padding(8).background(.regularMaterial)
                         Spacer()
-                        Slider(value:$s.splitPosition,in:0.05...0.95).accessibilityLabel("分割对比位置").frame(width:180).padding(8).background(.regularMaterial,in:Capsule())
+                        Slider(value:$s.splitPosition,in:0.05...0.95).accessibilityLabel(L10n.tr("分割对比位置")).frame(width:180).padding(8).background(.regularMaterial,in:Capsule())
                     }.frame(width:shell.safeCanvas.width,height:shell.safeCanvas.height).offset(x:shell.safeCanvas.minX,y:shell.safeCanvas.minY)
                 }
             }
@@ -733,6 +739,7 @@ struct CanvasPane: View {
 
 // MARK: - 蒙版操作层
 struct MaskOverlay: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     let mask: Mask
     let frame: CGRect
@@ -854,6 +861,7 @@ struct MaskOverlay: View {
 }
 
 struct Handle: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     let position: CGPoint
     var color: Color = .cyan
     var size: CGFloat = 14
@@ -874,6 +882,7 @@ struct Handle: View {
 
 // MARK: - 直方图
 struct HistogramBar: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
@@ -884,16 +893,16 @@ struct HistogramBar: View {
                     Circle()
                         .fill(s.showBefore ? Color.orange : Color.accentColor)
                         .frame(width: 6, height: 6)
-                    Text(s.showBefore ? "原图" : "调整后")
+                    Text(L10n.tr(s.showBefore ? "原图" : "调整后"))
                         .font(.system(size: 11, weight: .semibold))
                 }
-                Text(String(format: "原图 %d × %d",
+                Text(String(format: L10n.tr("原图 %d × %d"),
                             Int(s.sourceSize.width), Int(s.sourceSize.height)))
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.secondary)
                 Text(s.lastPreviewScale >= 0.999
                      ? "预览：全像素"
-                     : String(format: "预览：%d%%（代理图）", Int(s.lastPreviewScale * 100)))
+                     : String(format: L10n.tr("预览：%d%%（代理图）"), Int(s.lastPreviewScale * 100)))
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
                     .foregroundStyle(s.lastPreviewScale >= 0.999 ? Color.green : .secondary)
             }
@@ -907,6 +916,7 @@ struct HistogramBar: View {
 }
 
 struct HistogramView: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     let bins: (r: [Int], g: [Int], b: [Int], l: [Int])
     var body: some View {
         Canvas { ctx, size in
@@ -939,12 +949,13 @@ struct HistogramView: View {
 
 // MARK: - 裁剪叠加层与工具条
 struct CropBar: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     private let presets: [(String, Double?)] = [("自由", nil), ("1:1", 1), ("4:3", 4.0/3), ("3:2", 3.0/2), ("16:9", 16.0/9)]
     var body: some View {
         VStack {
             HStack(spacing: 3) {
-                Text("画幅")
+                Text(L10n.tr("画幅"))
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(.white.opacity(0.6))
                     .padding(.leading, 4)
@@ -971,11 +982,11 @@ struct CropBar: View {
                     .fill(.white.opacity(0.2))
                     .frame(width: 1, height: 14)
                     .padding(.horizontal, 3)
-                Button("取消") { s.cancelCrop() }.buttonStyle(.plain)
+                Button(L10n.tr("取消")) { s.cancelCrop() }.buttonStyle(.plain)
                 Button {
                     s.finishCrop()
                 } label: {
-                    Text("完成")
+                    Text(L10n.tr("完成"))
                         .font(.system(size: 11, weight: .semibold))
                         .padding(.horizontal, 10).padding(.vertical, 3)
                         .background(Capsule().fill(Color.accentColor))
@@ -998,13 +1009,14 @@ struct CropBar: View {
 
 /// 裁剪浮动条里的小按钮
 struct BarButton: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     let title: String
     var help: String = ""
     let action: () -> Void
     @State private var hover = false
     var body: some View {
         Button(action: action) {
-            Text(title)
+            Text(L10n.tr(title))
                 .font(.system(size: 10.5, weight: .medium))
                 .padding(.horizontal, 7).padding(.vertical, 3)
                 .foregroundStyle(hover ? .white : .white.opacity(0.75))
@@ -1012,7 +1024,7 @@ struct BarButton: View {
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .help(help)
+        .help(L10n.tr(help))
         .onHover { hover = $0 }
     }
 }
@@ -1034,6 +1046,7 @@ enum CropHitTesting {
 
 /// 裁剪框叠加：暗化外部 + 三分线 + 八向手柄 + 框内拖动
 struct CropOverlay: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     let frame: CGRect          // 预览图在画布上的显示矩形
     @State private var moveOrigin: [Double]?
@@ -1156,13 +1169,14 @@ struct CropOverlay: View {
 
 // MARK: - 状态栏
 struct StatusBar: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: "circle.fill")
                 .font(.system(size: 5))
                 .foregroundStyle(s.previewing ? Color.orange : Color.green)
-            Text(s.status)
+            Text(L10n.tr(s.status))
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
@@ -1179,7 +1193,7 @@ struct StatusBar: View {
                 Button {
                     s.togglePick()
                 } label: {
-                    Label(it.picked ? "已标记" : "标记",
+                    Label(L10n.tr(it.picked ? "已标记" : "标记"),
                           systemImage: it.picked ? "checkmark" : "flag")
                         .font(.system(size: 10.5, weight: .medium))
                         .padding(.horizontal, 8).padding(.vertical, 2)
@@ -1197,6 +1211,7 @@ struct StatusBar: View {
 
 // MARK: - 多重曝光合成
 struct MergeSheet: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     @EnvironmentObject var s: AppState
     @Environment(\.dismiss) var dismiss
 
@@ -1222,19 +1237,19 @@ struct MergeSheet: View {
                     .foregroundStyle(.white)
                     .frame(width: 30, height: 30)
                     .background(RoundedRectangle(cornerRadius: 8).fill(WorkspaceTokens.accent))
-                Text("多重曝光合成")
+                Text(L10n.tr("多重曝光合成"))
                     .font(.system(size: 15, weight: .bold))
             }
 
             // 合成方式
             VStack(alignment: .leading, spacing: 6) {
-                Picker("方式", selection: $mergeMode) {
-                    ForEach(MergeMode.allCases, id: \.self) { m in Text(m.label).tag(m) }
+                Picker(L10n.tr("方式"), selection: $mergeMode) {
+                    ForEach(MergeMode.allCases, id: \.self) { m in Text(L10n.tr(m.label)).tag(m) }
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .disabled(s.mergeRunning)
-                Text(mergeMode.hint)
+                Text(L10n.tr(mergeMode.hint))
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1242,21 +1257,21 @@ struct MergeSheet: View {
 
             // 对齐选项
             VStack(alignment: .leading, spacing: 6) {
-                Toggle("先对齐帧（重叠区 NCC < 0.7 的帧自动剔除）", isOn: Binding(
+                Toggle(L10n.tr("先对齐帧（重叠区 NCC < 0.7 的帧自动剔除）"), isOn: Binding(
                     get: { alignEnabled || mergeMode == .denoise },
                     set: { alignEnabled = $0 }))
                     .font(.system(size: 10.5))
                     .disabled(mergeMode == .denoise || s.mergeRunning)
                 if alignEnabled || mergeMode == .denoise {
-                    Picker("对齐方式", selection: $alignMethod) {
+                    Picker(L10n.tr("对齐方式"), selection: $alignMethod) {
                         ForEach(AlignMethod.allCases, id: \.self) { m in
-                            Text(m.label).tag(m)
+                            Text(L10n.tr(m.label)).tag(m)
                         }
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
                     .disabled(s.mergeRunning)
-                    Text("平移：只补偿手持位移，快。透视：额外抗旋转/透视错位，帧歪得厉害时用")
+                    Text(L10n.tr("平移：只补偿手持位移，快。透视：额外抗旋转/透视错位，帧歪得厉害时用"))
                         .font(.system(size: 9.5))
                         .foregroundStyle(.secondary)
                 }
@@ -1265,12 +1280,12 @@ struct MergeSheet: View {
             // 照片多选列表
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
-                    Text("点击勾选要合成的照片")
+                    Text(L10n.tr("点击勾选要合成的照片"))
                         .font(.system(size: 11, weight: .semibold))
                     Spacer()
-                    Button("全选") { selected = Set(s.items.map { $0.id }) }
-                    Button("全不选") { selected.removeAll() }
-                    Button("选已标记") {
+                    Button(L10n.tr("全选")) { selected = Set(s.items.map { $0.id }) }
+                    Button(L10n.tr("全不选")) { selected.removeAll() }
+                    Button(L10n.tr("选已标记")) {
                         selected = Set(s.items.filter { $0.picked }.map { $0.id })
                     }
                 }
@@ -1281,7 +1296,7 @@ struct MergeSheet: View {
                 ScrollView {
                     VStack(spacing: 2) {
                         if s.items.isEmpty {
-                            Text("还没有打开文件夹：点下面「添加文件…」直接选，或先 ⌘O 打开文件夹")
+                            Text(L10n.tr("还没有打开文件夹：点下面「添加文件…」直接选，或先 ⌘O 打开文件夹"))
                                 .font(.system(size: 10.5))
                                 .foregroundStyle(.secondary)
                                 .padding(10)
@@ -1314,12 +1329,12 @@ struct MergeSheet: View {
                     Button {
                         choose()
                     } label: {
-                        Label("添加文件夹外的文件…", systemImage: "doc.badge.plus")
+                        Label(L10n.tr("添加文件夹外的文件…"), systemImage: "doc.badge.plus")
                             .font(.system(size: 11, weight: .medium))
                     }
                     .disabled(s.mergeRunning)
                     Spacer()
-                    Text("已选 \(list.count) 张" + (list.count < 2 ? "（至少选 2 张）" : ""))
+                    Text(L10n.tr("已选 \(list.count) 张") + (list.count < 2 ? "（至少选 2 张）" : ""))
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(list.count >= 2 ? Color.green : .secondary)
                 }
@@ -1328,17 +1343,17 @@ struct MergeSheet: View {
             if s.mergeRunning {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text(s.mergeProgress).font(.system(size: 11))
+                    Text(L10n.tr(s.mergeProgress)).font(.system(size: 11))
                 }
             }
-            Label("输出 16 位 TIFF，文件名为「首张_合成.tif」，落在首张所在目录，合成后自动载入继续调色",
+            Label(L10n.tr("输出 16 位 TIFF，文件名为「首张_合成.tif」，落在首张所在目录，合成后自动载入继续调色"),
                   systemImage: "info.circle")
                 .font(.system(size: 10))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack {
-                Button("取消") { dismiss() }
+                Button(L10n.tr("取消")) { dismiss() }
                     .keyboardShortcut(.cancelAction)
                     .disabled(s.mergeRunning)
                 Button {
@@ -1346,7 +1361,7 @@ struct MergeSheet: View {
                     s.mergeMode = mergeMode; s.alignEnabled = alignEnabled; s.alignMethod = alignMethod
                     Task { await s.mergeExposures(urls) }
                 } label: {
-                    Label("开始合成", systemImage: "play.fill")
+                    Label(L10n.tr("开始合成"), systemImage: "play.fill")
                 }
                 .buttonStyle(WorkspaceButtonStyle(prominent:true))
                 .keyboardShortcut(.defaultAction)
@@ -1380,6 +1395,7 @@ struct MergeSheet: View {
 
 // 合成面板里的可勾选行
 struct MergeRow: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     let title: String
     let thumb: CGImage?
     let checked: Bool
@@ -1403,7 +1419,7 @@ struct MergeRow: View {
                 .clipped()
                 .cornerRadius(4)
 
-                Text(title)
+                Text(L10n.tr(title))
                     .font(.system(size: 11))
                     .lineLimit(1)
                     .truncationMode(.middle)

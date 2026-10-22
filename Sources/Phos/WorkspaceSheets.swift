@@ -24,11 +24,12 @@ enum WorkspaceExportValidation {
 }
 
 struct WorkspaceFormSection<Content:View>: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     let title:String
     @ViewBuilder var content:Content
     var body: some View {
         VStack(alignment:.leading,spacing:9) {
-            Text(title).font(.system(size:12,weight:.semibold))
+            Text(L10n.tr(title)).font(.system(size:12,weight:.semibold))
             content
         }.padding(12).frame(maxWidth:.infinity,alignment:.leading)
             .background(WorkspaceTokens.readoutColor.opacity(0.7),in:RoundedRectangle(cornerRadius:10))
@@ -36,13 +37,16 @@ struct WorkspaceFormSection<Content:View>: View {
 }
 
 struct ExportSheet: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     var body: some View { WorkspaceOutputSheet(batch:false) }
 }
 struct BatchSheet: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     var body: some View { WorkspaceOutputSheet(batch:true) }
 }
 
 private struct WorkspaceOutputSheet: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     let batch:Bool
     @EnvironmentObject private var s:AppState
     @Environment(\.dismiss) private var dismiss
@@ -59,52 +63,52 @@ private struct WorkspaceOutputSheet: View {
         VStack(alignment:.leading,spacing:14) {
             HStack(spacing:9) {
                 Image(systemName:batch ? "tray.and.arrow.down" : "square.and.arrow.up").foregroundStyle(WorkspaceTokens.accent)
-                Text(batch ? "批量导出" : "导出当前照片").font(.system(size:17,weight:.semibold))
+                Text(L10n.tr(batch ? "批量导出" : "导出当前照片")).font(.system(size:17,weight:.semibold))
             }
-            Text(batch ? "使用各张照片已保存的调整" : s.current?.url.lastPathComponent ?? "未选择照片").font(.system(size:12)).foregroundStyle(WorkspaceTokens.secondaryText).lineLimit(1)
+            Text(batch ? L10n.tr("使用各张照片已保存的调整") : s.current?.url.lastPathComponent ?? L10n.tr("未选择照片")).font(.system(size:12)).foregroundStyle(WorkspaceTokens.secondaryText).lineLimit(1)
             ScrollView {
                 VStack(spacing:10) {
                     WorkspaceFormSection(title:"文件与格式") {
                         HStack {
                             Image(systemName:"folder")
-                            Text(directory.path).font(.system(size:11)).lineLimit(2).truncationMode(.middle).help(directory.path)
-                            Spacer(); Button("更改…") { chooseDirectory() }
+                            Text(directory.path).font(.system(size:11)).lineLimit(2).truncationMode(.middle).help(L10n.tr(directory.path))
+                            Spacer(); Button(L10n.tr("更改…")) { chooseDirectory() }
                         }
-                        Picker("格式",selection:$settings.format) {
-                            if !cutout { Text("JPEG").tag("jpg") }
-                            Text("PNG").tag("png"); Text("TIFF").tag("tiff")
-                            if !cutout { Text("HEIC").tag("heic") }
+                        Picker(L10n.tr("格式"),selection:$settings.format) {
+                            if !cutout { Text(L10n.tr("JPEG")).tag("jpg") }
+                            Text(L10n.tr("PNG")).tag("png"); Text(L10n.tr("TIFF")).tag("tiff")
+                            if !cutout { Text(L10n.tr("HEIC")).tag("heic") }
                         }.pickerStyle(.segmented)
                         OutputPrecisionControls(settings:$settings)
                     }
                     WorkspaceFormSection(title:"尺寸与质量") {
                         HStack {
-                            Text("长边"); Spacer()
-                            TextField("0",text:$edge).textFieldStyle(.roundedBorder).multilineTextAlignment(.trailing).frame(width:92).accessibilityLabel("输出长边")
-                            Text("px").foregroundStyle(WorkspaceTokens.secondaryText)
+                            Text(L10n.tr("长边")); Spacer()
+                            TextField("0",text:$edge).textFieldStyle(.roundedBorder).multilineTextAlignment(.trailing).frame(width:92).accessibilityLabel(L10n.tr("输出长边"))
+                            Text(L10n.tr("px")).foregroundStyle(WorkspaceTokens.secondaryText)
                         }.font(.system(size:12))
-                        Text("0 保留原尺寸").font(.caption).foregroundStyle(WorkspaceTokens.secondaryText)
+                        Text(L10n.tr("0 保留原尺寸")).font(.caption).foregroundStyle(WorkspaceTokens.secondaryText)
                         SliderRow(label:"质量",value:$settings.quality,range:0.3...1,defaultValue:0.95,decimals:2,photoScoped:false)
                             .disabled(settings.format == "tiff" || settings.format == "png")
-                        Toggle("输出锐化",isOn:$settings.sharpenForOutput)
-                        if batch { Toggle("只导出已标记照片（\(targetCount) 张）",isOn:$onlyPicked) }
+                        Toggle(L10n.tr("输出锐化"),isOn:$settings.sharpenForOutput)
+                        if batch { Toggle(L10n.tr("只导出已标记照片（\(targetCount) 张）"),isOn:$onlyPicked) }
                         else {
-                            Toggle("透明背景抠图",isOn:$cutout)
+                            Toggle(L10n.tr("透明背景抠图"),isOn:$cutout)
                                 .disabled(!s.params.masks.contains { $0.kind == .foreground && $0.enabled })
                         }
                     }
                     WorkspaceFormSection(title:"水印") {
-                        Toggle("添加水印",isOn:$settings.watermarkEnabled)
+                        Toggle(L10n.tr("添加水印"),isOn:$settings.watermarkEnabled)
                         if settings.watermarkEnabled { WatermarkControls(settings:$settings) }
                     }
-                    if let validation { Label(validation,systemImage:"exclamationmark.circle").font(.system(size:12)).foregroundStyle(WorkspaceTokens.error).fixedSize(horizontal:false,vertical:true) }
+                    if let validation { Label(L10n.tr(validation),systemImage:"exclamationmark.circle").font(.system(size:12)).foregroundStyle(WorkspaceTokens.error).fixedSize(horizontal:false,vertical:true) }
                 }.padding(1)
             }.frame(maxHeight:475)
             Divider()
             HStack {
-                Button("取消",role:.cancel) { dismiss() }.keyboardShortcut(.cancelAction)
+                Button(L10n.tr("取消"),role:.cancel) { dismiss() }.keyboardShortcut(.cancelAction)
                 Spacer()
-                Button(batch ? "导出 \(targetCount) 张" : "导出…") { confirm() }
+                Button(L10n.tr(batch ? "导出 \(targetCount) 张" : "导出…")) { confirm() }
                     .buttonStyle(WorkspaceButtonStyle(prominent:true)).keyboardShortcut(.defaultAction).disabled(disabled)
             }
         }.padding(20).frame(width:440).workspaceGlassPanel()

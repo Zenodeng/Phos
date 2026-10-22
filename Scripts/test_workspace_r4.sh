@@ -4,6 +4,7 @@ set -euo pipefail
 mkdir -p "$1"
 OUTPUT="$(cd "$1" && pwd)"
 cd "$(dirname "$0")/.."
+python3 Scripts/generate_localization.py --check
 . ./Scripts/ui_compile_flags.sh
 phos_ui_compile_flags "${RF_SDK:-}" arm64-apple-macosx26.0 "$OUTPUT/ui-capabilities.json"
 mkdir -p "$OUTPUT/test-source"

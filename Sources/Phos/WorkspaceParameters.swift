@@ -134,6 +134,7 @@ enum ParameterGroupSchema {
 }
 
 struct WorkspacePhotoParameter: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     let id: String
     @EnvironmentObject private var s: AppState
     var body: some View {

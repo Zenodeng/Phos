@@ -132,6 +132,50 @@ import ImageIO
         check(model.enabled(.batch) && model.enabled(.export),"output commands re-enable after cancellation")
         s.toggleCropMode(); s.set(\.cropW,0.3); s.finishWindowWork()
         check(!s.cropMode && s.params == saved && s.pendingPhotoEditID == nil && !s.temporaryPan,"window close cancels transient crop and releases editing context")
+        // UI language is independent of persisted edits and processing work.
+        let oldLanguage = UserDefaults.standard.string(forKey: AppLanguage.defaultsKey)
+        defer {
+            if let oldLanguage { AppLanguage.shared.select(oldLanguage) }
+            else { AppLanguage.shared.select("system"); UserDefaults.standard.removeObject(forKey: AppLanguage.defaultsKey) }
+        }
+        check(AppLanguage.resolved("system",preferred:["zh-Hans-CN"]) == "zh-Hans" && AppLanguage.resolved("system",preferred:["en-US"]) == "en","language follows Chinese and English system preferences")
+        check(AppLanguage.resolved("system",preferred:["fr-FR"]) == "en" && AppLanguage.valid("invalid") == "system","unsupported system languages fall back to English; invalid preference follows system")
+        let langParams = s.params, langHistory = s.history.stack, langPhoto = s.current?.id
+        let langMetrics = s.workMetrics.snapshot
+        AppLanguage.shared.select("en")
+        let localizedBuiltin = Preset(name:"通透",params:EditParams(),builtin:true)
+        let opaqueUserPreset = Preset(name:"通透",params:EditParams())
+        check(WorkspacePresetPolicy.filtered([localizedBuiltin,opaqueUserPreset],query:"Clear",collection:.all).map(\.id) == [localizedBuiltin.id],"English preset search translates only built-in names")
+        check(opaqueUserPreset.name == "通透" && localizedBuiltin.name == "通透","localization does not rewrite persisted preset names")
+        check(L10n.tr("导出失败：无法创建输出文件") == "Export failed: Could not create the output file","nested application error details translate")
+        check(InspectorCategory.allCases.allSatisfy { ($0.localizedTitle as NSString).size(withAttributes:[.font:NSFont.systemFont(ofSize:10,weight:.medium)]).width <= 248.0/5 },"all English category labels fit the narrowest inspector without truncation")
+        check(L10n.tr("自动水平") == "Auto Level" && L10n.tr("明暗") == "Light","English action and category labels")
+        check(ParameterDescriptor.all.allSatisfy { L10n.tr($0.label) != $0.label },"all 45 parameter labels have English translations")
+        check(ParameterGroupSchema.titles.allSatisfy { L10n.tr($0) != $0 },"all 15 parameter groups have English translations")
+        check(L10n.tr("曝光数值") == "Exposure value" && L10n.tr("复位白平衡") == "Reset White Balance","composite accessibility labels translate")
+        check(L10n.tr("导出 12 张") == "Export 12 Photos","dynamic plural-count UI uses translated template")
+        let privateName = "原图-{0}-旅行.HIF"
+        check(L10n.tr("已导出 " + privateName) == "Exported " + privateName,"interpolated filenames and literal braces are preserved")
+        check(L10n.tr("无法读取 " + privateName + " 的编辑记录，原文件未修改。\nIO error") == "Could not read edits for " + privateName + ". The original file was preserved.\nIO error","multiline errors translate without changing filenames or diagnostics")
+        check(L10n.tr("地平线校直 1.3°，已按最大内接矩形裁切") == "Leveled by 1.3° and trimmed to remove empty edges","cached formatted status text translates")
+        check(L10n.tr("已按「人像」自动调整，可拖动强度滑杆微调").contains("Portrait"),"scene names in generated UI messages translate")
+        check(s.params == langParams && s.history.stack == langHistory && s.current?.id == langPhoto && s.workMetrics.snapshot == langMetrics,"live language change preserves photo, parameters, history and all processing counters")
+        let languageModel = WorkspaceWindowModel(state:AppState(),session:WorkspaceSessionState(persist:false))
+        let languageRoot = WorkspaceRootView(model:languageModel)
+        let languageWindow = NSWindow(contentRect:CGRect(x:0,y:0,width:1200,height:820),styleMask:[.titled,.closable,.resizable],backing:.buffered,defer:false)
+        languageWindow.isReleasedWhenClosed = false
+        languageWindow.contentView = languageRoot; languageWindow.orderFront(nil)
+        languageRoot.layoutSubtreeIfNeeded()
+        try await Task.sleep(nanoseconds:150_000_000)
+        let ids = languageRoot.shellDiagnostics["contentHostIDs"] as! [String:String]
+        func descendants(_ view:NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
+        check(descendants(languageRoot).compactMap { $0 as? NSSearchField }.first?.placeholderString == "Search photos","AppKit search localizes on initial English launch")
+        AppLanguage.shared.select("zh-Hans")
+        try await Task.sleep(nanoseconds:30_000_000)
+        check(descendants(languageRoot).compactMap { $0 as? NSSearchField }.first?.placeholderString == "搜索照片","AppKit search updates live when switching back to Chinese")
+        check(languageRoot.shellDiagnostics["contentHostIDs"] as! [String:String] == ids,"language switch does not remount canvas or sidebars")
+        check(L10n.tr("自动水平") == "自动水平" && s.params == langParams && s.history.stack == langHistory,"Chinese restoration preserves editing state")
+        languageModel.state.finishWindowWork(); languageWindow.orderOut(nil); languageWindow.contentView = nil; languageWindow.close()
         var result = previous;result["r4Checks"] = checks;result["checks"] = (previous["checks"] as! Int)+checks
         try JSONSerialization.data(withJSONObject:result,options:[.prettyPrinted,.sortedKeys]).write(to:reportURL)
         print("R4 complete: \(checks) checks")

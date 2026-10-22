@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct WorkspaceButtonStyle: ButtonStyle {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     var selected = false
     var previewPressed = false
     var prominent = false
@@ -27,6 +28,7 @@ struct WorkspaceButtonStyle: ButtonStyle {
 }
 
 struct WorkspaceIconButton: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     let symbol: String
     let title: String
     var selected = false
@@ -48,7 +50,7 @@ struct WorkspaceIconButton: View {
         .background(RoundedRectangle(cornerRadius:8).fill(Color.primary.opacity(hover && !disabled ? 0.06 : 0)))
         .overlay(RoundedRectangle(cornerRadius:8).stroke(keyboardFocused ? WorkspaceTokens.accent : .clear,lineWidth:2).padding(1).allowsHitTesting(false))
         .opacity(disabled ? 0.35 : 1).disabled(disabled)
-        .onHover { hover = $0 }.help(title).accessibilityLabel(title)
+        .onHover { hover = $0 }.help(L10n.tr(title)).accessibilityLabel(title)
         .accessibilityAddTraits(selected ? .isSelected : [])
         .animation(reduceMotion || accessibility.reduceMotion ? nil : .easeOut(duration:0.14),value:hover)
     }
@@ -56,6 +58,7 @@ struct WorkspaceIconButton: View {
 
 /// Draft text remains local; only a valid commit updates the image and history.
 struct WorkspaceParameterRow: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     let label: String
     @Binding var value: Double
     var range: ClosedRange<Double> = -100...100
@@ -74,7 +77,7 @@ struct WorkspaceParameterRow: View {
     var body: some View {
         VStack(spacing:5) {
             HStack {
-                Text(label).font(.system(size:WorkspaceTokens.TypeSize.parameter)).foregroundStyle(WorkspaceTokens.primaryText)
+                Text(L10n.tr(label)).font(.system(size:WorkspaceTokens.TypeSize.parameter)).foregroundStyle(WorkspaceTokens.primaryText)
                     .fixedSize(horizontal:false,vertical:true)
                 Spacer(minLength:8)
                 TextField(label,text:$draft)
@@ -98,7 +101,7 @@ struct WorkspaceParameterRow: View {
                         }
                         else { commit(); draft = formatted; invalid = false }
                     }
-                    .accessibilityLabel(label+"数值").help("输入数值，Enter 确认，Esc 取消")
+                    .accessibilityLabel(label+"数值").help(L10n.tr("输入数值，Enter 确认，Esc 取消"))
             }
             ZStack {
                 Slider(value:$value,in:range,onEditingChanged:{ editing in if !editing { onCommit() } })
@@ -133,6 +136,7 @@ struct WorkspaceParameterRow: View {
 }
 
 struct WorkspaceAdjustmentGroup<Content:View>: View {
+    @ObservedObject private var interfaceLanguage = AppLanguage.shared
     let title: String
     var modified = false
     var initiallyExpanded = true
@@ -151,13 +155,13 @@ struct WorkspaceAdjustmentGroup<Content:View>: View {
                 Button { expanded.toggle() } label: {
                     HStack(spacing:8) {
                         Image(systemName:expanded ? "chevron.down" : "chevron.right").font(.system(size:9,weight:.semibold)).foregroundStyle(.secondary).frame(width:12)
-                        Text(title).font(.system(size:WorkspaceTokens.TypeSize.group,weight:.semibold)).foregroundStyle(WorkspaceTokens.primaryText)
-                        if modified { Circle().fill(WorkspaceTokens.accent).frame(width:4,height:4).accessibilityLabel("已修改") }
+                        Text(L10n.tr(title)).font(.system(size:WorkspaceTokens.TypeSize.group,weight:.semibold)).foregroundStyle(WorkspaceTokens.primaryText)
+                        if modified { Circle().fill(WorkspaceTokens.accent).frame(width:4,height:4).accessibilityLabel(L10n.tr("已修改")) }
                         Spacer()
                     }.contentShape(Rectangle())
                 }.buttonStyle(.plain).accessibilityLabel(title.hasSuffix("分组") ? title : title+"分组")
                 Button { localResetGeneration &+= 1; reset() } label: { Image(systemName:"arrow.counterclockwise").symbolRenderingMode(.hierarchical).font(.system(size:12)).frame(width:24,height:24) }
-                    .buttonStyle(.plain).foregroundStyle(.secondary).disabled(!modified).opacity(modified ? 1 : 0.4).help("复位"+title)
+                    .buttonStyle(.plain).foregroundStyle(.secondary).disabled(!modified).opacity(modified ? 1 : 0.4).help(L10n.tr("复位")+title)
             }.frame(minHeight:36)
             if expanded { content().environment(\.workspaceInputResetGeneration,(parentResetGeneration &* 131) &+ localResetGeneration) }
         }.padding(.vertical,8)

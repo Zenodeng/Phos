@@ -1,4 +1,4 @@
-# Phos
+# Phos.
 
 **A native, non-destructive RAW photo editor for macOS — no account, no subscription, and your photos never leave your Mac.**  
 **为个人摄影流程打造的原生 macOS 非破坏性 RAW 修图软件 —— 纯本地、无账号、无订阅。**

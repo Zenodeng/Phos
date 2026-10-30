@@ -392,6 +392,7 @@ struct EditParams: Codable, Equatable {
     var bokehAmount: Double = 0
 
     // 镜头校正
+    var lensCorrection: LensCorrection? = nil
     var caAmount: Double = 0           // 横向色差 -100...100
     var purpleFringe: Double = 0       // 紫边抑制 0...100
 
@@ -446,6 +447,7 @@ struct EditParams: Codable, Equatable {
         case vignette, vignetteStart
         case halation, halationThreshold, halationRadius
         case bokehAmount
+        case lensCorrection
         case caAmount, purpleFringe
         case primRed, primGreen, primBlue, calibShadowTint
         case clutName, clutStrength
@@ -509,6 +511,8 @@ struct EditParams: Codable, Equatable {
         halationThreshold = try c.decodeIfPresent(Double.self, forKey: .halationThreshold) ?? base.halationThreshold
         halationRadius = try c.decodeIfPresent(Double.self, forKey: .halationRadius) ?? base.halationRadius
         bokehAmount    = try c.decodeIfPresent(Double.self, forKey: .bokehAmount) ?? base.bokehAmount
+        lensCorrection = try c.decodeIfPresent(LensCorrection.self, forKey: .lensCorrection)
+        if lensCorrection?.valid == false { lensCorrection = nil }
         caAmount       = try c.decodeIfPresent(Double.self, forKey: .caAmount)       ?? base.caAmount
         purpleFringe   = try c.decodeIfPresent(Double.self, forKey: .purpleFringe)   ?? base.purpleFringe
         perspectiveAuto = try c.decodeIfPresent(Bool.self, forKey: .perspectiveAuto) ?? base.perspectiveAuto

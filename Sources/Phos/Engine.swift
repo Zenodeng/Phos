@@ -49,7 +49,7 @@ enum Engine {
 
     // MARK: - 主渲染
     static func oriented(_ source: CIImage, _ p: EditParams) -> CIImage {
-        var img = source
+        var img = LensProfileEngine.apply(source, p.lensCorrection)
 
         // 1) 翻转 / 90° 旋转
         if p.flipped || p.rotation != 0 {
@@ -79,16 +79,16 @@ enum Engine {
         }
     }
     private static let perspectiveLock = NSLock()
-    private static var perspectiveCache: [(source:CIImage,rotation:Int,flipped:Bool,value:ResolvedPerspective)] = []
+    private static var perspectiveCache: [(source:CIImage,rotation:Int,flipped:Bool,lens:LensCorrection?,value:ResolvedPerspective)] = []
     static func resolvedPerspective(_ source: CIImage, _ p: EditParams) -> ResolvedPerspective? {
         guard p.perspectiveAuto else { return nil }
         perspectiveLock.lock(); defer { perspectiveLock.unlock() }
-        if let hit = perspectiveCache.first(where:{ $0.source === source && $0.rotation == p.rotation && $0.flipped == p.flipped }) { return hit.value }
+        if let hit = perspectiveCache.first(where:{ $0.source === source && $0.rotation == p.rotation && $0.flipped == p.flipped && $0.lens == p.lensCorrection }) { return hit.value }
         let image = oriented(source,p), e = image.extent
         let quad = autoPerspectiveQuad(from:image)
         func n(_ v: CGPoint) -> CGPoint { CGPoint(x:(v.x-e.minX)/e.width,y:(v.y-e.minY)/e.height) }
         let value = ResolvedPerspective(normalized:quad.map { (n($0.tl),n($0.tr),n($0.br),n($0.bl)) })
-        perspectiveCache.append((source,p.rotation,p.flipped,value))
+        perspectiveCache.append((source,p.rotation,p.flipped,p.lensCorrection,value))
         if perspectiveCache.count > 6 { perspectiveCache.removeFirst() }
         return value
     }

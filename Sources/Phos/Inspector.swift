@@ -329,6 +329,7 @@ struct GroupBox<Content: View>: View {
                 }
 
                 GroupBox(title: "镜头校正") {
+                    LensCorrectionPane()
                     WorkspacePhotoParameter(id: "caAmount")
                     Text(L10n.tr("横向色差：R/B 通道反向微缩放（正=收红边）"))
                         .font(.system(size: 9.5)).foregroundStyle(.secondary)

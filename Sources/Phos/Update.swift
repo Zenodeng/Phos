@@ -20,7 +20,12 @@ struct UpdateInfo: Decodable, Sendable {
 ///     defaults write com.zeno.phos updateCheckDisabled -bool true
 enum UpdateChecker {
     /// 官网的版本清单。按顺序尝试，第一个能取到的为准；换域名时改这里即可。
+    ///
+    /// 2026-10-30 官网迁到 zenodeng.com，新域名放首位。
+    /// 旧域名继续当镜像，GitHub Pages 那份是最后的兜底：
+    /// 三个地址的 update.json 内容一致，任一个活着就不会漏更新。
     static let manifests = [
+        "https://zenodeng.com/update.json",
         "https://zenophos.dpdns.org/update.json",
         "https://zenodeng.github.io/Phos/update.json"
     ]

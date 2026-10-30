@@ -75,6 +75,7 @@ enum ParameterGroupSchema {
         case "颜色分级": p.gradeShadow = d.gradeShadow; p.gradeMid = d.gradeMid; p.gradeHigh = d.gradeHigh
         case "HSL · 混色": p.hsl = d.hsl
         case "黑白": p.mono = d.mono
+        case "镜头校正": p.lensCorrection = nil
         case "校准": p.primRed = d.primRed; p.primGreen = d.primGreen; p.primBlue = d.primBlue
         case "胶片 CLUT": p.clutName = d.clutName
         case "变换与裁剪": p.rotation = d.rotation; p.flipped = d.flipped; p.perspectiveAuto = d.perspectiveAuto

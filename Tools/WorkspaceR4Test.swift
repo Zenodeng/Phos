@@ -176,6 +176,19 @@ import ImageIO
         check(languageRoot.shellDiagnostics["contentHostIDs"] as! [String:String] == ids,"language switch does not remount canvas or sidebars")
         check(L10n.tr("自动水平") == "自动水平" && s.params == langParams && s.history.stack == langHistory,"Chinese restoration preserves editing state")
         languageModel.state.finishWindowWork(); languageWindow.orderOut(nil); languageWindow.contentView = nil; languageWindow.close()
+        let lensSample=LensCalibration(model:"ptlens",focal:50,crop:1,coefficients:[0,0.02,0,0.98])
+        let lensValue=LensCorrection(name:"Test EF",cameraCrop:1,distortion:lensSample)
+        var lensParams=EditParams(); lensParams.lensCorrection=lensValue
+        let lensRoundTrip=try JSONDecoder().decode(EditParams.self,from:JSONEncoder().encode(lensParams))
+        check(lensRoundTrip == lensParams,"lens coefficients survive sidecar parameter round trip")
+        let oldParams=try JSONDecoder().decode(EditParams.self,from:Data("{}".utf8))
+        check(oldParams.lensCorrection == nil,"older sidecars keep lens correction off")
+        check(ParameterGroupSchema.modified("镜头校正",in:lensParams),"lens profile marks correction group modified")
+        check(ParameterGroupSchema.reset("镜头校正",in:lensParams).lensCorrection == nil,"group reset removes lens profile")
+        let prior=s.params
+        var applied=prior; applied.lensCorrection=lensValue; s.commit(applied)
+        check(s.params.lensCorrection==lensValue,"lens profile uses normal commit pipeline")
+        s.undo(); check(s.params==prior,"lens correction is undoable")
         var result = previous;result["r4Checks"] = checks;result["checks"] = (previous["checks"] as! Int)+checks
         try JSONSerialization.data(withJSONObject:result,options:[.prettyPrinted,.sortedKeys]).write(to:reportURL)
         print("R4 complete: \(checks) checks")

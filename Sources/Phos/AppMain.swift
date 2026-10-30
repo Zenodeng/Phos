@@ -625,7 +625,8 @@ final class AppState: ObservableObject {
                             proxyScale: scale, fullResolution: request.fullResolution || scale == 1)
         var before: PreviewFrame?
         if request.split, !request.cropMode {
-            let geometry = EditGroup.applying(p,to:EditParams(),groups:[.geometry])
+            var geometry = EditGroup.applying(p,to:EditParams(),groups:[.geometry])
+            geometry.lensCorrection = p.lensCorrection // Split comparison keeps lens geometry aligned.
             let neutral = Engine.render(base,geometry,resolvedAuto:resolved)
             if let bitmap = Engine.ctx.createCGImage(neutral,from:out.extent,format:.RGBA8,colorSpace:Engine.srgb) {
                 before = PreviewFrame(key:PreviewFrameKey(photoID:request.key.photoID,revision:request.key.revision,purpose:.beforeGeometry,paramsFingerprint:request.key.paramsFingerprint),image:bitmap,mask:nil,maskID:nil,histogram:([],[],[],[]),renderExtent:out.extent,editedExtent:edited.editedExtent,proxyScale:scale,fullResolution:edited.fullResolution)

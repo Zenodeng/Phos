@@ -28,6 +28,7 @@ cp "build/$APP_NAME" "$APP/Contents/MacOS/$APP_NAME"
 cp Info.plist "$APP/Contents/Info.plist"
 cp -R Resources/PhotoAIAdapter "$APP/Contents/Resources/PhotoAIAdapter"
 cp -R Resources/Localization "$APP/Contents/Resources/Localization"
+cp -R Resources/LensProfiles "$APP/Contents/Resources/LensProfiles"
 sh Scripts/package_icon.sh "$APP/Contents/Resources"
 chmod +x "$APP/Contents/MacOS/$APP_NAME"
 

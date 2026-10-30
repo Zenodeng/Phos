@@ -230,7 +230,7 @@ enum EditGroup: String, CaseIterable, Identifiable {
         case .color: return "曲线、色彩与胶片"
         case .detail: return "锐化与降噪"
         case .effects: return "颗粒、暗角与光晕"
-        case .lens: return "色差与紫边"
+        case .lens: return "镜头校正"
         case .geometry: return "裁剪、旋转与透视"
         case .masks: return "局部蒙版与散景"
         }
@@ -271,7 +271,7 @@ enum EditGroup: String, CaseIterable, Identifiable {
             p.vignette = source.vignette; p.vignetteStart = source.vignetteStart
             p.halation = source.halation; p.halationRadius = source.halationRadius; p.halationThreshold = source.halationThreshold
         }
-        if groups.contains(.lens) { p.caAmount = source.caAmount; p.purpleFringe = source.purpleFringe }
+        if groups.contains(.lens) { p.lensCorrection = source.lensCorrection; p.caAmount = source.caAmount; p.purpleFringe = source.purpleFringe }
         if groups.contains(.geometry) {
             p.rotation = source.rotation; p.flipped = source.flipped; p.straighten = source.straighten
             p.cropX = source.cropX; p.cropY = source.cropY; p.cropW = source.cropW; p.cropH = source.cropH

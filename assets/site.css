@@ -26,7 +26,10 @@ body{
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","PingFang SC","Helvetica Neue",Helvetica,Arial,sans-serif;
   font-size:17px;line-height:1.47;letter-spacing:-.022em;
   color:var(--ink);background:#fff;-webkit-font-smoothing:antialiased;
-  overflow-x:hidden;
+  /* overflow-x:hidden 会让 body 变成滚动容器，里面的 position:sticky 失效；
+     clip 只裁剪、不建立滚动容器。visible 是给老浏览器的兜底。 */
+  overflow-x:visible;
+  overflow-x:clip;
 }
 html.anim-on body{opacity:0;animation:fadeInBody .6s ease forwards}
 /* ---------- keyframes ---------- */

@@ -1,24 +1,25 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="warm">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phos — Native RAW Photo Editor for macOS</title>
 <meta name="description" content="Phos is a native, non-destructive RAW photo editor for macOS, written in Swift with Core Image and AppKit. RAW decoding, complete tonal and color control, film CLUT emulation, nine local masks, batch workflows, and professional export. Everything runs on your Mac — no network, no account, no subscription.">
 <meta name="keywords" content="Phos, RAW editor, macOS RAW editor, RAW photo editor, film simulation LUT, photo editing app, Swift, Core Image, non-destructive editing">
-<link rel="canonical" href="https://zenophos.dpdns.org/en/">
-<link rel="alternate" hreflang="zh-CN" href="https://zenophos.dpdns.org/">
-<link rel="alternate" hreflang="en" href="https://zenophos.dpdns.org/en/">
-<link rel="alternate" hreflang="x-default" href="https://zenophos.dpdns.org/">
+<link rel="canonical" href="https://zenodeng.com/en/">
+<link rel="alternate" hreflang="zh-CN" href="https://zenodeng.com/">
+<link rel="alternate" hreflang="en" href="https://zenodeng.com/en/">
+<link rel="alternate" hreflang="x-default" href="https://zenodeng.com/">
 <meta name="google-site-verification" content="VpFD-mee9gLzbt9L78dK2LwITVrWsh_sOPfUTFIICrg" />
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#0B0A09">
+<script>document.documentElement.classList.add('is-top');</script>
 <meta property="og:type" content="website">
 <meta property="og:locale" content="en_US">
 <meta property="og:locale:alternate" content="zh_CN">
 <meta property="og:title" content="Phos — Native RAW Photo Editor for macOS">
 <meta property="og:description" content="Non-destructive RAW editing, film CLUT emulation, nine local masks, batch workflows. Everything runs on your Mac — no network, no account, no subscription.">
-<meta property="og:url" content="https://zenophos.dpdns.org/en/">
-<meta property="og:image" content="https://zenophos.dpdns.org/images/05-tone-adjustments.jpg">
+<meta property="og:url" content="https://zenodeng.com/en/">
+<meta property="og:image" content="https://zenodeng.com/images/05-tone-adjustments.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23000'/%3E%3Ctext x='50' y='68' font-size='58' font-family='Helvetica' font-weight='600' fill='%23C9A876' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 <script type="application/ld+json">
@@ -40,10 +41,10 @@
   },
   "license": "https://opensource.org/licenses/MIT",
   "description": "A native, non-destructive RAW photo editor for macOS: RAW decoding, complete tonal and color controls, film CLUT emulation, nine local masks, batch sync, and watermarked export. Everything runs on-device — no network, no account, no subscription.",
-  "url": "https://zenophos.dpdns.org/en/",
-  "downloadUrl": "https://zenophos.dpdns.org/download/Phos-macOS-apple-silicon.dmg",
-  "installUrl": "https://zenophos.dpdns.org/en/#install",
-  "screenshot": "https://zenophos.dpdns.org/images/05-tone-adjustments.jpg",
+  "url": "https://zenodeng.com/en/",
+  "downloadUrl": "https://zenodeng.com/download/Phos-macOS-apple-silicon.dmg",
+  "installUrl": "https://zenodeng.com/en/#install",
+  "screenshot": "https://zenodeng.com/images/05-tone-adjustments.jpg",
   "inLanguage": [
     "en",
     "zh-CN"
@@ -152,6 +153,7 @@
    否则关掉动效（prefers-reduced-motion）或禁用 JS 时，body 会永远停在 opacity:0，整页空白。 */
 if(!matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentElement.className+=' anim-on';}</script>
 <link rel="stylesheet" href="../assets/site.css">
+<link rel="stylesheet" href="../assets/theme.css">
 </head>
 <body>
 
@@ -587,6 +589,7 @@ if(!matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentEle
         </div>
       </div>
 
+      <div class="ai-zone">
       <div class="rv" id="ai" style="margin-top:72px">
         <p class="eyebrow"><span class="idx">04</span>On-device AI · Experimental</p>
         <h2>Say it in Chinese. It edits.</h2>
@@ -618,6 +621,7 @@ if(!matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentEle
         </figcaption>
       </figure>
       <p class="note-sm">AI requires a separately installed base model (~3.1 GB; internet needed for the first install); the small adapter bundled with the app is about 1.3 MB. <strong>All regular editing works without installing the model.</strong> The feature is still experimental: detail understanding, local adjustments, and auto-framing can all misjudge, so trust the preview. <a href="#ai-model">Installation steps →</a></p>
+      </div>
     </div>
   </section>
 
@@ -834,5 +838,68 @@ python3.11 install_model.py</code></pre>
 </footer>
 
 <script src="../assets/site.js"></script>
+<script>
+/* 首屏全屏：滚过 24px 才让导航浮出、hero 收成圆角卡片 */
+(function(){
+  var root = document.documentElement, TH = 24, ticking = false;
+  function apply(){
+    var y = window.scrollY || window.pageYOffset || 0;
+    root.classList.toggle('is-top', y <= TH);
+    ticking = false;
+  }
+  window.addEventListener('scroll', function(){
+    if (!ticking){ ticking = true; requestAnimationFrame(apply); }
+  }, {passive:true});
+  apply();
+})();
+</script>
+<script>
+/* 整页堆叠：按段高算 sticky 的 top，长的段滚到底才钉住。
+   段高会变（图片解码、字体替换、窗口缩放），所以用 ResizeObserver 持续校正，
+   否则 top 是旧值，段落在错的位置钉住 —— 表现就是滚动时「跳一下」把下层露出来。 */
+(function(){
+  /* 桌面端不做叠卡（见 theme.css 的降级媒体查询），直接退出 */
+  if (window.matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+
+  var els = [].slice.call(document.querySelectorAll('main > section'))
+    .filter(function(el){ return el.id !== 'scene'; });
+  if (!els.length) return;
+
+  var pending = false;
+  function apply(){
+    pending = false;
+    var vh = window.innerHeight;
+    for (var i = 0; i < els.length; i++){
+      var el = els[i];
+      var h = el.offsetHeight;
+      var top = vh - h;
+      var v = (top < 0 ? top : 0) + 'px';
+      if (el.style.top !== v) el.style.top = v;
+    }
+  }
+  function schedule(){
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(apply);
+  }
+
+  window.addEventListener('resize', schedule);
+  window.addEventListener('load', schedule);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
+
+  if (window.ResizeObserver){
+    var ro = new ResizeObserver(schedule);
+    els.forEach(function(el){ ro.observe(el); });
+  }
+  /* 图片解码后段高可能变，补一发 */
+  els.forEach(function(el){
+    el.querySelectorAll('img').forEach(function(img){
+      if (!img.complete) img.addEventListener('load', schedule, {once:true});
+    });
+  });
+
+  schedule();
+})();
+</script>
 </body>
 </html>

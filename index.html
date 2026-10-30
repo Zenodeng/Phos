@@ -1,24 +1,25 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="warm">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phos — macOS 原生 RAW 照片编辑器</title>
 <meta name="description" content="Phos 是一款 macOS 原生非破坏性 RAW 照片编辑器，用 Swift、Core Image 与 AppKit 编写。RAW 解码、完整影调与色彩、胶片 CLUT 模拟、九种局部蒙版、批量工作流与专业导出。全部处理在本机完成，不联网、无账号、无订阅。">
 <meta name="keywords" content="Phos, RAW 修图软件, macOS RAW 编辑器, RAW 照片编辑器, RAW editor macOS, 胶片模拟 LUT, photo editing app, Swift, Core Image, 非破坏性编辑">
-<link rel="canonical" href="https://zenophos.dpdns.org/">
-<link rel="alternate" hreflang="zh-CN" href="https://zenophos.dpdns.org/">
-<link rel="alternate" hreflang="en" href="https://zenophos.dpdns.org/en/">
-<link rel="alternate" hreflang="x-default" href="https://zenophos.dpdns.org/">
+<link rel="canonical" href="https://zenodeng.com/">
+<link rel="alternate" hreflang="zh-CN" href="https://zenodeng.com/">
+<link rel="alternate" hreflang="en" href="https://zenodeng.com/en/">
+<link rel="alternate" hreflang="x-default" href="https://zenodeng.com/">
 <meta name="google-site-verification" content="VpFD-mee9gLzbt9L78dK2LwITVrWsh_sOPfUTFIICrg" />
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#0B0A09">
+<script>document.documentElement.classList.add('is-top');</script>
 <meta property="og:type" content="website">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:locale:alternate" content="en_US">
 <meta property="og:title" content="Phos — macOS 原生 RAW 照片编辑器">
 <meta property="og:description" content="非破坏性 RAW 修图、胶片 CLUT 模拟、九种局部蒙版、批量工作流。全部在本机完成，不联网、无账号、无订阅。">
-<meta property="og:url" content="https://zenophos.dpdns.org/">
-<meta property="og:image" content="https://zenophos.dpdns.org/images/05-tone-adjustments.jpg">
+<meta property="og:url" content="https://zenodeng.com/">
+<meta property="og:image" content="https://zenodeng.com/images/05-tone-adjustments.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23000'/%3E%3Ctext x='50' y='68' font-size='58' font-family='Helvetica' font-weight='600' fill='%23C9A876' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 <script type="application/ld+json">
@@ -36,10 +37,10 @@
   "offers": {"@type": "Offer", "price": "0", "priceCurrency": "CNY"},
   "license": "https://opensource.org/licenses/MIT",
   "description": "macOS 原生非破坏性 RAW 照片编辑器：RAW 解码、完整影调与色彩调整、胶片 CLUT 模拟、九种局部蒙版、批量同步与导出水印。全部在本机完成，不联网、无账号、无订阅。",
-  "url": "https://zenophos.dpdns.org/",
-  "downloadUrl": "https://zenophos.dpdns.org/download/Phos-macOS-apple-silicon.dmg",
-  "installUrl": "https://zenophos.dpdns.org/#install",
-  "screenshot": "https://zenophos.dpdns.org/images/05-tone-adjustments.jpg",
+  "url": "https://zenodeng.com/",
+  "downloadUrl": "https://zenodeng.com/download/Phos-macOS-apple-silicon.dmg",
+  "installUrl": "https://zenodeng.com/#install",
+  "screenshot": "https://zenodeng.com/images/05-tone-adjustments.jpg",
   "inLanguage": ["zh-CN", "en"],
   "sameAs": ["https://github.com/Zenodeng/Phos"],
   "author": {"@type": "Person", "name": "Zenodeng", "url": "https://github.com/Zenodeng"},
@@ -76,6 +77,7 @@
    否则关掉动效（prefers-reduced-motion）或禁用 JS 时，body 会永远停在 opacity:0，整页空白。 */
 if(!matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentElement.className+=' anim-on';}</script>
 <link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/theme.css">
 </head>
 <body>
 
@@ -511,6 +513,7 @@ if(!matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentEle
         </div>
       </div>
 
+      <div class="ai-zone">
       <div class="rv" id="ai" style="margin-top:72px">
         <p class="eyebrow"><span class="idx">04</span>本地 AI · 实验性</p>
         <h2>用中文说，让它改。</h2>
@@ -542,6 +545,7 @@ if(!matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentEle
         </figcaption>
       </figure>
       <p class="note-sm">AI 需要单独安装底模（约 3.1 GB，首次安装需联网），随应用附带的小型适配器约 1.3 MB。<strong>不安装模型也能正常使用全部常规编辑功能。</strong>这一功能仍属实验性：细节理解、局部调整与自动构图都可能误判，请以预览为准。<a href="#ai-model">安装步骤 →</a></p>
+      </div>
     </div>
   </section>
 
@@ -758,5 +762,68 @@ python3.11 install_model.py</code></pre>
 </footer>
 
 <script src="assets/site.js"></script>
+<script>
+/* 首屏全屏：滚过 24px 才让导航浮出、hero 收成圆角卡片 */
+(function(){
+  var root = document.documentElement, TH = 24, ticking = false;
+  function apply(){
+    var y = window.scrollY || window.pageYOffset || 0;
+    root.classList.toggle('is-top', y <= TH);
+    ticking = false;
+  }
+  window.addEventListener('scroll', function(){
+    if (!ticking){ ticking = true; requestAnimationFrame(apply); }
+  }, {passive:true});
+  apply();
+})();
+</script>
+<script>
+/* 整页堆叠：按段高算 sticky 的 top，长的段滚到底才钉住。
+   段高会变（图片解码、字体替换、窗口缩放），所以用 ResizeObserver 持续校正，
+   否则 top 是旧值，段落在错的位置钉住 —— 表现就是滚动时「跳一下」把下层露出来。 */
+(function(){
+  /* 桌面端不做叠卡（见 theme.css 的降级媒体查询），直接退出 */
+  if (window.matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+
+  var els = [].slice.call(document.querySelectorAll('main > section'))
+    .filter(function(el){ return el.id !== 'scene'; });
+  if (!els.length) return;
+
+  var pending = false;
+  function apply(){
+    pending = false;
+    var vh = window.innerHeight;
+    for (var i = 0; i < els.length; i++){
+      var el = els[i];
+      var h = el.offsetHeight;
+      var top = vh - h;
+      var v = (top < 0 ? top : 0) + 'px';
+      if (el.style.top !== v) el.style.top = v;
+    }
+  }
+  function schedule(){
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(apply);
+  }
+
+  window.addEventListener('resize', schedule);
+  window.addEventListener('load', schedule);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
+
+  if (window.ResizeObserver){
+    var ro = new ResizeObserver(schedule);
+    els.forEach(function(el){ ro.observe(el); });
+  }
+  /* 图片解码后段高可能变，补一发 */
+  els.forEach(function(el){
+    el.querySelectorAll('img').forEach(function(img){
+      if (!img.complete) img.addEventListener('load', schedule, {once:true});
+    });
+  });
+
+  schedule();
+})();
+</script>
 </body>
 </html>

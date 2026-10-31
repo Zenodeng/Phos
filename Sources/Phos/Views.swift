@@ -507,6 +507,20 @@ struct CanvasPane: View {
                                     .position(x:rect.width*s.splitPosition,y:rect.height/2).allowsHitTesting(false)
                             }
                         }
+                        .overlay {
+                            if s.lensGrid && !s.cropMode && !s.showBefore {
+                                Canvas { context, size in
+                                    var path = Path()
+                                    for i in 1..<8 {
+                                        let x = size.width * CGFloat(i) / 8, y = size.height * CGFloat(i) / 8
+                                        path.move(to: CGPoint(x:x,y:0)); path.addLine(to:CGPoint(x:x,y:size.height))
+                                        path.move(to: CGPoint(x:0,y:y)); path.addLine(to:CGPoint(x:size.width,y:y))
+                                    }
+                                    context.stroke(path, with:.color(.black.opacity(0.5)),lineWidth:2)
+                                    context.stroke(path, with:.color(.white.opacity(0.7)),lineWidth:0.7)
+                                }.allowsHitTesting(false).accessibilityHidden(true)
+                            }
+                        }
                         .clipped()
                         .position(x: rect.midX, y: rect.midY)
                 } else {
@@ -518,6 +532,11 @@ struct CanvasPane: View {
                     }
                     .frame(width: shell.safeCanvas.width, height: shell.safeCanvas.height)
                     .position(x: shell.safeCanvas.midX, y: shell.safeCanvas.midY)
+                }
+                if s.lensCompare, displayed != nil, !s.cropMode {
+                    Text(L10n.tr("镜头校正前 · 其他调整保留")).font(.caption.weight(.medium))
+                        .padding(8).background(.regularMaterial,in:Capsule())
+                        .position(x:shell.safeCanvas.midX,y:shell.safeCanvas.minY+22).allowsHitTesting(false)
                 }
                 if s.cropMode, displayed != nil, !pixelReady {
                     CropOverlay(frame: rect)

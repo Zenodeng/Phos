@@ -861,15 +861,18 @@ struct ClutPicker: View {
     @EnvironmentObject var s: AppState
     @EnvironmentObject private var ui: WorkspaceInspectorState
     private var q: String { ui.clutQuery }
+    @State private var available: [String] = []
+    @State private var scanning = true
+    @State private var scanRevision = 0
     var body: some View {
         VStack(spacing: 4) {
             HStack {
                 TextField(L10n.tr("搜索胶片…"), text: $ui.clutQuery).textFieldStyle(.roundedBorder).controlSize(.small)
                 Button(L10n.tr("清除")) { s.set(\.clutName, ""); s.endEdit() }.controlSize(.small)
-                Button(L10n.tr("刷新")) { s.cluts.invalidate(); s.render() }.controlSize(.small)
+                Button(L10n.tr("刷新")) { s.cluts.invalidate(); scanRevision &+= 1 }.controlSize(.small).disabled(scanning)
                     .help(L10n.tr("重新扫描 HaldCLUT 目录：往 ~/Documents/RawTherapee/HaldCLUT 里放了新 LUT 后点这里（HALD 的 PNG/TIF 与 .cube 都认）"))
             }
-            let all = s.cluts.list()
+            let all = available
             // 不再截断到前 60 个：LUT 超过 300 个时，新放进去的会排在后头，不搜索就永远看不到
             let shown = q.isEmpty ? all
                 : all.filter { $0.localizedCaseInsensitiveContains(q) }
@@ -888,7 +891,14 @@ struct ClutPicker: View {
                 .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 4))
             }
             .buttonStyle(.plain)
-            Text(L10n.tr(all.isEmpty ? "暂无胶片 LUT，可添加 HALD 或 cube 文件后刷新" : shown.isEmpty ? "没有匹配的胶片" : "共 \(all.count) 个可用 · 搜索结果 \(shown.count) 个")).font(.system(size: 9.5)).foregroundStyle(.secondary)
+            if scanning { HStack { ProgressView().controlSize(.mini); Text(L10n.tr("正在扫描胶片…")).font(.caption) } }
+            Text(L10n.tr(all.isEmpty ? "暂无胶片 LUT，可添加 HALD 或 cube 文件后刷新" : shown.isEmpty ? "没有匹配的胶片" : "共 \(all.count) 个可用 · 搜索结果 \(shown.count) 个")).font(.system(size: 9.5)).foregroundStyle(.secondary).opacity(scanning ? 0 : 1)
+        }
+        .task(id: scanRevision) {
+            scanning = true
+            let result = await Task.detached(priority: .utility) { CLUTLibrary.shared.list() }.value
+            guard !Task.isCancelled else { return }
+            available = result; scanning = false
         }
     }
 }

@@ -47,20 +47,25 @@ final class CLUTLibrary: ObservableObject {
     private let cubeCache = BoundedCache<String, CubeLUT>(capacity: 6)
     private let listLock = NSLock()
     private var listCache: [String]?
+    private var listRoot: String?
+    private var listGeneration = 0
     private let cubeDim = 64
 
     private static let haldExtensions: Set<String> = ["png", "tif", "tiff"]
 
     /// 列出所有可用 CLUT（相对根目录的路径，便于存进参数里）
     func list() -> [String] {
+        let directory = root
         listLock.lock()
-        defer { listLock.unlock() }
-        if let listCache { return listCache }
+        if let listCache, listRoot == directory.path { listLock.unlock(); return listCache }
+        let generation = listGeneration
+        listLock.unlock()
+        // Directory and file I/O must never hold the cache lock: refresh stays responsive.
         var out: [String] = []
         // 解析 root 上的符号链接（macOS 的 /var -> /private/var、iCloud 下的 Documents 等），
         // 否则 enumerator 给出的路径与 root 前缀对不上，相对路径会算错。
-        let rootPath = root.resolvingSymlinksInPath().path
-        if let e = FileManager.default.enumerator(at: root,
+        let rootPath = directory.resolvingSymlinksInPath().path
+        if let e = FileManager.default.enumerator(at: directory,
             includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles]) {
             for case let u as URL in e {
                 let ext = u.pathExtension.lowercased()
@@ -73,7 +78,9 @@ final class CLUTLibrary: ObservableObject {
             }
         }
         out.sort { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
-        listCache = out
+        listLock.lock()
+        if generation == listGeneration { listCache = out; listRoot = directory.path }
+        listLock.unlock()
         return out
     }
 
@@ -99,6 +106,8 @@ final class CLUTLibrary: ObservableObject {
     func invalidate() {
         listLock.lock()
         listCache = nil
+        listRoot = nil
+        listGeneration &+= 1
         listLock.unlock()
         cache.removeAll()
         imageCache.removeAll()

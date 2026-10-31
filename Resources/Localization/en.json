@@ -711,5 +711,17 @@
   "避免重复校正：JPEG/HEIF、手机照片及部分 RAW 解码可能已做镜头校正。只在确认未做相同校正时启用；增距镜、减焦镜、移轴或预裁切图片需专用标定。": "Avoid duplicate correction: JPEG/HEIF, phone photos, and some RAW decoders may already apply lens correction. Enable only when the same correction has not already been applied. Teleconverters, focal reducers, shift lenses, and pre-cropped images need dedicated calibration.",
   "配置位置：~/Library/Application Support/Phos/LensProfiles。导入配置长期保留；已有编辑保存系数快照，删除配置文件也不会改变已保存编辑。": "Library: ~/Library/Application Support/Phos/LensProfiles. Imported profiles persist. Existing edits contain a coefficient snapshot, so removing an imported file does not alter saved edits.",
   "1. 获取配置：仅内置 5 款精选镜头配置，包含适马 16–300 和常用 EF 老镜头。其他镜头可从 Lensfun 官方数据库下载对应 XML；请保存原始文件，不要保存网页。": "1. Get a profile: only five selected lens profiles are bundled, including Sigma 16–300 and common older EF lenses. Download other Lensfun XML profiles from the official database. Save the raw file, not the web page.",
-  "适马 16–300：内置 16–300mm F3.5–6.7 DC OS Contemporary 025 的畸变及横向色差数据，不含暗角数据。标定来自 Fujifilm X-S20，裁切系数 1.534；使用其他机身时请填写实际机身裁切系数，并检查实拍效果。": "Sigma 16–300: bundled distortion and lateral chromatic aberration data for the 16–300mm F3.5–6.7 DC OS Contemporary 025; no vignetting data. Measured on Fujifilm X-S20 at crop factor 1.534. For other cameras, enter the actual camera crop factor and verify your photos."
+  "适马 16–300：内置 16–300mm F3.5–6.7 DC OS Contemporary 025 的畸变及横向色差数据，不含暗角数据。标定来自 Fujifilm X-S20，裁切系数 1.534；使用其他机身时请填写实际机身裁切系数，并检查实拍效果。": "Sigma 16–300: bundled distortion and lateral chromatic aberration data for the 16–300mm F3.5–6.7 DC OS Contemporary 025; no vignetting data. Measured on Fujifilm X-S20 at crop factor 1.534. For other cameras, enter the actual camera crop factor and verify your photos.",
+  "正在扫描胶片…": "Scanning film LUTs…",
+  "校正前后": "Before / After",
+  "网格": "Grid",
+  "镜头校正前 · 其他调整保留": "Before lens correction · Other edits retained",
+  "自动匹配 · 已确认": "Auto matched · Confirmed",
+  "手动选择 · 已确认": "Manually selected · Confirmed",
+  "已保存配置 · 请核对": "Saved profile · Check settings",
+  "对比仅暂时关闭镜头配置；其他调整保留。再次点击返回。": "Comparison temporarily bypasses the lens profile and retains other edits. Click again to return.",
+  "暂无畸变标定数据": "No distortion calibration data",
+  "暂无横向色差标定数据": "No lateral CA calibration data",
+  "暂无暗角标定数据": "No vignetting calibration data",
+  "此类照片可能已由相机校正，请对比确认，避免重复校正。": "This photo may already have in-camera correction. Compare before applying to avoid double correction."
 }

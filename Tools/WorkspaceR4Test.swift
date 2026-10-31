@@ -188,6 +188,38 @@ import ImageIO
         let prior=s.params
         var applied=prior; applied.lensCorrection=lensValue; s.commit(applied)
         check(s.params.lensCorrection==lensValue,"lens profile uses normal commit pipeline")
+        let previewParams=s.params, previewHistory=s.history.stack, previewWrites=s.workMetrics.snapshot["sidecarWrite"]
+        s.lensCompare=true; s.lensGrid=true
+        try await wait { !s.previewing }
+        var withoutLens=previewParams; withoutLens.lensCorrection=nil
+        check(s.previewFrame?.key.paramsFingerprint == PreviewFrame.fingerprint(withoutLens),"lens comparison bypasses only the lens profile in preview")
+        check(s.params==previewParams && s.history.stack==previewHistory && s.workMetrics.snapshot["sidecarWrite"]==previewWrites,"lens comparison and grid never write edits or history")
+        s.lensCompare=false; try await wait { !s.previewing }
+        check(s.previewFrame?.key.paramsFingerprint == PreviewFrame.fingerprint(previewParams),"leaving lens comparison restores corrected preview")
+        s.lensCompare=true; s.showBefore=true
+        check(!s.lensCompare,"original comparison exits lens-only comparison")
+        s.showBefore=false; s.lensGrid=false
+        var method=lensValue; method.selectionMethod="manual"
+        let persistedMethod=try JSONDecoder().decode(LensCorrection.self,from:JSONEncoder().encode(method))
+        check(persistedMethod.selectionMethod=="manual","profile selection provenance persists")
+        check(lensValue.selectionMethod==nil,"legacy profiles have unknown selection provenance")
+        let lutRoot=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at:lutRoot,withIntermediateDirectories:true)
+        let oldLUT=UserDefaults.standard.string(forKey:"clutDirectory")
+        let library=CLUTLibrary()
+        defer { if let oldLUT { UserDefaults.standard.set(oldLUT,forKey:"clutDirectory") } else { UserDefaults.standard.removeObject(forKey:"clutDirectory") }; try? FileManager.default.removeItem(at:lutRoot) }
+        UserDefaults.standard.set(lutRoot.path,forKey:"clutDirectory")
+        try Data("LUT_3D_SIZE 2\n".utf8).write(to:lutRoot.appendingPathComponent("a.cube"))
+        let initial=await Task.detached { library.list() }.value
+        check(initial==["a.cube"],"background LUT scan reads 3D cube headers")
+        try Data("LUT_1D_SIZE 2\n".utf8).write(to:lutRoot.appendingPathComponent("one.cube"))
+        try Data().write(to:lutRoot.appendingPathComponent("b.png"))
+        library.invalidate()
+        let refreshed=await Task.detached { library.list() }.value
+        check(refreshed==["a.cube","b.png"],"refresh invalidates LUT listing and excludes 1D LUTs")
+        UserDefaults.standard.set(lutRoot.appendingPathComponent("missing").path,forKey:"clutDirectory")
+        let changed=await Task.detached { library.list() }.value
+        check(changed.isEmpty,"LUT cache cannot leak results across configured directories")
         s.undo(); check(s.params==prior,"lens correction is undoable")
         var result = previous;result["r4Checks"] = checks;result["checks"] = (previous["checks"] as! Int)+checks
         try JSONSerialization.data(withJSONObject:result,options:[.prettyPrinted,.sortedKeys]).write(to:reportURL)

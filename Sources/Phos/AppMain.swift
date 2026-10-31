@@ -89,9 +89,13 @@ final class AppState: ObservableObject {
     @Published private(set) var autoLevelRunning = false
     private(set) var cropSession: CropEditSession?
     @Published var splitComparison = false {
-        didSet { if splitComparison { showBefore = false; cancelMaskDrawing(); render() } }
+        didSet { if splitComparison { lensCompare = false; showBefore = false; cancelMaskDrawing(); render() } }
     }
     @Published private(set) var geometryBeforeFrame: PreviewFrame?
+    @Published var lensGrid = false
+    @Published var lensCompare = false {
+        didSet { if oldValue != lensCompare { if lensCompare { showBefore = false; splitComparison = false }; render() } }
+    }
     @Published var splitPosition: CGFloat = 0.5
     @Published var temporaryPan = false
     // 编辑
@@ -102,7 +106,7 @@ final class AppState: ObservableObject {
     var preview: CGImage? { previewFrame?.image }
     @Published var previewing: Bool = false
     @Published var showBefore: Bool = false {
-        didSet { if showBefore { splitComparison = false; cancelMaskDrawing(); refreshBefore() } }
+        didSet { if showBefore { lensCompare = false; splitComparison = false; cancelMaskDrawing(); refreshBefore() } }
     }
     var beforeImage: CGImage? { beforeFrame?.image }
     var displayFrame: PreviewFrame? { showBefore ? beforeFrame : previewFrame }
@@ -365,6 +369,7 @@ final class AppState: ObservableObject {
         sourceQueue.invalidate()
         previewQueue.invalidate()
         beforeQueue.invalidate()
+        lensCompare = false; lensGrid = false
         currentIndex = i
         let u = items[i].url
         source = nil
@@ -586,8 +591,11 @@ final class AppState: ObservableObject {
     func render() {
         guard let src = source else { return }
         previewing = true
+        // Preview-only comparison never changes history, sidecars, or exported parameters.
+        var previewParams = cropMode ? params.cropNeutral : params
+        if lensCompare && !cropMode { previewParams.lensCorrection = nil }
         // 裁剪模式下预览未裁剪的整幅（裁剪框叠加层直接在画布上改），退出后恢复
-        submitPreview(source: src, parameters: cropMode ? params.cropNeutral : params,
+        submitPreview(source: src, parameters: previewParams,
                       mask: showMaskOverlay && !cropMode ? selectedMask : nil)
     }
 

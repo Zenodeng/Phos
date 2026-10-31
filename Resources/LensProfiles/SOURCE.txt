@@ -1,0 +1,10 @@
+Selected Lensfun database entries, retrieved 2026-10-23.
+Authors: Lensfun contributors; per-entry comments retained.
+License CC BY-SA 3.0 https://creativecommons.org/licenses/by-sa/3.0/ (see LICENSE.txt).
+https://github.com/lensfun/lensfun/blob/master/data/db/slr-canon.xml
+https://github.com/lensfun/lensfun/blob/master/data/db/mil-sigma.xml
+https://github.com/lensfun/lensfun/blob/master/data/db/mil-sony.xml
+https://github.com/lensfun/lensfun/blob/master/data/db/mil-fujifilm.xml
+Changes: selected five lens profiles and 7 camera records; no coefficient changes.
+Sigma 16-300: measured on Fujifilm X-S20, crop factor 1.534; distortion + TCA only, no vignetting.
+SHA256 bundled.xml: 0d7a171238b14dd91a7393d173893148118458e32b09e663c0c74409c932ec38

@@ -33,6 +33,16 @@ mkdir -p "$STAGE/Contents/MacOS" "$STAGE/Contents/Resources"
 cp "$BIN" "$STAGE/Contents/MacOS/Phos"
 cp Info.plist "$STAGE/Contents/Info.plist"
 sh Scripts/package_icon.sh "$STAGE/Contents/Resources"
+
+# 运行时资源必须一起进包，否则本地这版会缺东西：
+# 没有 LensProfiles → 镜头校正找不到 bundled.xml；没有 Localization → 少了 en.json 兜底。
+# 这一步与 Scripts/package_app.sh 保持一致，两边产物才不会出现「本地能用、发布包也能用」之外的差异。
+for res in PhotoAIAdapter Localization LensProfiles; do
+    if [ -d "Resources/$res" ]; then
+        /bin/rm -rf "$STAGE/Contents/Resources/$res"
+        cp -R "Resources/$res" "$STAGE/Contents/Resources/$res"
+    fi
+done
 chmod +x "$STAGE/Contents/MacOS/Phos"
 xattr -dr com.apple.quarantine "$STAGE" 2>/dev/null || true
 SIGN_LOG="$SCRIPT_DIR/build/codesign.log"

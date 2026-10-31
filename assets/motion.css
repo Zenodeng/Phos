@@ -1,5 +1,5 @@
 /* Phos motion plan: static content first; movement only explains entrance or input. */
-:root{--motion-ease:cubic-bezier(.22,1,.36,1);--motion-press:120ms;--motion-hover:180ms;--motion-enter:200ms;--motion-dialog:240ms}
+:root{--motion-ease:cubic-bezier(.16,1,.3,1);--motion-press:120ms;--motion-hover:180ms;--motion-enter:200ms;--motion-dialog:240ms}
 html body *,html body *::before,html body *::after{animation:none!important;transition-property:transform,opacity!important;transition-duration:var(--motion-hover);transition-timing-function:var(--motion-ease)}
 /* Keep the message and download visible from the first paint. Give the photo more room. */
 .signature-hero{padding-top:30px}.signature-copy h1{width:clamp(340px,37vw,550px);margin-bottom:18px}.signature-description{margin-top:12px}.signature-copy .hero-actions{margin-top:20px}.signature-copy .requirements{margin-top:12px}.signature-product{margin-top:34px;transform:none;transform-origin:center center;transition:transform 150ms var(--motion-ease)!important}.signature-product.is-tilting{will-change:transform}.workspace-image{transform:none}.workspace-shot{transition:opacity 200ms var(--motion-ease)!important}

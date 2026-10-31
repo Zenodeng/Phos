@@ -3,7 +3,8 @@
   const root = document.documentElement;
   const system = matchMedia('(prefers-reduced-motion: reduce)');
   const desktop = matchMedia('(hover: hover) and (pointer: fine) and (min-width: 761px)');
-  const ease = 'cubic-bezier(.22,1,.36,1)';
+  const ease = 'cubic-bezier(.16,1,.3,1)';
+  const easeEnter = 'cubic-bezier(.16,1,.3,1)';
   let enabled = !system.matches;
   const animations = new Set();
   const dialogAnimations = new WeakMap();
@@ -162,23 +163,23 @@
       running++;
       const targets=visible.flatMap(item=>specs.get(item)?.children || [item]);
       let remaining=targets.length;
-      targets.forEach((target,index) => animate(target,[{opacity:0,transform:'translateY(12px)'},{opacity:1,transform:'none'}],{delay:Math.min(index*60,300)},() => {
+      targets.forEach((target,index) => animate(target,[{opacity:0,transform:'translateY(12px)'},{opacity:1,transform:'none'}],{duration:420,easing:easeEnter,delay:Math.min(index*50,250)},() => {
         remaining--; if (!remaining) {running--;pump();}
       }));
     }
   }
   // Full chapter surfaces enter together, including their background and product image.
   // A tall chapter must trigger from its top edge, not a percentage of its full height.
-  const chapterSet=new Set(document.querySelectorAll('.workflow-look,.workflow-refine,.workflow-export,.looks-section,.editorial-ai,.learn-section,.faq-section,.final-cta,.safety-strip,.feature-chapter,.workflow-gallery,.help-main>section'));
+  const chapterSet=new Set(document.querySelectorAll('.workflow-look,.workflow-refine,.workflow-export,.editorial-ai,.learn-section,.final-cta,.safety-strip,.feature-chapter,.workflow-gallery,.help-main>section'));
   document.querySelectorAll('main figure,main .workspace-image,main .install-shots img').forEach(element=>{
-    if(element.closest('.photo-hero,.try-editor,dialog'))return;
+    if(element.closest('.photo-hero,.try-editor,dialog,.look-card'))return;
     if(element.matches('img')&&element.closest('figure'))return;
     if(element.matches('.workspace-image')&&element.closest('figure'))return;
     if(element.matches('figure')&&!element.querySelector('img'))return;
     chapterSet.add(element);
   });
   // Observe each complete surface once; nested image observers otherwise snap their parent to its final frame.
-  document.querySelectorAll('main>section,.workflow-refine,.try-editor').forEach(element=>chapterSet.add(element));
+  document.querySelectorAll('main>section:not(#gallery):not(#faq),.workflow-refine,.try-editor').forEach(element=>chapterSet.add(element));
   const workspaceSection=document.getElementById('workspace');if(workspaceSection)chapterSet.delete(workspaceSection);
   const topSurfaces=[...chapterSet].filter(element=>![...chapterSet].some(parent=>parent!==element&&parent.contains(element)));
   const chapters=topSurfaces;
@@ -200,7 +201,7 @@
           if(target.contains(chapter)||chapter.contains(target)){animation.finish();chapterAnimations.delete(target);}
         });
         
-        const animation=animate(chapter,[{opacity:.3,transform:'translate3d(0,40px,0)'},{opacity:1,transform:'translate3d(0,0,0)'}],{duration:650,easing:ease},()=>chapterAnimations.delete(chapter));
+        const animation=animate(chapter,[{opacity:.15,transform:'translate3d(0,20px,0)'},{opacity:1,transform:'translate3d(0,0,0)'}],{duration:560,easing:easeEnter},()=>chapterAnimations.delete(chapter));
         if(animation)chapterAnimations.set(chapter,animation);
       });
     },{rootMargin:'0px 0px -60px 0px',threshold:0});

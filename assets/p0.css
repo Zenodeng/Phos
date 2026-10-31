@@ -1,0 +1,75 @@
+/* P0: cross-platform type, legible nav mark, no-JS nav, centered final CTA, flat primary button. */
+
+:root {
+  --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB",
+          "Microsoft YaHei", "Noto Sans CJK SC", "Noto Sans SC", sans-serif;
+}
+
+/* Windows classic scrollbars must not create horizontal overflow. */
+html { scrollbar-gutter: stable; }
+
+/* Nav: use a wordmark at 67–86px, not the 3D sculpture. */
+.wordmark-text {
+  display: block;
+  font-family: var(--font);
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -.045em;
+  color: var(--ink);
+  transform: translateY(-1px);
+}
+@media (max-width: 760px) {
+}
+
+/* No-JS fallback: actual links are in <noscript>; show below the nav on phones only. */
+.noscript-nav {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 12px var(--page-gutter);
+  border-top: 1px solid var(--line);
+  background: var(--canvas);
+  font-size: var(--caption);
+  position: relative;
+  z-index: 45;
+}
+.noscript-nav a { color: var(--muted); }
+.noscript-nav a:hover { color: var(--ink); }
+@media (min-width: 761px) {
+  .noscript-nav { display: none; }
+}
+
+/* Final CTA: one deliberate center moment instead of an 869px empty right side. */
+.final-cta { text-align: center; }
+.final-cta .page-width { max-width: 900px; }
+.final-cta .page-width > p,
+.final-cta .page-width > .button,
+.final-cta .page-width > .platform-note { margin-left: auto; margin-right: auto; }
+.final-cta .button { margin-top: 6px; }
+.final-cta .cta-requirements { margin-top: 16px; }
+
+/* Platform clarity: the app is macOS-only; the website is not. */
+.platform-note {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--muted);
+  max-width: 54ch;
+}
+.platform-note a { color: var(--gold); text-decoration: underline; text-underline-offset: 3px; }
+.platform-note a:hover { color: var(--ink); }
+
+/* Apple-like primary action: flat fill, no drop shadow / inset highlight. */
+.button,
+.btn,
+.nav-download {
+  box-shadow: none;
+  border-color: transparent;
+}
+.button.primary:hover,
+.nav-download:hover { box-shadow: none; }
+
+@media (max-width: 760px) {
+}

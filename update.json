@@ -1,8 +1,8 @@
 {
-  "version": "4.3.0",
-  "released": "2026-10-22",
-  "page": "https://zenodeng.com/#install",
+  "version": "4.4.0",
+  "released": "2026-10-31",
+  "page": "https://zenodeng.com/help#download-help",
   "url": "https://zenodeng.com/download/Phos-macOS-apple-silicon.dmg",
   "minOS": "26.0",
-  "notes": "4.3：界面支持「跟随系统 / 简体中文 / English」，在「更多菜单 → 语言」里切换，即时生效不用重启。668 条词条覆盖菜单、45 个参数、表单与提示，工具提示与无障碍标签同步。香槟金与 A/B 布局保留。模型与适配器没有变化，不用重新下载。"
+  "notes": "4.4：镜头校正新增「校正前后」切换与 8 等分直线网格，便于核对建筑线条；应用已保存配置时会显示来源，缺少畸变、横向色差或暗角数据会明确列出。色彩面板的 LUT 目录扫描改到后台，界面不再等待目录遍历。内置 5 款镜头配置，含适马 16–300。模型与适配器没有变化，不用重新下载。"
 }

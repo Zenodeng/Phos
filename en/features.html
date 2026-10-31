@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="phos" class="system-page"><head>
+
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phos — Features in detail</title>
+
+<meta name="description" content="Explore light, five-channel curves, film LUTs, nine local masks, batch workflows, 16-bit TIFF export and experimental local AI in Phos.">
+
+<meta name="keywords" content="Phos, RAW editor, macOS RAW editor, RAW photo editor, film simulation LUT, photo editing app, Swift, Core Image, non-destructive editing">
+
+<link rel="canonical" href="https://zenodeng.com/en/features.html">
+
+<link rel="alternate" hreflang="zh-CN" href="https://zenodeng.com/features.html">
+
+<link rel="alternate" hreflang="en" href="https://zenodeng.com/en/features.html">
+
+<link rel="alternate" hreflang="x-default" href="https://zenodeng.com/features.html">
+
+<meta name="google-site-verification" content="VpFD-mee9gLzbt9L78dK2LwITVrWsh_sOPfUTFIICrg">
+
+<meta name="theme-color" content="#0c0d10">
+
+<meta property="og:type" content="website">
+
+<meta property="og:locale" content="en_US">
+
+<meta property="og:locale:alternate" content="zh_CN">
+
+<meta property="og:title" content="Phos — Features in detail">
+
+<meta property="og:description" content="Explore light, five-channel curves, film LUTs, nine local masks, batch workflows, 16-bit TIFF export and experimental local AI in Phos.">
+
+<meta property="og:url" content="https://zenodeng.com/en/features.html">
+
+<meta property="og:image" content="https://zenodeng.com/images/workspace-b.jpg">
+
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="../images/phos-icon-dark.png" type="image/png">
+
+<link rel="stylesheet" href="../assets/system.css">
+
+<link rel="stylesheet" href="../assets/motion.css"></head>
+
+<body class="features-page"><a class="skip" href="#main">Skip to content</a>
+
+<nav class="site-nav" aria-label="Main navigation"><a class="wordmark" href="./" aria-label="Phos"><img class="nav-sculpture" src="../images/phos-sculpture.svg" width="1300" height="446" alt=""></a>
+<div class="nav-links"><a href="index.html#workspace">Workspace</a><a href="features.html" aria-current="page">Features</a><a href="index.html#studio">Try editing</a><a href="help.html">Help</a></div>
+
+<div class="nav-actions"><button class="command-trigger" type="button" aria-haspopup="dialog"><span>Search</span><kbd>⌘ K</kbd></button><a class="language" href="../features.html" aria-label="切换到简体中文">中文</a><a class="nav-download" href="../download/Phos-macOS-apple-silicon.dmg" download="">Download Mac</a><button class="menu-toggle" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="mobile-menu" hidden="">Menu<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 6h14M3 14h14"></path></svg></button></div>
+</nav>
+
+<dialog class="mobile-menu" id="mobile-menu" aria-labelledby="mobile-menu-title">
+<div class="mobile-menu-header">
+<h2 id="mobile-menu-title">Explore Phos</h2><button class="dialog-close menu-close" type="button">Close</button></div>
+
+<nav aria-label="Mobile navigation"><a href="index.html#workspace">Workspace</a><a href="features.html" aria-current="page">Features</a><a href="index.html#studio">Try editing</a><a href="help.html">Help</a></nav>
+
+<div class="mobile-menu-footer"><a class="language" href="../features.html">简体中文</a><a class="button primary" href="../download/Phos-macOS-apple-silicon.dmg" download="">Download Mac</a></div>
+</dialog>
+
+<noscript>&lt;nav class="noscript-nav" aria-label="Page navigation"&gt;&lt;a href="index.html#workspace"&gt;Workspace&lt;/a&gt;&lt;a href="features.html" aria-current="page"&gt;Features&lt;/a&gt;&lt;a href="index.html#studio"&gt;Try editing&lt;/a&gt;&lt;a href="help.html"&gt;Help&lt;/a&gt;&lt;/nav&gt;</noscript>
+
+<main id="main">
+
+<header id="top" class="features-hero reading-hero">
+
+<h1>From first light<br>to final export.</h1>
+
+<p>Every capability, in the context of a real photography workflow.</p><a class="button primary" href="index.html#studio">Try editing<span aria-hidden="true">↗</span></a></header>
+
+<div class="feature-guide">
+
+<aside class="feature-sidebar">
+
+<details class="chapter-menu">
+
+<summary>Browse feature chapters<span aria-hidden="true">+</span></summary>
+
+<nav aria-label="Feature contents"><a href="#light">Light &amp; white balance</a><a href="#color">Curves &amp; color</a><a href="#film">Film &amp; texture</a><a href="#masks">Nine local masks</a><a href="#geometry">Crop, geometry &amp; lenses</a><a href="#workflow">Selection &amp; batch editing</a><a href="#export">Export &amp; watermarks</a><a href="#local-ai">Local AI editing</a><a href="#native">Native, bilingual &amp; compatible</a></nav>
+
+</details>
+
+<nav aria-label="Feature contents"><a href="#light">Light &amp; white balance</a><a href="#color">Curves &amp; color</a><a href="#film">Film &amp; texture</a><a href="#masks">Nine local masks</a><a href="#geometry">Crop, geometry &amp; lenses</a><a href="#workflow">Selection &amp; batch editing</a><a href="#export">Export &amp; watermarks</a><a href="#local-ai">Local AI editing</a><a href="#native">Native, bilingual &amp; compatible</a></nav>
+
+<a class="text-link" href="index.html#studio">Try the browser preview</a></aside>
+
+<div class="feature-chapters">
+
+<section id="light" class="feature-chapter">
+
+<h2>Light &amp; white balance</h2>
+
+<p class="chapter-intro">Shape the image one adjustment at a time.</p>
+
+<ul>
+
+<li>Temperature, tint and gray-point sampling; exposure, contrast, highlights, shadows, whites and blacks.</li>
+
+<li>Texture, clarity, dehaze, vibrance, saturation and HDR highlight/shadow compression.</li>
+
+<li>Auto tone gives you an editable starting point. Original comparison and undo remain available.</li></ul>
+
+<figure class="feature-shot"><img src="../images/native-20261031/workspace-a.webp" width="2160" height="1341" loading="lazy" alt="Light adjustment workspace"><button type="button" class="image-zoom" data-zoom="feature-light">Enlarge image</button>
+
+<figcaption>Light adjustment workspace</figcaption></figure>
+
+<details class="technical-note">
+
+<summary>Specifications and details</summary>
+
+<div>
+
+<p>Exposure, contrast, highlights, shadows, whites and blacks, texture / clarity / dehaze, white-balance gray-point eyedropper, HDR; five-channel tone curve, HSL mixer, color grading, black &amp; white, and calibration.</p></div>
+
+</details>
+
+</section>
+
+<section id="color" class="feature-chapter">
+
+<h2>Curves &amp; color</h2>
+
+<p class="chapter-intro">Build a look or refine one subtle color.</p>
+
+<ul>
+
+<li>Five curve channels: composite, luminance, R, G and B, with freely editable points.</li>
+
+<li>Separate shadow, midtone and highlight grading, with blend and balance.</li>
+
+<li>Eight-band HSL, black-and-white channel mixing and RGB primary calibration.</li></ul>
+
+<figure class="feature-shot"><img src="../images/workspace-color.webp" width="2160" height="1341" loading="lazy" alt="Curves and color grading"><button type="button" class="image-zoom" data-zoom="feature-color">Enlarge image</button>
+
+<figcaption>Curves and color grading</figcaption></figure>
+
+<details class="technical-note">
+
+<summary>Specifications and details</summary>
+
+<div>
+
+<figure class="feature-shot"><img src="../images/color-detail.webp" width="610" height="1575" alt="Current Phos color inspector with curves, color grading and HSL controls" class="color-inspector" loading="lazy" decoding="async"><button type="button" class="image-zoom" data-zoom="inspector">Enlarge image</button>
+
+<figcaption>Colour inspector detail</figcaption></figure>
+
+</div>
+
+</details>
+
+</section>
+
+<section id="film" class="feature-chapter">
+
+<h2>Film &amp; texture</h2>
+
+<p class="chapter-intro">Keep the look you want to return to.</p>
+
+<ul>
+
+<li>HALD film LUTs, including Kodak 2383 / 2393 print looks, with continuous strength control.</li>
+
+<li>Import .cube LUTs or scan your own HaldCLUT directory.</li>
+
+<li>Grain, grain size, vignette, halation, sharpening and luminance/color noise reduction.</li></ul>
+
+<details class="technical-note">
+
+<summary>Specifications and details</summary>
+
+<div>
+
+<p>HALD CLUT loading, including Kodak 2383 / 2393 print emulations, 64³ cube resampling, adjustable strength.</p></div>
+
+</details>
+
+</section>
+
+<section id="masks" class="feature-chapter">
+
+<h2>Nine local masks</h2>
+
+<p class="chapter-intro">Give each area its own adjustments.</p>
+
+<ul>
+
+<li>Linear and radial gradients, brush, color range and luminance range.</li>
+
+<li>Subject, person, foreground cutout and depth painting, using on-device vision where applicable.</li>
+
+<li>Independent adjustment stacks; invert, duplicate or delete, with directly draggable canvas controls.</li></ul>
+
+<figure class="feature-shot"><img src="../images/06-linear-gradient-mask.webp" width="1920" height="1192" loading="lazy" alt="Linear gradient mask example"><button type="button" class="image-zoom" data-zoom="feature-masks">Enlarge image</button>
+
+<figcaption>Linear gradient mask example</figcaption></figure>
+
+<details class="technical-note">
+
+<summary>Specifications and details</summary>
+
+<div>
+
+<p>Linear and radial gradients, brush, color range, luminance range, Select Subject, Select Person, subject cutout, and depth paint — nine in all. Each mask has its own adjustment stack and can be inverted, duplicated, or deleted.</p></div>
+
+</details>
+
+</section>
+
+<section id="geometry" class="feature-chapter">
+
+<h2>Crop, geometry &amp; lenses</h2>
+
+<p class="chapter-intro">Look after the composition and the edges.</p>
+
+<ul>
+
+<li>Eight crop handles, aspect ratios, 90-degree rotation, horizontal flip and manual straightening.</li>
+
+<li>Auto level and automatic/manual perspective correction, with undoable crop sessions.</li>
+
+<li>Lateral chromatic aberration and purple-fringe suppression; portrait depth or painted depth for bokeh.</li></ul>
+
+</section>
+
+<section id="workflow" class="feature-chapter">
+
+<h2>Selection &amp; batch editing</h2>
+
+<p class="chapter-intro">Carry one good edit across a series.</p>
+
+<ul>
+
+<li>A Immersive and B Filmstrip share edit state, with search, ratings and picks.</li>
+
+<li>Named presets and snapshots, snapshot recovery, selection sync and batch export.</li>
+
+<li>Multiple-exposure averaging, exposure fusion and handheld denoise workflows.</li></ul>
+
+<figure class="feature-shot"><img src="../images/native-20261031/workspace-b.webp" width="2160" height="1341" loading="lazy" alt="Filmstrip selection workflow"><button type="button" class="image-zoom" data-zoom="feature-workflow">Enlarge image</button>
+
+<figcaption>Filmstrip selection workflow</figcaption></figure>
+
+<details class="technical-note">
+
+<summary>Specifications and details</summary>
+
+<div>
+
+<p>Multi-select and sync adjustments, restore snapshots, named presets, named snapshots, and multi-exposure compositing.</p>
+
+<p>The main window rebuilt in 4.0: A List for one-at-a-time editing, B Filmstrip for continuous culling. The toolbar shares a centerline with the system traffic lights, the list and inspector widths are draggable, and switching layouts doesn’t interrupt editing.</p></div>
+
+</details>
+
+</section>
+
+<section id="export" class="feature-chapter">
+
+<h2>Export &amp; watermarks</h2>
+
+<p class="chapter-intro">Choose how the photograph leaves the editor.</p>
+
+<ul>
+
+<li>JPEG, PNG, TIFF and HEIC output; 8/16-bit TIFF and multiple color spaces.</li>
+
+<li>Long-edge resize, output quality, output sharpening and text/image watermarks.</li>
+
+<li>Nine-position watermark placement, opacity and rotation, with a fixed output directory option.</li></ul>
+
+<figure class="feature-shot"><img src="../images/04-export-dialog.webp" width="1920" height="1192" loading="lazy" alt="Export and watermark settings"><button type="button" class="image-zoom" data-zoom="feature-export">Enlarge image</button>
+
+<figcaption>Export and watermark settings</figcaption></figure>
+
+<details class="technical-note">
+
+<summary>Specifications and details</summary>
+
+<div>
+
+<p>8-bit and 16-bit TIFF in multiple color spaces, long-edge resizing, text and image watermarks with nine-point placement, pinned export folder.</p></div>
+
+</details>
+
+</section>
+
+<section id="local-ai" class="feature-chapter">
+
+<h2>Local AI editing</h2>
+
+<p class="chapter-intro">Describe your change. Keep control of the parameters.</p>
+
+<ul>
+
+<li>Global and local-mask suggestions, with side-by-side previews before applying.</li>
+
+<li>Explicitly preserved controls are protected; stale suggestions do not overwrite changed photos or parameters.</li>
+
+<li>A separately installed 3.1 GB base model and bundled 1.3 MB adapter. Experimental; judge the preview.</li></ul>
+
+<figure class="feature-shot"><img src="../images/ai-preview.webp" width="1440" height="1146" loading="lazy" alt="Local AI suggestion preview"><button type="button" class="image-zoom" data-zoom="feature-local-ai">Enlarge image</button>
+
+<figcaption>Local AI suggestion preview</figcaption></figure>
+
+<details class="technical-note">
+
+<summary>Specifications and details</summary>
+
+<div>
+
+<p>Describe the change in Chinese; the model suggests global slider values and local masks, with a preview before anything is applied. Inference runs on-device — photos are never uploaded. Experimental; the model must be <a href="help.html#ai-model">installed separately</a>.</p></div>
+
+</details>
+
+<details class="validation-note">
+
+<summary>Development validation and constraints (not an independent test)</summary>
+
+<div>
+
+<div class="ai-depth">
+
+<div class="ai-benchmark">
+
+<p class="note-sm" style="margin-top:16px">4.1 ships new fine-tuned weights: on the same 301 controlled validation prompts, first-pass strict completion rose from 51.8% to  <strong>94.0%</strong>. <strong>Only the 1.3 MB adapter bundled with the app changed — the base model does not need to be downloaded again.</strong> These numbers come from a development validation set, not an independent test, and say nothing about aesthetics.</p></div>
+
+<div class="feats">
+        
+
+<div class="feat">
+          
+
+<div class="ico"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"></path></svg></div>
+
+          
+
+<h3>Say it precisely, it obeys</h3>
+          
+
+<p>Requests like “crop 5% off each side, keep the full height” are computed by code, not estimated by the model. Auto-crop first validates dimensions and retained area; an invalid plan is sent back for one retry, and after two failures nothing is applied.</p>
+        </div>
+
+        
+
+<div class="feat">
+          
+
+<div class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"></rect><path d="M8 12h8"></path><path d="M12 8v8"></path></svg></div>
+
+          
+
+<h3>Keep means keep</h3>
+          
+
+<p>When you explicitly ask to “leave exposure alone” or “keep white balance unchanged,” those sliders are removed from the model’s writable fields and checked again after decoding. Mixed global and local requests are supported just the same.</p>
+        </div>
+
+        
+
+<div class="feat">
+          
+
+<div class="ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></div>
+
+          
+
+<h3>Preview first, then decide</h3>
+          
+
+<p>Generated plans show a preview and are only written after you confirm; each apply is one undo. Local effects are checked against the direction of real rendered pixels and retried or blocked when they don’t match.</p>
+        </div>
+
+      </div>
+
+<details class="original-ai">
+
+<summary>View the original AI workflow example</summary>
+
+<figure class="legacy-wrap" style="margin-top:56px">
+        <img class="shot" src="../images/11-ai-panel.webp" width="1920" height="1192" loading="lazy" alt="Phos AI editing panel: after a Chinese prompt, it suggests exposure, temperature, vibrance, and other parameters, with current and suggested results side by side; the top right is labeled “fine-tune experimental”">
+        
+
+<figcaption>
+          
+
+<div class="t">AI Edit · Fine-tune experimental</div>
+
+          
+
+<div class="d">Write a request and the model proposes exposure, temperature, vibrance, and local mask suggestions. The current result is on the left, the suggestion on the right; nothing is written until you confirm, and closing it leaves the original untouched — not a single byte.</div>
+
+        </figcaption>
+      </figure>
+
+</details>
+
+</div>
+
+</div>
+
+</details>
+
+</section>
+
+<section id="native" class="feature-chapter">
+
+<h2>Native, bilingual &amp; compatible</h2>
+
+<p class="chapter-intro">Work the way your Mac does.</p>
+
+<ul>
+
+<li>Swift, Core Image, Vision and AppKit, with system-following light and dark appearances.</li>
+
+<li>System language, Simplified Chinese and English, switching menus and controls immediately.</li>
+
+<li>Edits live in sidecars; legacy RawForge sidecars and existing presets stay readable.</li></ul>
+
+<details class="technical-note">
+
+<summary>Specifications and details</summary>
+
+<div>
+
+<p>Mainstream RAW formats such as ARW / CR3 / NEF, plus HEIF / HEIC / HIF, JPEG, PNG, TIFF, and AVIF.</p>
+
+<p>Choose Follow System, 简体中文, or English — it switches instantly, no restart. 668 strings cover menus, parameters, forms and messages; tooltips and accessibility labels follow the language too.</p>
+
+<p class="lead">A non-destructive RAW photo editor built for macOS. Every pixel is processed on your Mac; edits are written to a sidecar file next to the original, and not a single byte of the original is changed. Version 4.0 rebuilt the entire workspace and added optional on-device AI editing.</p></div>
+
+</details>
+
+<article id="design" class="design-language">
+
+<h3>Graphite and champagne</h3>
+
+<p>The interface is built on neutral graphite panels; champagne gold marks only selection and editing states, while everything else stays restrained. The order comes from a strict grid: a fixed line-height rhythm, tabular figures, and hairline dividers.</p>
+
+<div class="design-principles">
+
+<article>
+
+<h4>Restrained gold</h4>
+
+<p>Gold doesn’t decorate — it reports state: selection rings, slider fills, film cards, the primary export button. If it’s gold, you’re editing.</p></article>
+
+<article>
+
+<h4>Strict grid</h4>
+
+<p>A fixed 26 / 27 / 34 px line-height rhythm, 16 px padding throughout, right-aligned tabular figures. Dense, never messy.</p></article>
+
+<article>
+
+<h4>Masks you can read</h4>
+
+<p>Guides are 1 px white dashed lines, and handle colors encode their job: linear gradient endpoints are cyan, the center is white, the rotation handle is amber; radial gradients are yellow. The color tells you what you can drag.</p></article>
+
+</div>
+
+<div class="anatomy" role="region" aria-label="Gradient control diagram, scroll horizontally to inspect" tabindex="0">
+        <svg viewBox="0 0 1000 420" role="img" aria-label="Linear gradient mask diagram: three parallel dashed guides, two cyan endpoint handles, one white center handle, and one amber rotation handle">
+          <defs>
+            <linearGradient id="anatBg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#1d2a3c"></stop><stop offset="0.5" stop-color="#6b5a60"></stop>
+              <stop offset="0.78" stop-color="#c98a5c"></stop><stop offset="1" stop-color="#2a3026"></stop>
+            </linearGradient>
+            <linearGradient id="anatMask" gradientUnits="userSpaceOnUse" x1="250" y1="330" x2="760" y2="120">
+              <stop offset="0" stop-color="#ffd9a0" stop-opacity="0"></stop>
+              <stop offset="1" stop-color="#ffd9a0" stop-opacity="0.34"></stop>
+            </linearGradient>
+          </defs>
+          <rect width="1000" height="420" rx="14" fill="url(#anatBg)"></rect>
+          <rect width="1000" height="420" rx="14" fill="url(#anatMask)"></rect>
+          <!-- 三条参考线 -->
+          <g stroke="#fff" stroke-opacity="0.8" stroke-width="1.4" stroke-dasharray="7 6">
+            <line x1="118" y1="404" x2="612" y2="60"></line>
+            <line x1="310" y1="430" x2="804" y2="86"></line>
+            <line x1="500" y1="456" x2="994" y2="112"></line>
+          </g>
+          <!-- 控制点 -->
+          <circle cx="161" cy="374" r="12" fill="#3ad0e0" stroke="#fff" stroke-width="2.5"></circle>
+          <circle cx="741" cy="126" r="12" fill="#3ad0e0" stroke="#fff" stroke-width="2.5"></circle>
+          <circle cx="451" cy="250" r="10" fill="#fff"></circle>
+          <circle cx="520" cy="196" r="9" fill="#e08b3a" stroke="#fff" stroke-width="2"></circle>
+          <!-- 标注 -->
+          <g font-family="Outfit,Phos Sans SC,sans-serif" font-size="13" fill="rgba(255,255,255,.82)">
+            <line x1="161" y1="374" x2="92" y2="374" stroke="rgba(58,208,224,.6)" stroke-width="1"></line>
+            <text x="20" y="362">Drag endpoint</text><text x="20" y="380" fill="rgba(255,255,255,.5)" font-size="11.5">range</text>
+
+            <line x1="741" y1="126" x2="880" y2="86" stroke="rgba(58,208,224,.6)" stroke-width="1"></line>
+            <text x="888" y="82">Drag endpoint</text><text x="888" y="100" fill="rgba(255,255,255,.5)" font-size="11.5">range</text>
+
+            <line x1="451" y1="250" x2="300" y2="182" stroke="rgba(255,255,255,.4)" stroke-width="1"></line>
+            <text x="212" y="172">Drag center to move</text>
+
+            <line x1="520" y1="196" x2="592" y2="300" stroke="rgba(224,139,58,.6)" stroke-width="1"></line>
+            <text x="600" y="306">Rotation handle · direction</text>
+          </g>
+        </svg>
+        
+
+<div class="legend">
+          
+
+<div><i style="background-image: none; background-position: 0% 0%; background-size: auto; background-repeat: repeat; background-origin: padding-box; background-clip: border-box; background-attachment: scroll;"></i>Endpoint: sets the gradient width</div>
+
+          
+
+<div><i style="background-image: none; background-position: 0% 0%; background-size: auto; background-repeat: repeat; background-origin: padding-box; background-clip: border-box; background-attachment: scroll;"></i>Center: moves the whole gradient</div>
+
+          
+
+<div><i style="background-image: none; background-position: 0% 0%; background-size: auto; background-repeat: repeat; background-origin: padding-box; background-clip: border-box; background-attachment: scroll;"></i>Rotation handle: changes direction</div>
+
+          
+
+<div><i style="background-image: none; background-position: 0% 0%; background-size: auto; background-repeat: repeat; background-origin: padding-box; background-clip: border-box; background-attachment: scroll;"></i>Radial: ellipse and feather boundary</div>
+
+        </div>
+
+      </div><p class="diagram-caption">Control diagram, not an application screenshot. Scroll horizontally on a narrow screen to inspect the handles.</p>
+
+</article>
+
+</section>
+
+</div>
+
+</div>
+
+<section class="workflow-gallery page-width" id="screenshots">
+
+<div class="section-heading">
+
+<h2>A workflow you can see.</h2>
+
+<p>These five screenshots are from the real app and map to features that exist today — nothing invented. The workspace offers two layouts: <strong>A List</strong> for detailed one-at-a-time editing, <strong>B Filmstrip</strong> for continuous culling — both share the same edit state.</p></div>
+
+<div class="gallery-tabs" role="tablist" aria-label="Workflow screenshots"><button role="tab" type="button" id="gallery-tab-0" aria-controls="gallery-panel-0" aria-selected="true" tabindex="0" data-gallery="0">Curves · Tone</button><button role="tab" type="button" id="gallery-tab-1" aria-controls="gallery-panel-1" aria-selected="false" tabindex="-1" data-gallery="1">Linear gradient mask</button><button role="tab" type="button" id="gallery-tab-2" aria-controls="gallery-panel-2" aria-selected="false" tabindex="-1" data-gallery="2">Radial gradient mask</button><button role="tab" type="button" id="gallery-tab-3" aria-controls="gallery-panel-3" aria-selected="false" tabindex="-1" data-gallery="3">B Filmstrip layout</button><button role="tab" type="button" id="gallery-tab-4" aria-controls="gallery-panel-4" aria-selected="false" tabindex="-1" data-gallery="4">Pro export</button></div>
+
+<div class="gallery-panel" id="gallery-panel-0" role="tabpanel" aria-labelledby="gallery-tab-0">
+
+<figure class="legacy-wrap">
+          <img class="shot" src="../images/07-color-grading.webp" width="1920" height="1192" loading="lazy" alt="Phos curves panel: an RGB composite curve with five control points, saturation compensation below, plus collapsible color grading, HSL, black &amp; white, calibration, and film CLUT sections">
+          
+
+<figcaption>
+            
+
+<div class="t">Curves · Tone</div>
+
+            
+
+<div class="d">A five-point RGB composite curve, switchable to luminance and individual R / G / B channels. Below it, saturation compensation, then color grading, HSL, black &amp; white, calibration, and film CLUT fold out as needed.</div>
+
+          </figcaption>
+        </figure>
+
+<button class="image-zoom" type="button" data-zoom="0">Enlarge image</button></div>
+
+<div class="gallery-panel" id="gallery-panel-1" role="tabpanel" aria-labelledby="gallery-tab-1" hidden="">
+
+<figure class="legacy-wrap">
+          <img class="shot" src="../images/06-linear-gradient-mask.webp" width="1920" height="1193" loading="lazy" alt="Phos linear gradient mask: three parallel guides and three control points on the canvas, with mask tools and an independent adjustment stack on the right">
+          
+
+<figcaption>
+            
+
+<div class="t">Linear gradient mask</div>
+
+            
+
+<div class="d">Three on-canvas guides mark the gradient’s start, end, and axis: drag the center to move it, an endpoint to change its width, or the rotation handle to change direction. Every mask carries its own adjustment stack.</div>
+
+          </figcaption>
+        </figure>
+
+<button class="image-zoom" type="button" data-zoom="1">Enlarge image</button></div>
+
+<div class="gallery-panel" id="gallery-panel-2" role="tabpanel" aria-labelledby="gallery-tab-2" hidden="">
+
+<figure class="legacy-wrap">
+          <img class="shot" src="../images/08-radial-gradient-mask.webp" width="1920" height="1192" loading="lazy" alt="Phos radial gradient mask: an elliptical selection and three control points on the canvas, with horizontal radius, vertical radius, rotation, and feather on the right">
+          
+
+<figcaption>
+            
+
+<div class="t">Radial gradient mask</div>
+
+            
+
+<div class="d">After you drag out an ellipse, three handles take over: the center moves it, the edges scale it, the rotation handle changes its angle. Horizontal and vertical radii are independent; feather controls the inner-to-outer transition.</div>
+
+          </figcaption>
+        </figure>
+
+<button class="image-zoom" type="button" data-zoom="2">Enlarge image</button></div>
+
+<div class="gallery-panel" id="gallery-panel-3" role="tabpanel" aria-labelledby="gallery-tab-3" hidden="">
+
+<figure class="legacy-wrap">
+          <img class="shot" src="../images/12-b-filmstrip.webp" width="1920" height="1192" loading="lazy" alt="Phos B Filmstrip layout: a horizontal filmstrip along the bottom for continuous culling, with the canvas above and the inspector on the right">
+          
+
+<figcaption>
+            
+
+<div class="t">B Filmstrip layout</div>
+
+            
+
+<div class="d">A horizontal filmstrip along the bottom for continuous culling; arrow keys step through frames, and the canvas automatically fits the area not covered by the panel and filmstrip. Switch back to A List and the edit state, viewport, and undo stack are exactly where you left them.</div>
+
+          </figcaption>
+        </figure>
+
+<button class="image-zoom" type="button" data-zoom="3">Enlarge image</button></div>
+
+<div class="gallery-panel" id="gallery-panel-4" role="tabpanel" aria-labelledby="gallery-tab-4" hidden="">
+
+<figure class="legacy-wrap">
+          <img class="shot" src="../images/04-export-dialog.webp" width="1920" height="1192" loading="lazy" alt="Phos export sheet: format and bit depth, color space, long-edge resizing, watermark overlays, and export folder settings">
+          
+
+<figcaption>
+            
+
+<div class="t">Pro export</div>
+
+            
+
+<div class="d">8-bit and 16-bit TIFF output in multiple color spaces, long-edge resizing, text and image watermarks with nine-point placement, and a pinned export folder.</div>
+
+          </figcaption>
+        </figure>
+
+<button class="image-zoom" type="button" data-zoom="4">Enlarge image</button></div>
+
+</section>
+
+</main>
+
+<footer class="site-footer">
+<div class="footer-inner"><a href="#top" class="footer-wordmark" aria-label="Phos"><img src="../images/phos-sculpture.svg" width="1300" height="446" alt="Phos" loading="lazy"></a>
+<p class="footer-intro">Native Mac editing. Your photos stay local.</p>
+<div class="footer-columns">
+<div>
+<h3>Product</h3>
+<ul>
+<li><a href="../download/Phos-macOS-apple-silicon.dmg">Download for Mac</a></li>
+<li><a href="help.html#download-help">Mirrors and checksums</a></li></ul>
+
+<p>Phos 4.3.0 · 7.32 MB</p>
+<p>macOS 26+ · Apple silicon</p></div>
+
+<div>
+<h3>Features</h3>
+<ul>
+<li><a href="features.html#light">Light and colour</a></li>
+<li><a href="features.html#masks">Local masks</a></li>
+<li><a href="features.html#workflow">Workspace and batch</a></li>
+<li><a href="features.html#export">Export and watermarks</a></li></ul>
+</div>
+
+<div>
+<h3>Support</h3>
+<ul>
+<li><a href="help.html">Installation help</a></li>
+<li><a href="help.html#ai-model">Local AI model</a></li>
+<li><a href="https://github.com/Zenodeng/Phos/issues">Report an issue</a></li>
+<li><a href="https://github.com/Zenodeng/Phos/releases">Releases</a></li></ul>
+</div>
+
+<div>
+<h3>Open source and credits</h3>
+<ul>
+<li><a href="https://github.com/Zenodeng/Phos">GitHub</a></li>
+<li><a href="https://github.com/Zenodeng/Phos/blob/main/LICENSE">MIT License</a></li>
+<li><a href="#photo-credits">Photo credits</a></li>
+<li><a href="../features.html">简体中文</a></li></ul>
+</div>
+</div>
+
+<div class="footer-bottom">
+<p>Free and open source. No account or subscription.</p>
+<p>Version checks use the network. Photo processing and AI inference stay on your Mac.</p><p class="motion-explanation" id="motion-settings">Motion follows your system’s Reduce Motion setting.</p></div>
+
+<details class="photo-credits" id="photo-credits">
+<summary>Photo credits and editing recipes</summary>
+<p>Photography: <a href="https://unsplash.com/photos/a-lake-surrounded-by-mountains-in-the-middle-of-a-forest-r8vMMxGmv4I" target="_blank" rel="noopener">Mushegh Hakobyan</a> / <a href="https://unsplash.com/photos/mountains-and-a-lake-reflect-under-a-cloudy-sky-RyoQe3BU8gI" target="_blank" rel="noopener">Willian Justen de Vasconcellos</a> · <a href="https://unsplash.com/license" target="_blank" rel="noopener">Unsplash License</a>.<br>After images rendered by Phos Engine.render. <a href="../images/photo-edits/manifest.json">View sources and recipes</a></p></details>
+</div>
+</footer>
+
+<script src="../assets/brand-v2.js" defer=""></script>
+<script src="../assets/navigation.js" defer=""></script>
+<script src="../assets/motion.js" defer=""></script>
+<script>if(new URLSearchParams(location.search).has('audit')){const s=document.createElement('script');s.src='../assets/audit-metrics.js';s.defer=true;document.body.append(s);}</script>
+
+
+
+</body></html>

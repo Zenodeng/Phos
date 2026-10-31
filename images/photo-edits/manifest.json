@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "renderedAt": "2026-10-31",
+  "renderer": "Phos Engine.render; unmodified current app source; sRGB",
+  "sources": [
+    {
+      "id": "landro",
+      "author": "Mushegh Hakobyan",
+      "page": "https://unsplash.com/photos/a-lake-surrounded-by-mountains-in-the-middle-of-a-forest-r8vMMxGmv4I",
+      "asset": "https://images.unsplash.com/photo-1684962756735-bb70f883ddc5",
+      "license": "https://unsplash.com/license"
+    },
+    {
+      "id": "braies",
+      "author": "Willian Justen de Vasconcellos",
+      "page": "https://unsplash.com/photos/mountains-and-a-lake-reflect-under-a-cloudy-sky-RyoQe3BU8gI",
+      "asset": "https://images.unsplash.com/photo-1748897364750-a9ce5b1067cc",
+      "license": "https://unsplash.com/license"
+    }
+  ],
+  "looks": [
+    {
+      "clut": "常用推荐/Fuji 400H 2.png",
+      "exposure": 0.1,
+      "height": 1280,
+      "highlights": -12,
+      "id": "braies-fuji",
+      "renderer": "Unmodified Phos Engine.render from current source; sRGB JPEG",
+      "shadows": 16,
+      "sourcePhoto": "braies",
+      "strength": 0.75,
+      "width": 2048,
+      "before": "braies-fuji-before",
+      "after": "braies-fuji-after"
+    },
+    {
+      "clut": "常用推荐/Kodak Ektar 100.png",
+      "exposure": 0.2,
+      "height": 1536,
+      "highlights": -18,
+      "id": "landro-ektar",
+      "renderer": "Unmodified Phos Engine.render from current source; sRGB JPEG",
+      "shadows": 12,
+      "sourcePhoto": "landro",
+      "strength": 0.65,
+      "width": 2048,
+      "before": "landro-ektar-before",
+      "after": "landro-ektar-after"
+    },
+    {
+      "clut": "常用推荐/Kodak T-Max 400.png",
+      "exposure": 0.1,
+      "height": 1536,
+      "highlights": -10,
+      "id": "landro-tmax",
+      "renderer": "Unmodified Phos Engine.render from current source; sRGB JPEG",
+      "shadows": 8,
+      "sourcePhoto": "landro",
+      "strength": 1,
+      "width": 2048,
+      "before": "landro-tmax-before",
+      "after": "landro-tmax-after"
+    }
+  ]
+}

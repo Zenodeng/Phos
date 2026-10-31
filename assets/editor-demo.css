@@ -1,0 +1,295 @@
+.try-editor .demo{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 330px;
+  overflow:hidden;
+  background:var(--surface);
+  color:var(--ink);
+  border-radius:12px}
+.try-editor .stage{
+  position:relative;
+  min-height:540px;
+  overflow:hidden;
+  background:var(--canvas)}
+.try-editor .scene{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  display:block}
+.try-editor .cmp{
+  position:absolute;
+  left:20px;
+  top:20px;
+  display:flex;
+  background:var(--scrim);
+  padding:4px;
+  border-radius:100px}
+.try-editor .cmp button{
+  background:none;
+  padding:8px 14px;
+  color:var(--ink);
+  border-radius:100px;
+  min-height:38px}
+.try-editor .cmp button[aria-pressed=true]{
+  background:var(--ink);
+  color:var(--surface)}
+.try-editor .badge{
+  position:absolute;
+  bottom:18px;
+  left:20px;
+  color:var(--ink);
+  background:var(--scrim);
+  padding:6px 12px;
+  border-radius:100px}
+.try-editor .panel{
+  min-width:0}
+.try-editor .tabs{
+  display:flex;
+  background:var(--raised);
+  padding:8px 8px 0}
+.try-editor .tabs button{
+  background:none;
+  color:var(--muted);
+  padding:12px 4px;
+  flex:1;
+  min-height:68px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  flex-direction:column;
+  border-radius:7px 7px 0 0}
+.try-editor .tabs button svg{
+  width:18px;
+  height:18px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.5;
+  stroke-linecap:round;
+  stroke-linejoin:round}
+.try-editor .tabs button[aria-selected=true]{
+  color:var(--gold);
+  background:var(--surface)}
+.try-editor .panel .body{
+  padding:24px}
+.try-editor .pane{
+  display:none}
+.try-editor .pane.on{
+  display:block}
+.try-editor .pane h4{
+  margin-bottom:22px}
+.try-editor .ctrl{
+  display:grid;
+  grid-template-columns:45px minmax(0,1fr) 44px;
+  gap:10px;
+  align-items:center;
+  margin:18px 0}
+.try-editor .ctrl output{
+  text-align:right;
+  color:var(--muted)}
+.try-editor input[type=range]{
+  accent-color:var(--gold);
+  width:100%;
+  min-width:0;
+  cursor:pointer;
+  height:28px}
+.try-editor .sep{
+  height:18px}
+.try-editor .hint{
+  color:var(--muted);
+  margin-top:18px}
+.try-editor .hint strong{
+  color:var(--ink)}
+.try-editor .curve-box{
+  padding:10px;
+  background:var(--raised);
+  border-radius:8px}
+.try-editor .curve-box svg{
+  width:100%;
+  height:120px;
+  display:block}
+.try-editor .films{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px}
+.try-editor .films button{
+  background:var(--raised);
+  padding:13px 10px;
+  text-align:left;
+  border-radius:6px}
+.try-editor .films b{
+  display:block}
+.try-editor .films span{
+  display:block;
+  color:var(--muted);
+  margin-top:5px}
+.try-editor .films button[aria-pressed=true]{
+  background:var(--gold)}
+.try-editor .maskrow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:13px 10px;
+  margin:6px 0;
+  background:var(--raised);
+  border-radius:5px;
+  cursor:pointer}
+.try-editor .maskrow[aria-pressed=true]{
+  background:var(--gold)}
+.try-editor .maskrow em{
+  color:var(--muted)}
+.try-editor .demo-actions{
+  display:flex;
+  align-items:start;
+  justify-content:space-between;
+  gap:40px;
+  padding-top:20px}
+.try-editor .demo-actions p{
+  max-width:620px;
+  color:var(--muted)}
+.try-editor .text-button{
+  background:none;
+  padding:0 0 4px;
+  white-space:nowrap;
+  border-bottom:1px solid currentColor;
+  color:inherit}
+.try-editor .text-button:hover{
+  color:var(--gold)}
+.try-editor .curve-access{
+  display:grid;
+  gap:7px;
+  margin-top:12px}
+.try-editor .curve-access label{
+  }
+.try-editor .curve-access select{
+  background:var(--raised);
+  color:var(--ink);
+  padding:6px;
+  border:0;
+  border-radius:4px}
+.try-editor .curve-access .curve-input{
+  display:grid;
+  grid-template-columns:50px 1fr;
+  gap:10px;
+  align-items:center}
+@media (min-width:1800px){
+  }
+@media (max-width:1100px){
+  .try-editor .demo{
+  grid-template-columns:minmax(0,1fr) 300px}
+.try-editor .stage{
+  min-height:510px}
+}
+@media (max-width:760px){
+  .try-editor .demo{
+  grid-template-columns:1fr;
+  border-radius:8px}
+.try-editor .stage{
+  height:300px;
+  min-height:0}
+.try-editor .panel .body{
+  padding:20px}
+.try-editor .tabs{
+  padding-top:4px}
+.try-editor .tabs button{
+  min-height:60px}
+.try-editor .pane h4{
+  margin-bottom:15px}
+.try-editor .ctrl{
+  grid-template-columns:45px 1fr 45px;
+  margin:13px 0;
+  gap:13px}
+.try-editor .hint{
+  }
+.try-editor .demo-actions{
+  flex-direction:column;
+  gap:16px}
+.try-editor .demo-actions p{
+  }
+}
+@media (max-width:380px){
+  }
+@media (prefers-reduced-motion:reduce){
+  }
+.try-editor .pane .control-heading{
+  margin-bottom:22px}
+.try-editor .demo{
+  background:var(--surface);
+  box-shadow:0 0 0 1px var(--shadow);
+  border-radius:14px}
+.try-editor .panel{
+  background:var(--canvas)}
+.try-editor .tabs{
+  background:var(--raised)}
+.try-editor .tabs button[aria-selected=true]{
+  background:var(--canvas)}
+.try-editor .panel .body{
+  padding:23px}
+.try-editor .real-hist{
+  height:68px;
+  display:flex;
+  align-items:end;
+  gap:2px;
+  margin:22px 0 10px;
+  overflow:hidden}
+.try-editor .real-hist i{
+  display:block;
+  flex:1;
+  min-width:1px;
+  background:var(--muted);
+  min-height:1px;
+  border-radius:1px 1px 0 0}
+.try-editor .real-hist[data-state=loading] i{
+  background:var(--raised)}
+.try-editor .paint-tools{
+  margin:18px 0}
+.try-editor .paint-tools>label{
+  }
+.try-editor .paint-tools>div{
+  display:flex;
+  gap:20px;
+  flex-wrap:wrap;
+  margin-top:12px}
+.try-editor .hint{
+  }
+.try-editor .maskrow{
+  padding:10px;
+  background:var(--raised)}
+.try-editor .maskrow[aria-pressed=true]{
+  background:var(--gold)}
+.try-editor .maskrow em{
+  }
+.try-editor .ctrl{
+  margin:14px 0}
+.try-editor .pane .control-heading{
+  }
+.try-editor .demo-actions p{
+  }
+.try-editor .badge{
+  }
+.try-editor .pane.on{
+  }
+@media (max-width:1150px){
+  }
+@media (max-width:980px){
+  }
+@media (max-width:760px){
+  }
+@media (max-width:370px){
+  }
+@media (prefers-reduced-motion:reduce){
+  .try-editor .pane.on{
+  }
+}
+@media (max-width:760px){
+  }
+@media (max-width:760px){
+  }
+@media (max-width:370px){
+  }
+@media (prefers-reduced-motion:reduce){
+  }
+@media (max-width:760px){
+  }
+@media (max-width:370px){
+  }

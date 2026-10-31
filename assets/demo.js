@@ -9,7 +9,7 @@
     return isZh ? {
       originalBadge: '原图 · 未调整',
       renderBadge: function(n, ms){
-        return '第 ' + n + ' 次渲染 · ' + ms + 'ms · 4096 × 6144';
+        return '交互效果示意';
       },
       hints: {
         linear: '线性渐变工具已激活：<strong>直接拖动画面上的三个圆点</strong>——青色改范围，白色移中轴。参数只作用在选区内，和全局调整互不干扰。',
@@ -22,7 +22,7 @@
     } : {
       originalBadge: 'Original · Unadjusted',
       renderBadge: function(n, ms){
-        return 'Render ' + n + ' · ' + ms + 'ms · 4096 × 6144';
+        return 'Interactive effect preview';
       },
       hints: {
         linear: 'Linear gradient tool active: <strong>drag the three dots on the canvas</strong> — cyan changes the range, white moves the axis. Settings apply only inside the mask, independent of global adjustments.',
@@ -35,108 +35,6 @@
     };
   })();
 
-  /* ---------- 滚动入场 ---------- */
-  var rv = document.querySelectorAll('.rv');
-  var rvStagger = document.querySelectorAll('.rv-stagger');
-  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  if (!('IntersectionObserver' in window) || reduce) {
-    rv.forEach(function(el){ el.classList.add('in'); });
-    rvStagger.forEach(function(el){ el.classList.add('in'); });
-  } else {
-    var io = new IntersectionObserver(function(entries){
-      entries.forEach(function(en){
-        if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
-      });
-    }, {rootMargin:'0px 0px -12% 0px', threshold:.08});
-
-    rv.forEach(function(el){ io.observe(el); });
-    rvStagger.forEach(function(el){ io.observe(el); });
-  }
-
-  /* ---------- 导航栏滚动响应 ---------- */
-  var nav = document.querySelector('.nav');
-  var lastScroll = 0;
-  window.addEventListener('scroll', function(){
-    var scroll = window.pageYOffset;
-    if (scroll > 80) nav.classList.add('scrolled');
-    else nav.classList.remove('scrolled');
-
-    // 更新滚动进度条
-    var docHeight = document.documentElement.scrollHeight - window.innerHeight;
-    var progress = (scroll / docHeight) * 100;
-    document.documentElement.style.setProperty('--scroll-width', progress + '%');
-
-    lastScroll = scroll;
-  }, {passive:true});
-
-  /* ---------- 数字滚动动画 ----------
-     目标值、后缀与动画方式都从 data-* 读取（data-count / data-suffix / data-mode），
-     不再靠匹配文本里的中文（如「种」）——中英两版共用同一份脚本。 */
-  function statValue(el, n){
-    return n + (el.getAttribute('data-suffix') || '');
-  }
-  function tweenStat(el, duration){
-    var target = parseInt(el.getAttribute('data-count'), 10) || 0;
-    var startTime = null;
-    function easeOutExpo(t){ return t === 1 ? 1 : 1 - Math.pow(2, -10 * t); }
-    function step(ts){
-      if (!startTime) startTime = ts;
-      var progress = Math.min((ts - startTime) / duration, 1);
-      var eased = easeOutExpo(progress);
-      el.textContent = statValue(el, Math.floor(eased * target));
-      if (progress < 1) requestAnimationFrame(step);
-      else el.textContent = statValue(el, target);
-    }
-    requestAnimationFrame(step);
-  }
-  function stepStat(el){
-    var target = parseInt(el.getAttribute('data-count'), 10) || 64;
-    var n = 0;
-    var timer = setInterval(function(){
-      n = Math.min(target, n + 4);
-      if (n >= target) { clearInterval(timer); el.textContent = statValue(el, target); }
-      else el.textContent = statValue(el, n);
-    }, 30);
-  }
-  function typeStat(el){
-    var chars = (el.getAttribute('data-text') || el.textContent.trim()).split('');
-    var i = 0;
-    el.textContent = '';
-    var timer = setInterval(function(){
-      if (i < chars.length) { el.textContent += chars[i]; i++; }
-      else clearInterval(timer);
-    }, 150);
-  }
-  function runStat(el){
-    var mode = el.getAttribute('data-mode') || 'tween';
-    if (mode === 'step') stepStat(el);
-    else if (mode === 'type') typeStat(el);
-    else tweenStat(el, 2000);
-  }
-
-  if (!reduce) {
-    var statObserver = new IntersectionObserver(function(entries){
-      entries.forEach(function(en){
-        if (!en.isIntersecting) return;
-        statObserver.unobserve(en.target);
-        var b = en.target.querySelector('b');
-        if (b) runStat(b);
-      });
-    }, {threshold: 0.5});
-
-    document.querySelectorAll('.stat').forEach(function(el){
-      /* 首屏下方的四个数字不在这里跑：它们要跟着下滑一起带出来，
-         交给 .hero-reveal 的调度（见文末），否则页面一打开就先演完了 */
-      if (el.closest('.hero-reveal')) return;
-      statObserver.observe(el);
-    });
-  }
-
-  /* =========================================================
-     实时演示
-     渲染顺序:影调 → 色彩 → 胶片 → 蒙版，与 Phos 一致
-     ========================================================= */
   var stage = document.getElementById('stage');
   if (!stage) return;
 
@@ -179,7 +77,6 @@
   }
   var grainLayer    = document.getElementById('grainLayer');
   var vignetteLayer = document.getElementById('vignetteLayer');
-  var histBox    = document.getElementById('hist');
   var badgeText  = document.getElementById('badgeText');
   var shown      = 'after';
 
@@ -195,26 +92,6 @@
   };
 
   /* ---------- 直方图 ---------- */
-  var BARS = 34, barEls = [];
-  for (var i = 0; i < BARS; i++) {
-    var b = document.createElement('i');
-    b.style.height = '2px';
-    histBox.appendChild(b);
-    barEls.push(b);
-  }
-  function drawHist(){
-    // 用一条随参数移动的双峰分布模拟真实直方图
-    var shift = (S.exp / 100) * 10 + (S.con / 100) * 3;
-    var spread = 6 - (S.con / 100) * 2.4 + (S.sh / 100) * 1.2;
-    var peakA = BARS * 0.34 + shift, peakB = BARS * 0.70 + shift * 0.7;
-    var hA = 1 + (S.hi / 100) * 0.45, hB = 1 + (S.sh / 100) * 0.5;
-    for (var k = 0; k < BARS; k++) {
-      var gA = Math.exp(-Math.pow((k - peakA) / spread, 2)) * hA;
-      var gB = Math.exp(-Math.pow((k - peakB) / (spread * 0.78), 2)) * hB;
-      var v = Math.min(1, (gA * 0.92 + gB * 0.68) * (1 + (S.sat / 100) * 0.10));
-      barEls[k].style.height = Math.max(2, Math.round(v * 56)) + 'px';
-    }
-  }
 
   /* ---------- 色调曲线 ----------
      曲线 = 手动控制点（可拖动） + 滑杆贡献（对比 / 高光 / 阴影 / 曝光）。
@@ -271,7 +148,6 @@
   }
 
   /* ---------- 画面 ---------- */
-  var renderMs = 24;
   // 值没变就不写属性：颗粒层挂了 feTurbulence，无谓地改它会触发滤镜重算
   function setOpacityIfChanged(el, v){
     if (!el) return;
@@ -282,6 +158,7 @@
   function render(){
     var e = S.exp / 100, c = S.con / 100, s = S.sat / 100, vi = S.vib / 100, t = S.tem / 100;
     var strength = S.str / 100;
+    document.querySelectorAll('#maskGrad stop,#maskRadialGrad stop').forEach(function(stop){stop.setAttribute('stop-color',S.mExp<0?'#000':'#fff');});
 
     if (shown === 'before') {
       resetTone();
@@ -335,17 +212,17 @@
     setOpacityIfChanged(vignetteLayer, S.vig / 100 * 0.92);
 
     // 局部蒙版的曝光只在该蒙版被选中时叠加
-    maskLayer.style.opacity = guidesOn() ? Math.max(0, S.mExp / 100 * 0.85).toFixed(3) : '0';
+    maskLayer.style.opacity = guidesOn() ? Math.abs(S.mExp / 100 * 0.85).toFixed(3) : '0';
 
     renderCount++;
-    badgeText.textContent = UI.renderBadge(renderCount, renderMs);
+    badgeText.textContent = UI.renderBadge();
   }
 
   /* ---------- 控件绑定 ---------- */
   /* 拖动滑杆时 input 事件触发极密，每次都重建 9 个曲线控制点 + 重算直方图 + 重设滤镜
      会明显卡顿。用 rAF 合并成每帧一次。
 
-     ⚠️ requestAnimationFrame 在页面不可见（切标签页 / 切窗口 / 被遮挡）时不会触发。
+     requestAnimationFrame 在页面不可见（切标签页 / 切窗口 / 被遮挡）时不会触发。
         只靠它的话，一次没执行到的回调就会让 rafPending 永久卡在 true，
         之后所有滑杆都不再渲染 —— 而且蒙版拖动走的是直接 render()，仍然正常，
         症状就成了「只有非蒙版功能偶发无响应」。
@@ -355,7 +232,7 @@
     rafPending = false;
     if (rafTimer) { clearTimeout(rafTimer); rafTimer = 0; }
     // 即使直方图 / 曲线出错，也要保证画面本身渲染出来
-    try { drawHist(); drawCurve(); } finally { render(); }
+    try { drawCurve(); } finally { render(); }
   }
   function flushRender(){ if (rafPending) forceRender(); }
   function scheduleRender(){
@@ -446,7 +323,7 @@
   var tabBtns = document.querySelectorAll('.panel .tabs button');
   tabBtns.forEach(function(btn){
     btn.addEventListener('click', function(){
-      tabBtns.forEach(function(b){ b.setAttribute('aria-selected', String(b === btn)); });
+      tabBtns.forEach(function(b){ b.setAttribute('aria-selected', String(b === btn)); b.tabIndex = b === btn ? 0 : -1; });
       document.querySelectorAll('.pane').forEach(function(p){
         p.classList.toggle('on', p.id === btn.dataset.pane);
       });
@@ -478,7 +355,7 @@
   bBefore.addEventListener('click', function(){ spacePeek = false; setCompare('before'); });
 
   /* 按住空格临时看原图。
-     ⚠️ 只靠 keyup 复位会卡死：切窗口 / 失焦 / 切标签页时 keyup 收不到，
+     只靠 keyup 复位会卡死：切窗口 / 失焦 / 切标签页时 keyup 收不到，
         shown 会永远停在 'before'，表现就是「拖滑杆画面完全没反应」。
         所以额外用 blur 与 visibilitychange 兜底。 */
   var spaceDown = false, spacePeek = false;
@@ -522,7 +399,7 @@
   function guidesOn(){ return guides.getAttribute('opacity') === '1'; }
   function setGuides(on){
     guides.setAttribute('opacity', on ? '1' : '0');
-    maskLayer.style.opacity = on ? Math.max(0, S.mExp / 100 * 0.85).toFixed(3) : '0';
+    maskLayer.style.opacity = on ? Math.abs(S.mExp / 100 * 0.85).toFixed(3) : '0';
   }
 
   function rot(cx, cy, x, y, deg){
@@ -689,93 +566,58 @@
   /* ---------- 初始化 ---------- */
   updateMask();
   setGuides(true);
-  drawHist();
   drawCurve();
   render();
   window.addEventListener('resize', updateMask);
-
-  /* ---------- 首屏下方的截图与数字：下滑才带出来 ----------
-     原先截图固定在加载后 .7s、数字 .85s 起播，页面一打开就演完了，
-     用户滚下去看到的是已经演完的静态结果。现在统一由 .hero-reveal 进入视口触发：
-     截图 scaleIn，四个数字沿用原来的滚动动画与 100ms 错峰，
-     延迟与 CSS 上浮动画的 delay 对齐（.35s 起，逐个 +100ms）。 */
-  var heroReveal = document.querySelector('.hero-reveal');
-  if (heroReveal) {
-    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!('IntersectionObserver' in window) || reduceMotion) {
-      heroReveal.classList.add('in');
-    } else {
-      var heroIO = new IntersectionObserver(function(entries){
-        entries.forEach(function(en){
-          if (!en.isIntersecting) return;
-          heroIO.unobserve(en.target);
-          en.target.classList.add('in');
-          var heroStats = en.target.querySelectorAll('.stat b');
-          for (var hi = 0; hi < heroStats.length; hi++) {
-            (function(el, i){
-              setTimeout(function(){ runStat(el); }, 350 + i * 100);
-            })(heroStats[hi], hi);
-          }
-        });
-      }, {threshold:.15});
-      heroIO.observe(heroReveal);
-    }
-  }
-
-  /* ---------- 卡片悬停：柔和放大（原来这里是 3D 倾斜，
-       倾斜会把子元素带进 3D 空间，文字容易被卡片背景压住，
-       已改为纯 CSS 的呼吸式放大，见 .tile:hover / .feat:hover）---------- */
-
-  /* ---------- 界面演示：图片加载完成后淡入 ----------
-     懒加载的图如果直接出现会“啪”一下，很生硬。
-     失败也要显示，别把位置留白。 */
-  var galShots = document.querySelectorAll('.gal .shot');
-  for (var gi = 0; gi < galShots.length; gi++) {
-    (function(img){
-      function show(){ img.classList.add('is-loaded'); }
-      if (img.complete && img.naturalWidth) show();
-      else {
-        img.addEventListener('load',  show, {once:true});
-        img.addEventListener('error', show, {once:true});
+  var zh = document.documentElement.lang.toLowerCase().indexOf('zh') === 0;
+  tabBtns.forEach(function(btn,index){
+    btn.addEventListener('keydown',function(ev){
+      var next = index;
+      if(ev.key==='ArrowRight') next=(index+1)%tabBtns.length;
+      else if(ev.key==='ArrowLeft') next=(index+tabBtns.length-1)%tabBtns.length;
+      else if(ev.key==='Home') next=0;
+      else if(ev.key==='End') next=tabBtns.length-1;
+      else return;
+      ev.preventDefault();tabBtns[next].click();tabBtns[next].focus();
+    });
+  });
+  var pointSelect=document.getElementById('curvePoint'), pointValue=document.getElementById('curveValue');
+  function syncPoint(){ pointValue.value=Math.round(curvePts[Number(pointSelect.value)]*100); }
+  pointSelect.addEventListener('change',syncPoint);
+  pointValue.addEventListener('input',function(){ curvePts[Number(pointSelect.value)]=Number(this.value)/100;scheduleRender(); });
+  document.getElementById('resetCurve').addEventListener('click',function(){ for(var i=0;i<CVN;i++)curvePts[i]=i/(CVN-1);syncPoint();scheduleRender(); });
+  [[hStart,'s'],[hEnd,'e'],[hMid,'m'],[hRot,'r']].forEach(function(pair){
+    var el=pair[0],which=pair[1];
+    el.setAttribute('tabindex','0');el.setAttribute('role','button');
+    el.setAttribute('aria-label',zh ? ({s:'蒙版起点或横半径',e:'蒙版终点或纵半径',m:'蒙版中心',r:'蒙版旋转'})[which]+'，使用方向键调整' : ({s:'Mask start or horizontal radius',e:'Mask end or vertical radius',m:'Mask center',r:'Mask rotation'})[which]+', use arrow keys');
+    el.addEventListener('keydown',function(ev){
+      var keys={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
+      if(!keys[ev.key]||!guidesOn())return;
+      ev.preventDefault();ev.stopPropagation();var d=keys[ev.key],step=ev.shiftKey?.04:.01;
+      if(maskKind==='radial'){
+        if(which==='m'){rC.x=clampN(rC.x+d[0]*step);rC.y=clampN(rC.y+d[1]*step);}
+        else if(which==='s')rRX=clampR(rRX+(d[0]-d[1])*step*W);
+        else if(which==='e')rRY=clampR(rRY+(d[0]-d[1])*step*H);
+        else rAngle+=(d[0]-d[1])*3;
+      }else{
+        if(which==='s'||which==='m'){mS.x=clampN(mS.x+d[0]*step);mS.y=clampN(mS.y+d[1]*step);}
+        if(which==='e'||which==='m'){mE.x=clampN(mE.x+d[0]*step);mE.y=clampN(mE.y+d[1]*step);}
+        if(which==='r'){var cx=(mS.x+mE.x)/2,cy=(mS.y+mE.y)/2,a=(d[0]-d[1])*Math.PI/60,c=Math.cos(a),sn=Math.sin(a);[mS,mE].forEach(function(p){var x=(p.x-cx)*W,y=(p.y-cy)*H;p.x=cx+(x*c-y*sn)/W;p.y=cy+(x*sn+y*c)/H;});}
       }
-    })(galShots[gi]);
-  }
-
-  /* ---------- 滚动动效 ----------
-     原先有三个独立的 scroll 监听，而且每滚一帧就对每张 .shot 调一次
-     getBoundingClientRect() —— 强制同步重排，滚动发涩。
-     现在合并成一个，用 rAF 节流。 */
-  var heroWrap = document.querySelector('.hero .wrap');
-  var scrollTick = false;
-
-  function onScrollFrame(){
-    scrollTick = false;
-    var y = window.pageYOffset, vh = window.innerHeight;
-
-    if (reduce) {                     // 关掉动效时清掉可能残留的内联样式
-      if (heroWrap) { heroWrap.style.transform = ''; heroWrap.style.opacity = ''; }
-      return;
-    }
-
-    // Hero：轻微下移 + 淡出，但保留下限，不要整块消失
-    if (heroWrap) {
-      var p = Math.min(y / vh, 1);
-      heroWrap.style.transform = 'translateY(' + (y * 0.15).toFixed(1) + 'px)';
-      heroWrap.style.opacity = (1 - p * 0.55).toFixed(3);
-    }
-
-    /* 画廊图片的视差已移除：
-       它按 (视口高 - 图片顶部) × 0.03 下移图片，最多能移 27px，
-       而图注只有 24px 的上边距 —— 图片会盖住下面的文字。
-       而且图片与图注错位本身也不合理，图注应该跟着图走。 */
-  }
-  function requestScrollFrame(){
-    if (scrollTick) return;
-    scrollTick = true;
-    requestAnimationFrame(onScrollFrame);
-  }
-  window.addEventListener('scroll', requestScrollFrame, {passive:true});
-  window.addEventListener('resize', requestScrollFrame, {passive:true});
-  requestScrollFrame();
+      updateMask();render();
+    });
+  });
+  // Hidden guides never add invisible keyboard stops.
+  var originalSetGuides=setGuides;
+  setGuides=function(on){originalSetGuides(on);guides.setAttribute('aria-hidden',on?'false':'true');[hStart,hEnd,hMid,hRot].forEach(function(el){el.setAttribute('tabindex',on?'0':'-1');});};
+  setGuides(false);
+  document.getElementById('resetDemo').addEventListener('click',function(){
+    var defaults={rExp:14,rCon:18,rHi:-22,rSh:26,rSat:8,rTem:6,rVib:16,rStr:85,rGr:22,rVig:18,rMExp:52,rMFe:60};
+    Object.keys(defaults).forEach(function(id){var el=document.getElementById(id);el.value=defaults[id];el.dispatchEvent(new Event('input',{bubbles:true}));});
+    for(var i=0;i<CVN;i++)curvePts[i]=i/(CVN-1);
+    mS={x:.20,y:.72};mE={x:.78,y:.24};rC={x:.46,y:.46};rRX=300;rRY=200;rAngle=-18;
+    var film=document.querySelector('[data-film="k2383"]');if(film)film.click();
+    maskRows[0].click();tabBtns[0].click();bAfter.click();syncPoint();updateMask();forceRender();
+  });
 
 })();

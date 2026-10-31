@@ -1,0 +1,250 @@
+{
+  "blacks" : 0,
+  "bokehAmount" : 0,
+  "caAmount" : 0,
+  "calibShadowTint" : 0,
+  "clarity" : 0,
+  "clutName" : "常用推荐\/Kodak T-Max 400.png",
+  "clutStrength" : 1,
+  "contrast" : 0,
+  "cropH" : 1,
+  "cropW" : 1,
+  "cropX" : 0,
+  "cropY" : 0,
+  "curve" : {
+    "points" : [
+      [
+        0,
+        0
+      ],
+      [
+        0.25,
+        0.25
+      ],
+      [
+        0.5,
+        0.5
+      ],
+      [
+        0.75,
+        0.75
+      ],
+      [
+        1,
+        1
+      ]
+    ]
+  },
+  "curveB" : {
+    "points" : [
+      [
+        0,
+        0
+      ],
+      [
+        0.25,
+        0.25
+      ],
+      [
+        0.5,
+        0.5
+      ],
+      [
+        0.75,
+        0.75
+      ],
+      [
+        1,
+        1
+      ]
+    ]
+  },
+  "curveG" : {
+    "points" : [
+      [
+        0,
+        0
+      ],
+      [
+        0.25,
+        0.25
+      ],
+      [
+        0.5,
+        0.5
+      ],
+      [
+        0.75,
+        0.75
+      ],
+      [
+        1,
+        1
+      ]
+    ]
+  },
+  "curveR" : {
+    "points" : [
+      [
+        0,
+        0
+      ],
+      [
+        0.25,
+        0.25
+      ],
+      [
+        0.5,
+        0.5
+      ],
+      [
+        0.75,
+        0.75
+      ],
+      [
+        1,
+        1
+      ]
+    ]
+  },
+  "dehaze" : 0,
+  "denoise" : 0,
+  "denoiseColor" : 0,
+  "exposure" : 0.1,
+  "flipped" : false,
+  "gradeBalance" : 0,
+  "gradeBlend" : 50,
+  "gradeHigh" : {
+    "hue" : 0,
+    "lum" : 0,
+    "sat" : 0
+  },
+  "gradeMid" : {
+    "hue" : 0,
+    "lum" : 0,
+    "sat" : 0
+  },
+  "gradeShadow" : {
+    "hue" : 0,
+    "lum" : 0,
+    "sat" : 0
+  },
+  "grain" : 0,
+  "grainSize" : 0.6,
+  "halation" : 0,
+  "halationRadius" : 0.33,
+  "halationThreshold" : 60,
+  "hdrLimit" : 50,
+  "hdrMode" : false,
+  "highlights" : -10,
+  "hsl" : {
+    "aqua" : {
+      "hue" : 0,
+      "lum" : 0,
+      "sat" : 0
+    },
+    "blue" : {
+      "hue" : 0,
+      "lum" : 0,
+      "sat" : 0
+    },
+    "green" : {
+      "hue" : 0,
+      "lum" : 0,
+      "sat" : 0
+    },
+    "magenta" : {
+      "hue" : 0,
+      "lum" : 0,
+      "sat" : 0
+    },
+    "orange" : {
+      "hue" : 0,
+      "lum" : 0,
+      "sat" : 0
+    },
+    "purple" : {
+      "hue" : 0,
+      "lum" : 0,
+      "sat" : 0
+    },
+    "red" : {
+      "hue" : 0,
+      "lum" : 0,
+      "sat" : 0
+    },
+    "yellow" : {
+      "hue" : 0,
+      "lum" : 0,
+      "sat" : 0
+    }
+  },
+  "lumaCurve" : {
+    "points" : [
+      [
+        0,
+        0
+      ],
+      [
+        0.25,
+        0.25
+      ],
+      [
+        0.5,
+        0.5
+      ],
+      [
+        0.75,
+        0.75
+      ],
+      [
+        1,
+        1
+      ]
+    ]
+  },
+  "masks" : [
+
+  ],
+  "mono" : false,
+  "monoBlue" : 0.2,
+  "monoGreen" : 0.4,
+  "monoRed" : 0.4,
+  "perspectiveAuto" : false,
+  "perspectiveH" : 0,
+  "perspectiveV" : 0,
+  "primBlue" : {
+    "hue" : 0,
+    "sat" : 0
+  },
+  "primGreen" : {
+    "hue" : 0,
+    "sat" : 0
+  },
+  "primRed" : {
+    "hue" : 0,
+    "sat" : 0
+  },
+  "purpleFringe" : 0,
+  "refineSat" : 0,
+  "rotation" : 0,
+  "saturation" : 0,
+  "shadows" : 8,
+  "sharpen" : 0.35,
+  "sharpenDetail" : 0.5,
+  "sharpenMask" : 0,
+  "sharpenRadius" : 1,
+  "straighten" : 0,
+  "temperature" : 0,
+  "texture" : 0,
+  "tint" : 0,
+  "vibrance" : 0,
+  "vignette" : 0,
+  "vignetteStart" : 0.6,
+  "whiteBalanceGains" : [
+    1,
+    1,
+    1
+  ],
+  "whites" : 0
+}

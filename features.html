@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="phos" class="system-page"><head>
+
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phos — 完整功能介绍</title>
+
+<meta name="description" content="逐项了解 Phos 的影调、五通道曲线、胶片 LUT、九种局部蒙版、批量工作区、16 位 TIFF 导出与实验性本地 AI。">
+
+<meta name="keywords" content="Phos, RAW 修图软件, macOS RAW 编辑器, RAW 照片编辑器, RAW editor macOS, 胶片模拟 LUT, photo editing app, Swift, Core Image, 非破坏性编辑">
+
+<link rel="canonical" href="https://zenodeng.com/features.html">
+
+<link rel="alternate" hreflang="zh-CN" href="https://zenodeng.com/features.html">
+
+<link rel="alternate" hreflang="en" href="https://zenodeng.com/en/features.html">
+
+<link rel="alternate" hreflang="x-default" href="https://zenodeng.com/features.html">
+
+<meta name="google-site-verification" content="VpFD-mee9gLzbt9L78dK2LwITVrWsh_sOPfUTFIICrg">
+
+<meta name="theme-color" content="#0c0d10">
+
+<meta property="og:type" content="website">
+
+<meta property="og:locale" content="zh_CN">
+
+<meta property="og:locale:alternate" content="en_US">
+
+<meta property="og:title" content="Phos — 完整功能介绍">
+
+<meta property="og:description" content="逐项了解 Phos 的影调、五通道曲线、胶片 LUT、九种局部蒙版、批量工作区、16 位 TIFF 导出与实验性本地 AI。">
+
+<meta property="og:url" content="https://zenodeng.com/features.html">
+
+<meta property="og:image" content="https://zenodeng.com/images/native-20261031/workspace-b.webp">
+
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="images/phos-icon-dark.png" type="image/png">
+
+<link rel="stylesheet" href="assets/system.css">
+
+<link rel="stylesheet" href="assets/motion.css"></head>
+
+<body class="features-page"><a class="skip" href="#main">跳到正文</a>
+
+<nav class="site-nav" aria-label="主导航"><a class="wordmark" href="./" aria-label="Phos"><img class="nav-sculpture" src="images/phos-sculpture.svg" width="1300" height="446" alt=""></a>
+<div class="nav-links"><a href="index.html#workspace">工作区</a><a href="features.html" aria-current="page">完整功能</a><a href="index.html#studio">试着修图</a><a href="help.html">安装帮助</a></div>
+
+<div class="nav-actions"><button class="command-trigger" type="button" aria-haspopup="dialog"><span>搜索</span><kbd>⌘ K</kbd></button><a class="language" href="en/features.html" aria-label="Switch to English">EN</a><a class="nav-download" href="download/Phos-macOS-apple-silicon.dmg" download="">下载 Mac 版</a><button class="menu-toggle" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="mobile-menu" hidden="">菜单<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 6h14M3 14h14"></path></svg></button></div>
+</nav>
+
+<dialog class="mobile-menu" id="mobile-menu" aria-labelledby="mobile-menu-title">
+<div class="mobile-menu-header">
+<h2 id="mobile-menu-title">浏览 Phos</h2><button class="dialog-close menu-close" type="button">关闭</button></div>
+
+<nav aria-label="移动端导航"><a href="index.html#workspace">工作区</a><a href="features.html" aria-current="page">完整功能</a><a href="index.html#studio">试着修图</a><a href="help.html">安装帮助</a></nav>
+
+<div class="mobile-menu-footer"><a class="language" href="en/features.html">English</a><a class="button primary" href="download/Phos-macOS-apple-silicon.dmg" download="">下载 Mac 版</a></div>
+</dialog>
+
+<noscript>&lt;nav class="noscript-nav" aria-label="页面导航"&gt;&lt;a href="index.html#workspace"&gt;工作区&lt;/a&gt;&lt;a href="features.html" aria-current="page"&gt;完整功能&lt;/a&gt;&lt;a href="index.html#studio"&gt;试着修图&lt;/a&gt;&lt;a href="help.html"&gt;安装帮助&lt;/a&gt;&lt;/nav&gt;</noscript>
+
+<main id="main">
+
+<header id="top" class="features-hero reading-hero">
+
+<h1>从第一束光，<br>到最后一次导出。</h1>
+
+<p>把光线、色彩与每一步调整，放进你的摄影流程。</p><a class="button primary" href="index.html#studio">试着修一张<span aria-hidden="true">↗</span></a></header>
+
+<div class="feature-guide">
+
+<aside class="feature-sidebar">
+
+<details class="chapter-menu">
+
+<summary>浏览功能章节<span aria-hidden="true">+</span></summary>
+
+<nav aria-label="功能目录"><a href="#light">明暗与白平衡</a><a href="#color">曲线与色彩</a><a href="#film">胶片与质感</a><a href="#masks">九种局部蒙版</a><a href="#geometry">裁剪、几何与镜头</a><a href="#workflow">选片、预设与批量</a><a href="#export">导出与水印</a><a href="#local-ai">本地 AI 修图</a><a href="#native">原生、语言与文件</a></nav>
+
+</details>
+
+<nav aria-label="功能目录"><a href="#light">明暗与白平衡</a><a href="#color">曲线与色彩</a><a href="#film">胶片与质感</a><a href="#masks">九种局部蒙版</a><a href="#geometry">裁剪、几何与镜头</a><a href="#workflow">选片、预设与批量</a><a href="#export">导出与水印</a><a href="#local-ai">本地 AI 修图</a><a href="#native">原生、语言与文件</a></nav>
+
+<a class="text-link" href="index.html#studio">在网页上试一试</a></aside>
+
+<div class="feature-chapters">
+
+<section id="light" class="feature-chapter">
+
+<h2>明暗与白平衡</h2>
+
+<p class="chapter-intro">从整体亮度到局部层次，按照片的需要逐步调整。</p>
+
+<ul>
+
+<li>色温、色调与灰点吸管；曝光、对比、高光、阴影、白色和黑色。</li>
+
+<li>纹理、清晰度、去朦胧、鲜艳度、饱和度，以及 HDR 压高光与拉暗部。</li>
+
+<li>自动影调提供可继续手动调整的起点；原图对照和撤销始终可用。</li></ul>
+
+<figure class="feature-shot"><img src="images/native-20261031/workspace-a.webp" width="2160" height="1341" loading="lazy" alt="明暗调整工作区"><button type="button" class="image-zoom" data-zoom="feature-light">放大查看</button>
+
+<figcaption>明暗调整工作区</figcaption></figure>
+
+<details class="technical-note">
+
+<summary>补充规格与说明</summary>
+
+<div>
+
+<p>曝光、对比、高光、阴影、白色与黑色、纹理 / 清晰度 / 去朦胧、白平衡灰点吸管、HDR；五通道色调曲线、HSL 混色、颜色分级、黑白、校准。</p></div>
+
+</details>
+
+</section>
+
+<section id="color" class="feature-chapter">
+
+<h2>曲线与色彩</h2>
+
+<p class="chapter-intro">既能建立统一色调，也能处理一个颜色的微小偏差。</p>
+
+<ul>
+
+<li>RGB 合成、亮度、R / G / B 五通道曲线；可自由添加与移动控制点。</li>
+
+<li>阴影、中间调、高光三档颜色分级；混合与平衡控制分界。</li>
+
+<li>八个色相区间的 HSL 混色、黑白通道混合与原色校准。</li></ul>
+
+<figure class="feature-shot"><img src="images/workspace-color.webp" width="2160" height="1341" loading="lazy" alt="色彩曲线与颜色分级"><button type="button" class="image-zoom" data-zoom="feature-color">放大查看</button>
+
+<figcaption>色彩曲线与颜色分级</figcaption></figure>
+
+<details class="technical-note">
+
+<summary>补充规格与说明</summary>
+
+<div>
+
+<figure class="feature-shot"><img src="images/color-detail.webp" width="610" height="1575" alt="当前 Phos 色彩检查器局部，展示曲线、颜色分级与 HSL 调整" class="color-inspector" loading="lazy" decoding="async"><button type="button" class="image-zoom" data-zoom="inspector">放大查看</button>
+
+<figcaption>色彩检查器局部</figcaption></figure>
+
+</div>
+
+</details>
+
+</section>
+
+<section id="film" class="feature-chapter">
+
+<h2>胶片与质感</h2>
+
+<p class="chapter-intro">把色彩风格留成可重复使用的选择。</p>
+
+<ul>
+
+<li>HALD 胶片 LUT 及 Kodak 2383 / 2393 等印片模拟，强度连续可调。</li>
+
+<li>支持导入 .cube LUT，也能扫描自备 HaldCLUT 目录。</li>
+
+<li>颗粒与颗粒尺寸、暗角、光晕、锐化和亮度 / 色彩降噪。</li></ul>
+
+<details class="technical-note">
+
+<summary>补充规格与说明</summary>
+
+<div>
+
+<p>HALD CLUT 加载，含 Kodak 2383 / 2393 印片模拟，64³ 立方体重采样，强度可调。</p></div>
+
+</details>
+
+</section>
+
+<section id="masks" class="feature-chapter">
+
+<h2>九种局部蒙版</h2>
+
+<p class="chapter-intro">让想调整的区域拥有自己的参数。</p>
+
+<ul>
+
+<li>线性渐变、径向渐变、画笔、颜色范围、亮度范围。</li>
+
+<li>选择主体、选择人物、主体抠图与深度涂绘，结合本机视觉能力。</li>
+
+<li>每个蒙版都有独立调整栈，可反转、复制、删除；画布参考线与控制点可直接操作。</li></ul>
+
+<figure class="feature-shot"><img src="images/06-linear-gradient-mask.webp" width="1920" height="1192" loading="lazy" alt="线性渐变蒙版图示"><button type="button" class="image-zoom" data-zoom="feature-masks">放大查看</button>
+
+<figcaption>线性渐变蒙版图示</figcaption></figure>
+
+<details class="technical-note">
+
+<summary>补充规格与说明</summary>
+
+<div>
+
+<p>线性与径向渐变、画笔、颜色范围、亮度范围、选择主体、选择人物、主体抠图、深度涂绘，共九种。每个蒙版带独立调整栈，可反转、复制、删除。</p></div>
+
+</details>
+
+</section>
+
+<section id="geometry" class="feature-chapter">
+
+<h2>裁剪、几何与镜头</h2>
+
+<p class="chapter-intro">先照顾构图，再照顾边缘。</p>
+
+<ul>
+
+<li>八个裁剪手柄、画幅比例、90° 旋转、水平镜像与手动拉直。</li>
+
+<li>自动水平、自动与手动透视校正，裁切与旋转操作可撤销。</li>
+
+<li>横向色差与紫边抑制；人物深度数据或深度涂绘可用于焦外散景。</li></ul>
+
+</section>
+
+<section id="workflow" class="feature-chapter">
+
+<h2>选片、预设与批量</h2>
+
+<p class="chapter-intro">让一张照片的好调整，延续到同一组照片。</p>
+
+<ul>
+
+<li>A 沉浸编辑与 B 连续选片共享编辑状态，支持搜索、评分与标记。</li>
+
+<li>保存命名预设、命名快照、恢复快照，多选同步调整与批量导出。</li>
+
+<li>多重曝光平均、曝光融合、手持降噪等合成工作流。</li></ul>
+
+<figure class="feature-shot"><img src="images/native-20261031/workspace-b.webp" width="2160" height="1341" loading="lazy" alt="连续选片与胶片条"><button type="button" class="image-zoom" data-zoom="feature-workflow">放大查看</button>
+
+<figcaption>连续选片与胶片条</figcaption></figure>
+
+<details class="technical-note">
+
+<summary>补充规格与说明</summary>
+
+<div>
+
+<p>多选同步调整、恢复快照、命名预设、命名快照，以及多重曝光合成。</p>
+
+<p>4.0 重做的主窗口：A 列表逐张精修，B 胶片连续选片。工具条与系统交通灯共用中线，列表与检查器宽度可拖，切布局不打断编辑。</p></div>
+
+</details>
+
+</section>
+
+<section id="export" class="feature-chapter">
+
+<h2>导出与水印</h2>
+
+<p class="chapter-intro">把照片交到下一步，格式由你决定。</p>
+
+<ul>
+
+<li>JPEG、PNG、TIFF、HEIC 等输出；TIFF 支持 8 / 16 位与多色域。</li>
+
+<li>长边缩放、输出质量、输出锐化，以及文字或图片水印。</li>
+
+<li>水印支持九宫格位置、透明度和旋转，可固定导出目录。</li></ul>
+
+<figure class="feature-shot"><img src="images/04-export-dialog.webp" width="1920" height="1192" loading="lazy" alt="导出与水印设置"><button type="button" class="image-zoom" data-zoom="feature-export">放大查看</button>
+
+<figcaption>导出与水印设置</figcaption></figure>
+
+<details class="technical-note">
+
+<summary>补充规格与说明</summary>
+
+<div>
+
+<p>8 位与 16 位 TIFF 多色域、长边缩放、文字与图片水印九宫格叠加、固定导出目录。</p></div>
+
+</details>
+
+</section>
+
+<section id="local-ai" class="feature-chapter">
+
+<h2>本地 AI 修图</h2>
+
+<p class="chapter-intro">自然语言提出要求，参数仍然可以继续编辑。</p>
+
+<ul>
+
+<li>可生成全局调整与局部蒙版建议；先看双图预览，再决定是否应用。</li>
+
+<li>明确保留的滑杆受到约束；照片或参数变化后，过期建议不直接应用。</li>
+
+<li>约 3.1 GB 的底模单独安装，约 1.3 MB 的适配器随应用提供。实验性能力，以预览为准。</li></ul>
+
+<figure class="feature-shot"><img src="images/ai-preview.webp" width="1440" height="1146" loading="lazy" alt="本地 AI 建议预览"><button type="button" class="image-zoom" data-zoom="feature-local-ai">放大查看</button>
+
+<figcaption>本地 AI 建议预览</figcaption></figure>
+
+<details class="technical-note">
+
+<summary>补充规格与说明</summary>
+
+<div>
+
+<p>用中文描述想怎么改，模型给出全局滑杆与局部蒙版建议，先预览再应用。推理在本机完成，照片不上传。属实验性功能，模型需<a href="help.html#ai-model">单独安装</a>。</p></div>
+
+</details>
+
+<details class="validation-note">
+
+<summary>开发验证与行为约束（非独立测试）</summary>
+
+<div>
+
+<div class="ai-depth">
+
+<div class="ai-benchmark">
+
+<p class="note-sm" style="margin-top:16px">4.1 换上了新的微调权重：同一批 301 条受控验证指令上，首次严格完成率从 51.8% 提升到 <strong>94.0%</strong>。<strong>换的只是随应用附带的 1.3 MB 适配器，底模不用重新下载。</strong>这组成绩来自开发验证集，不是独立测试，也不代表审美。</p></div>
+
+<div class="feats">
+        
+
+<div class="feat">
+          
+
+<div class="ico"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"></path></svg></div>
+
+          
+
+<h3>说清楚就照做</h3>
+          
+
+<p>「只裁去左右各 5%、保留完整高度」这类要求由代码直接计算范围，不交给模型估。自动裁切会先验证尺寸与保留面积，方案不合法就退回重试一次，两次失败不应用。</p>
+        </div>
+
+        
+
+<div class="feat">
+          
+
+<div class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"></rect><path d="M8 12h8"></path><path d="M12 8v8"></path></svg></div>
+
+          
+
+<h3>说保留就真的保留</h3>
+          
+
+<p>明确要求「别动曝光」「白平衡保持原样」时，这些滑杆会从模型可写字段里移除，解码后再复核一次。全局与局部混合的要求照样支持。</p>
+        </div>
+
+        
+
+<div class="feat">
+          
+
+<div class="ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></div>
+
+          
+
+<h3>先看，再决定</h3>
+          
+
+<p>生成的方案先出预览，确认后才写入；一次应用对应一次撤销。局部效果会用真实渲染像素核对方向，不符合要求会重试或拦截。</p>
+        </div>
+
+      </div>
+
+<details class="original-ai">
+
+<summary>查看原有 AI 工作流示例</summary>
+
+<figure class="legacy-wrap" style="margin-top:56px">
+        <img class="shot" src="images/11-ai-panel.webp" width="1920" height="1192" loading="lazy" alt="Phos AI 修图面板：输入中文要求后给出曝光、色温、鲜艳度等参数建议，左右并排显示当前效果与建议效果，右上角标注「微调实验版」">
+        
+
+<figcaption>
+          
+
+<div class="t">AI 修图 · 微调实验版</div>
+
+          
+
+<div class="d">写一句要求，模型给出曝光、色温、鲜艳度等参数与局部蒙版建议。左边是当前效果，右边是建议效果，确认后才写入；不满意可以关掉，原图一个字节都没动。</div>
+
+        </figcaption>
+      </figure>
+
+</details>
+
+</div>
+
+</div>
+
+</details>
+
+</section>
+
+<section id="native" class="feature-chapter">
+
+<h2>原生、语言与文件</h2>
+
+<p class="chapter-intro">与 Mac 的工作方式保持一致。</p>
+
+<ul>
+
+<li>Swift、Core Image、Vision 与 AppKit；浅色和深色外观可跟随系统。</li>
+
+<li>界面支持跟随系统、简体中文和 English，参数与菜单即时切换。</li>
+
+<li>编辑写入原片旁档，旧 RawForge 旁档与已有预设保持兼容。</li></ul>
+
+<details class="technical-note">
+
+<summary>补充规格与说明</summary>
+
+<div>
+
+<p>ARW / CR3 / NEF 等主流 RAW，另支持 HEIF / HEIC / HIF、JPEG、PNG、TIFF、AVIF。</p>
+
+<p>界面语言可选「跟随系统 / 简体中文 / English」，即时切换、不用重启。菜单、参数、表单与提示共 668 条词条，工具提示与无障碍标签也会跟着变。</p>
+
+<p class="lead">非破坏性 RAW 照片编辑器，为 macOS 而写。所有像素处理都跑在你的 Mac 上，编辑结果写入原图旁的副档，原始文件一个字节都不会被改动。4.0 重做了整个工作区，并加入可选的本地 AI 修图。</p></div>
+
+</details>
+
+<article id="design" class="design-language">
+
+<h3>石墨与香槟金</h3>
+
+<p>界面以中性石墨灰面板打底，香槟金只点在「选中」与「编辑态」两处，其余全部克制。工整来自严格网格：固定行高节奏、等宽数字对齐、发丝分隔线。</p>
+
+<div class="design-principles">
+
+<article>
+
+<h4>克制的金色</h4>
+
+<p>金色不装饰，只表达状态：选中环、滑杆填充、胶片卡、导出主按钮。看到金色，就是在编辑。</p></article>
+
+<article>
+
+<h4>严格网格</h4>
+
+<p>26 / 27 / 34 px 固定行高节奏，16 px 统一内边距，数值列右对齐等宽。密度高而不乱。</p></article>
+
+<article>
+
+<h4>蒙版可视化</h4>
+
+<p>参考线是 1 px 白色虚线，控制点用颜色区分职责：线性渐变端点为青、中心为白、旋转柄为琥珀；径向渐变为黄。看到颜色就知道能拖什么。</p></article>
+
+</div>
+
+<div class="anatomy" role="region" aria-label="渐变控制点示意，可横向滚动查看" tabindex="0">
+        <svg viewBox="0 0 1000 420" role="img" aria-label="线性渐变蒙版示意图：三条平行虚线参考线，两个青色端点控制点、一个白色中心控制点与一个琥珀色旋转柄">
+          <defs>
+            <linearGradient id="anatBg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#1d2a3c"></stop><stop offset="0.5" stop-color="#6b5a60"></stop>
+              <stop offset="0.78" stop-color="#c98a5c"></stop><stop offset="1" stop-color="#2a3026"></stop>
+            </linearGradient>
+            <linearGradient id="anatMask" gradientUnits="userSpaceOnUse" x1="250" y1="330" x2="760" y2="120">
+              <stop offset="0" stop-color="#ffd9a0" stop-opacity="0"></stop>
+              <stop offset="1" stop-color="#ffd9a0" stop-opacity="0.34"></stop>
+            </linearGradient>
+          </defs>
+          <rect width="1000" height="420" rx="14" fill="url(#anatBg)"></rect>
+          <rect width="1000" height="420" rx="14" fill="url(#anatMask)"></rect>
+          <!-- 三条参考线 -->
+          <g stroke="#fff" stroke-opacity="0.8" stroke-width="1.4" stroke-dasharray="7 6">
+            <line x1="118" y1="404" x2="612" y2="60"></line>
+            <line x1="310" y1="430" x2="804" y2="86"></line>
+            <line x1="500" y1="456" x2="994" y2="112"></line>
+          </g>
+          <!-- 控制点 -->
+          <circle cx="161" cy="374" r="12" fill="#3ad0e0" stroke="#fff" stroke-width="2.5"></circle>
+          <circle cx="741" cy="126" r="12" fill="#3ad0e0" stroke="#fff" stroke-width="2.5"></circle>
+          <circle cx="451" cy="250" r="10" fill="#fff"></circle>
+          <circle cx="520" cy="196" r="9" fill="#e08b3a" stroke="#fff" stroke-width="2"></circle>
+          <!-- 标注 -->
+          <g font-family="Outfit,Phos Sans SC,sans-serif" font-size="13" fill="rgba(255,255,255,.82)">
+            <line x1="161" y1="374" x2="92" y2="374" stroke="rgba(58,208,224,.6)" stroke-width="1"></line>
+            <text x="20" y="362">拖端点</text><text x="20" y="380" fill="rgba(255,255,255,.5)" font-size="11.5">改范围</text>
+
+            <line x1="741" y1="126" x2="880" y2="86" stroke="rgba(58,208,224,.6)" stroke-width="1"></line>
+            <text x="888" y="82">拖端点</text><text x="888" y="100" fill="rgba(255,255,255,.5)" font-size="11.5">改范围</text>
+
+            <line x1="451" y1="250" x2="300" y2="182" stroke="rgba(255,255,255,.4)" stroke-width="1"></line>
+            <text x="212" y="172">拖中心整条平移</text>
+
+            <line x1="520" y1="196" x2="592" y2="300" stroke="rgba(224,139,58,.6)" stroke-width="1"></line>
+            <text x="600" y="306">旋转柄 · 改方向</text>
+          </g>
+        </svg>
+        
+
+<div class="legend">
+          
+
+<div><i style="background-image: none; background-position: 0% 0%; background-size: auto; background-repeat: repeat; background-origin: padding-box; background-clip: border-box; background-attachment: scroll;"></i>端点：控制渐变宽度</div>
+
+          
+
+<div><i style="background-image: none; background-position: 0% 0%; background-size: auto; background-repeat: repeat; background-origin: padding-box; background-clip: border-box; background-attachment: scroll;"></i>中心：整条平移</div>
+
+          
+
+<div><i style="background-image: none; background-position: 0% 0%; background-size: auto; background-repeat: repeat; background-origin: padding-box; background-clip: border-box; background-attachment: scroll;"></i>旋转柄：改变方向</div>
+
+          
+
+<div><i style="background-image: none; background-position: 0% 0%; background-size: auto; background-repeat: repeat; background-origin: padding-box; background-clip: border-box; background-attachment: scroll;"></i>径向渐变：椭圆与羽化边界</div>
+
+        </div>
+
+      </div><p class="diagram-caption">控制点示意图，非应用截图。窄屏可左右滑动查看完整标注。</p>
+
+</article>
+
+</section>
+
+</div>
+
+</div>
+
+<section class="workflow-gallery page-width" id="screenshots">
+
+<div class="section-heading">
+
+<h2>看得见的工作流。</h2>
+
+<p>下面五张是真实界面截图，对应 Phos 现有的功能，没有虚构的能力。工作区提供两种布局：<strong>A 列表</strong>适合逐张精修，<strong>B 胶片</strong>适合连续选片，两者共用同一份编辑状态。</p></div>
+
+<div class="gallery-tabs" role="tablist" aria-label="工作流截图"><button role="tab" type="button" id="gallery-tab-0" aria-controls="gallery-panel-0" aria-selected="true" tabindex="0" data-gallery="0">曲线 · 影调</button><button role="tab" type="button" id="gallery-tab-1" aria-controls="gallery-panel-1" aria-selected="false" tabindex="-1" data-gallery="1">线性渐变蒙版</button><button role="tab" type="button" id="gallery-tab-2" aria-controls="gallery-panel-2" aria-selected="false" tabindex="-1" data-gallery="2">径向渐变蒙版</button><button role="tab" type="button" id="gallery-tab-3" aria-controls="gallery-panel-3" aria-selected="false" tabindex="-1" data-gallery="3">B 胶片布局</button><button role="tab" type="button" id="gallery-tab-4" aria-controls="gallery-panel-4" aria-selected="false" tabindex="-1" data-gallery="4">专业导出</button></div>
+
+<div class="gallery-panel" id="gallery-panel-0" role="tabpanel" aria-labelledby="gallery-tab-0">
+
+<figure class="legacy-wrap">
+          <img class="shot" src="images/07-color-grading.webp" width="1920" height="1192" loading="lazy" alt="Phos 曲线面板：RGB 合成曲线带五个控制点，下方是饱和度补偿，以及折叠的颜色分级、HSL、黑白、校准与胶片 CLUT">
+          
+
+<figcaption>
+            
+
+<div class="t">曲线 · 影调</div>
+
+            
+
+<div class="d">五个控制点的 RGB 合成曲线，可切到亮度与 R / G / B 单通道；下方是饱和度补偿，颜色分级、HSL、黑白、校准与胶片 CLUT 依次折叠，需要时再展开。</div>
+
+          </figcaption>
+        </figure>
+
+<button class="image-zoom" type="button" data-zoom="0">放大查看</button></div>
+
+<div class="gallery-panel" id="gallery-panel-1" role="tabpanel" aria-labelledby="gallery-tab-1" hidden="">
+
+<figure class="legacy-wrap">
+          <img class="shot" src="images/06-linear-gradient-mask.webp" width="1920" height="1193" loading="lazy" alt="Phos 线性渐变蒙版：画布上三条平行参考线与三个控制点，右侧为蒙版工具与独立调整栈">
+          
+
+<figcaption>
+            
+
+<div class="t">线性渐变蒙版</div>
+
+            
+
+<div class="d">画布上三条参考线对应渐变的起止与中轴：拖中心移动，拖端点改宽度，拖旋转柄改变方向。每个蒙版都带独立调整栈。</div>
+
+          </figcaption>
+        </figure>
+
+<button class="image-zoom" type="button" data-zoom="1">放大查看</button></div>
+
+<div class="gallery-panel" id="gallery-panel-2" role="tabpanel" aria-labelledby="gallery-tab-2" hidden="">
+
+<figure class="legacy-wrap">
+          <img class="shot" src="images/08-radial-gradient-mask.webp" width="1920" height="1192" loading="lazy" alt="Phos 径向渐变蒙版：画布上的椭圆选区与三个控制点，右侧为横半径、纵半径、旋转与羽化">
+          
+
+<figcaption>
+            
+
+<div class="t">径向渐变蒙版</div>
+
+            
+
+<div class="d">拖出椭圆后由三个控制点接管：中心移动、边缘缩放、旋转柄改角度。横纵半径各自独立，羽化控制内外过渡。</div>
+
+          </figcaption>
+        </figure>
+
+<button class="image-zoom" type="button" data-zoom="2">放大查看</button></div>
+
+<div class="gallery-panel" id="gallery-panel-3" role="tabpanel" aria-labelledby="gallery-tab-3" hidden="">
+
+<figure class="legacy-wrap">
+          <img class="shot" src="images/12-b-filmstrip.webp" width="1920" height="1192" loading="lazy" alt="Phos B 胶片布局：底部横向胶片条用于连续选片，上方是画布与右侧检查器">
+          
+
+<figcaption>
+            
+
+<div class="t">B 胶片布局</div>
+
+            
+
+<div class="d">底部胶片条横向排列，方向键连续选片；画布自动 fit 到不被面板和胶片遮挡的区域。切回 A 列表时，编辑状态、视口与撤销栈都保持不变。</div>
+
+          </figcaption>
+        </figure>
+
+<button class="image-zoom" type="button" data-zoom="3">放大查看</button></div>
+
+<div class="gallery-panel" id="gallery-panel-4" role="tabpanel" aria-labelledby="gallery-tab-4" hidden="">
+
+<figure class="legacy-wrap">
+          <img class="shot" src="images/04-export-dialog.webp" width="1920" height="1192" loading="lazy" alt="Phos 导出面板：格式与位深、色彩空间、长边缩放、水印叠加与导出目录设置">
+          
+
+<figcaption>
+            
+
+<div class="t">专业导出</div>
+
+            
+
+<div class="d">8 位与 16 位 TIFF 多色域输出，长边缩放，文字与图片水印九宫格叠加，可固定导出目录。</div>
+
+          </figcaption>
+        </figure>
+
+<button class="image-zoom" type="button" data-zoom="4">放大查看</button></div>
+
+</section>
+
+</main>
+
+<footer class="site-footer">
+<div class="footer-inner"><a href="#top" class="footer-wordmark" aria-label="Phos"><img src="images/phos-sculpture.svg" width="1300" height="446" alt="Phos" loading="lazy"></a>
+<p class="footer-intro">原生 Mac 修图。照片不上传。</p>
+<div class="footer-columns">
+<div>
+<h3>产品</h3>
+<ul>
+<li><a href="download/Phos-macOS-apple-silicon.dmg">下载 Mac 版</a></li>
+<li><a href="help.html#download-help">下载渠道与校验</a></li></ul>
+
+<p>Phos 4.3.0 · 7.32 MB</p>
+<p>macOS 26+ · Apple 芯片</p></div>
+
+<div>
+<h3>功能</h3>
+<ul>
+<li><a href="features.html#light">明暗与色彩</a></li>
+<li><a href="features.html#masks">局部蒙版</a></li>
+<li><a href="features.html#workflow">工作区与批量</a></li>
+<li><a href="features.html#export">导出与水印</a></li></ul>
+</div>
+
+<div>
+<h3>支持</h3>
+<ul>
+<li><a href="help.html">安装帮助</a></li>
+<li><a href="help.html#ai-model">本地 AI 模型</a></li>
+<li><a href="https://github.com/Zenodeng/Phos/issues">反馈问题</a></li>
+<li><a href="https://github.com/Zenodeng/Phos/releases">Releases</a></li></ul>
+</div>
+
+<div>
+<h3>开源与来源</h3>
+<ul>
+<li><a href="https://github.com/Zenodeng/Phos">GitHub</a></li>
+<li><a href="https://github.com/Zenodeng/Phos/blob/main/LICENSE">MIT License</a></li>
+<li><a href="#photo-credits">摄影来源</a></li>
+<li><a href="en/features.html">English</a></li></ul>
+</div>
+</div>
+
+<div class="footer-bottom">
+<p>免费开源，无账号，无订阅。</p>
+<p>版本检查会联网；照片处理和 AI 推理均在本机完成。</p><p class="motion-explanation" id="motion-settings">动效遵循系统的减少动态效果设置。</p></div>
+
+<details class="photo-credits" id="photo-credits">
+<summary>摄影来源与样张参数</summary>
+<p>摄影: <a href="https://unsplash.com/photos/a-lake-surrounded-by-mountains-in-the-middle-of-a-forest-r8vMMxGmv4I" target="_blank" rel="noopener">Mushegh Hakobyan</a> / <a href="https://unsplash.com/photos/mountains-and-a-lake-reflect-under-a-cloudy-sky-RyoQe3BU8gI" target="_blank" rel="noopener">Willian Justen de Vasconcellos</a> · <a href="https://unsplash.com/license" target="_blank" rel="noopener">Unsplash License</a>.<br>样张修后图由 Phos Engine.render 生成。 <a href="images/photo-edits/manifest.json">查看来源与参数清单</a></p></details>
+</div>
+</footer>
+
+<script src="assets/brand-v2.js" defer=""></script>
+<script src="assets/navigation.js" defer=""></script>
+<script src="assets/motion.js" defer=""></script>
+<script>if(new URLSearchParams(location.search).has('audit')){const s=document.createElement('script');s.src='assets/audit-metrics.js';s.defer=true;document.body.append(s);}</script>
+
+
+
+</body></html>

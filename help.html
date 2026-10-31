@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="phos" class="system-page"><head>
+
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phos — 安装与下载帮助</title>
+
+<meta name="description" content="下载 Phos 4.3.0，查看 macOS 首次打开步骤、下载渠道、SHA256 校验、可选本地 AI 模型与 Windows 实验版说明。">
+
+<meta name="keywords" content="Phos, RAW 修图软件, macOS RAW 编辑器, RAW 照片编辑器, RAW editor macOS, 胶片模拟 LUT, photo editing app, Swift, Core Image, 非破坏性编辑">
+
+<link rel="canonical" href="https://zenodeng.com/help.html">
+
+<link rel="alternate" hreflang="zh-CN" href="https://zenodeng.com/help.html">
+
+<link rel="alternate" hreflang="en" href="https://zenodeng.com/en/help.html">
+
+<link rel="alternate" hreflang="x-default" href="https://zenodeng.com/help.html">
+
+<meta name="google-site-verification" content="VpFD-mee9gLzbt9L78dK2LwITVrWsh_sOPfUTFIICrg">
+
+<meta name="theme-color" content="#0c0d10">
+
+<meta property="og:type" content="website">
+
+<meta property="og:locale" content="zh_CN">
+
+<meta property="og:locale:alternate" content="en_US">
+
+<meta property="og:title" content="Phos — 安装与下载帮助">
+
+<meta property="og:description" content="下载 Phos 4.3.0，查看 macOS 首次打开步骤、下载渠道、SHA256 校验、可选本地 AI 模型与 Windows 实验版说明。">
+
+<meta property="og:url" content="https://zenodeng.com/help.html">
+
+<meta property="og:image" content="https://zenodeng.com/images/native-20261031/workspace-b.webp">
+
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="images/phos-icon-dark.png" type="image/png">
+
+<link rel="stylesheet" href="assets/system.css">
+
+<link rel="stylesheet" href="assets/motion.css"></head>
+
+<body class="help-page"><a class="skip" href="#main">跳到正文</a>
+
+<nav class="site-nav" aria-label="主导航"><a class="wordmark" href="./" aria-label="Phos"><img class="nav-sculpture" src="images/phos-sculpture.svg" width="1300" height="446" alt=""></a>
+<div class="nav-links"><a href="index.html#workspace">工作区</a><a href="features.html">完整功能</a><a href="index.html#studio">试着修图</a><a href="help.html" aria-current="page">安装帮助</a></div>
+
+<div class="nav-actions"><button class="command-trigger" type="button" aria-haspopup="dialog"><span>搜索</span><kbd>⌘ K</kbd></button><a class="language" href="en/help.html" aria-label="Switch to English">EN</a><a class="nav-download" href="download/Phos-macOS-apple-silicon.dmg" download="">下载 Mac 版</a><button class="menu-toggle" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="mobile-menu" hidden="">菜单<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 6h14M3 14h14"></path></svg></button></div>
+</nav>
+
+<dialog class="mobile-menu" id="mobile-menu" aria-labelledby="mobile-menu-title">
+<div class="mobile-menu-header">
+<h2 id="mobile-menu-title">浏览 Phos</h2><button class="dialog-close menu-close" type="button">关闭</button></div>
+
+<nav aria-label="移动端导航"><a href="index.html#workspace">工作区</a><a href="features.html">完整功能</a><a href="index.html#studio">试着修图</a><a href="help.html" aria-current="page">安装帮助</a></nav>
+
+<div class="mobile-menu-footer"><a class="language" href="en/help.html">English</a><a class="button primary" href="download/Phos-macOS-apple-silicon.dmg" download="">下载 Mac 版</a></div>
+</dialog>
+
+<noscript>&lt;nav class="noscript-nav" aria-label="页面导航"&gt;&lt;a href="index.html#workspace"&gt;工作区&lt;/a&gt;&lt;a href="features.html"&gt;完整功能&lt;/a&gt;&lt;a href="index.html#studio"&gt;试着修图&lt;/a&gt;&lt;a href="help.html" aria-current="page"&gt;安装帮助&lt;/a&gt;&lt;/nav&gt;</noscript>
+
+<main id="main" class="">
+
+<header id="top" class="reading-hero">
+
+<h1>安装与下载帮助</h1>
+
+<p class="help-back"><a href="index.html">返回首页</a></p></header>
+
+<div class="help-main">
+
+<section id="install" class="dark">
+    
+
+<div class="wrap">
+      
+      
+
+<h2>四步就能开始修图。</h2>
+      
+
+<p class="lead">Phos 目前没有做 Apple 公证，所以首次打开需要手动放行一次，之后不会再问。这是 macOS 对所有未公证应用的统一处理，不是 Phos 独有的问题。</p>
+    </div>
+
+    
+
+<div class="wide">
+      
+
+<div class="install-shots">
+        
+
+<figure class="rv">
+          <img class="shot" src="images/09-gatekeeper-dialog.webp" width="3024" height="1572" loading="lazy" alt="macOS 弹窗提示无法打开 Phos，因为 Apple 无法检查其是否包含恶意软件，弹窗中提供「完成」与「移到废纸篓」按钮">
+          
+
+<figcaption>双击 Phos 会被拦一次。这个弹窗里只有「完成」和「移到废纸篓」两个按钮 —— 点「完成」，别点废纸篓。</figcaption>
+        </figure>
+
+        
+
+<figure class="rv">
+          <img class="shot" src="images/10-system-settings-open-anyway.webp" width="1920" height="998" loading="lazy" alt="系统设置中的隐私与安全性面板，在安全性一栏显示 Phos 已被阻止，右侧有「仍要打开」按钮">
+          
+
+<figcaption>如果已经双击过，也可以到「系统设置 → 隐私与安全性」点「仍要打开」。</figcaption>
+        </figure>
+
+      </div>
+
+    </div>
+
+    
+
+<div class="wrap">
+      
+
+<div class="steps">
+        
+
+<div class="step">
+          
+
+<div>
+            
+
+<h3>下载并打开磁盘映像</h3>
+            
+
+<p>点页面上的「下载 macOS 版」按钮，或直接访问 <a href="download/Phos-macOS-apple-silicon.dmg">这个直链</a>，下载 <code>Phos-macOS-apple-silicon.dmg</code>，双击打开。</p>
+          </div>
+
+        </div>
+
+        
+
+<div class="step">
+          
+
+<div>
+            
+
+<h3>拖进「应用程序」</h3>
+            
+
+<p>映像窗口里把 <strong>Phos</strong> 拖到旁边的「应用程序」文件夹，然后弹出映像即可。</p>
+          </div>
+
+        </div>
+
+        
+
+<div class="step">
+          
+
+<div>
+            
+
+<h3>首次打开时放行</h3>
+            
+
+<p>Phos 是本地签名、未做 Apple 公证，所以第一次会被拦一次。双击 Phos，点弹窗里的「<strong>完成</strong>」关掉它，然后<strong>立刻</strong>打开「系统设置 → 隐私与安全性」，滚到最下面点「<strong>仍要打开</strong>」。</p>
+            
+
+<p><em>那个按钮在弹窗出现后大约一小时就会消失，所以要马上点。之后双击就能正常打开了。</em></p>
+          </div>
+
+        </div>
+
+        
+
+<div class="step">
+          
+
+<div>
+            
+
+<h3>嫌麻烦就用一条命令</h3>
+            
+
+<p>在「终端」里执行下面这行，可以直接去掉隔离标记，之后双击即可打开：</p>
+            
+
+<p style="margin-top:10px"><code>xattr -dr com.apple.quarantine /Applications/Phos.app</code></p>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+<section class="dl light" id="download-help">
+    
+
+<div class="wrap center">
+      
+      
+
+<h2>免费，开源，照片不上传。</h2>
+      
+
+<p class="lead">没有账号，没有订阅，没有云端上传。你的照片始终留在自己的 Mac 上。</p>
+      
+
+<div class="btnrow">
+        <a class="btn btn-primary" href="download/Phos-macOS-apple-silicon.dmg" download="">下载 Mac 版</a>
+        <a class="btn btn-outline-l" href="https://github.com/Zenodeng/Phos">在 GitHub 上查看</a>
+      </div>
+
+      
+
+<p class="note">需要 macOS 26.0 或更高版本 · Apple 芯片 · MIT 协议 · 当前版本 v4.3.0（7.32 MB）</p>
+      
+
+<div class="channels">
+        
+
+<h3>下载渠道 · 慢就换一个</h3>
+        
+
+<ul>
+          
+
+<li><a href="download/Phos-macOS-apple-silicon.dmg" download="">本站直链</a><span>Cloudflare，推荐</span></li>
+          
+
+<li><a href="https://cdn.jsdelivr.net/gh/Zenodeng/Phos@gh-pages/download/Phos-macOS-apple-silicon.dmg">jsDelivr CDN</a><span>国内有节点</span></li>
+          
+
+<li><a href="https://testingcf.jsdelivr.net/gh/Zenodeng/Phos@gh-pages/download/Phos-macOS-apple-silicon.dmg">jsDelivr 备用节点</a><span>换线路再试</span></li>
+          
+
+<li><a href="https://zenodeng.github.io/Phos/download/Phos-macOS-apple-silicon.dmg">GitHub Pages</a><span>备用</span></li>
+          
+
+<li><a href="https://github.com/Zenodeng/Phos/releases">GitHub Releases</a><span>需能访问 GitHub</span></li>
+        </ul>
+
+        
+
+<p class="sum">以上是同一个文件，SHA256 完全一致：<code>286e1e8f…3b7c</code>（完整值见 <a href="download/SHA256.txt">SHA256.txt</a>）。下载后可在终端执行 <code>shasum -a 256 下载的文件.dmg</code> 核对。</p>
+        
+
+<p class="sum">习惯用 zip 的话，<a href="download/Phos-macOS-apple-silicon.zip">这里也有一份</a>（内容相同）。</p>
+      </div>
+
+      
+
+<div class="channels" id="ai-model" style="margin-top:40px">
+        
+
+<h3>可选：本地 AI 修图模型</h3>
+        
+
+<ul>
+          
+
+<li><a href="download/Phos-Optional-Model-Installer.zip" download="">Phos-Optional-Model-Installer.zip</a><span>6.7 KB · 只含脚本与校验清单</span></li>
+        </ul>
+
+        
+
+<p class="sum">主程序里已经带了约 1.3 MB 的微调适配器，<strong>打开 AI 面板不需要再下载任何东西</strong>；但要让 AI 真正给出建议，还需要一份约 3.1 GB 的底模和一套 MLX 运行环境。这个 6.7 KB 的小包就是用来准备它们的 —— 它本身不含权重，会按固定版本从 Hugging Face 拉取并逐个文件校验 SHA256。</p>
+        
+
+<p class="sum" style="margin-top:14px"><strong>不安装也能正常使用全部常规编辑功能。</strong>AI 属实验性，装不装都不影响修图本身。</p>
+
+        
+
+<h3 style="margin-top:36px">安装前请确认</h3>
+        
+
+<p class="sum" style="margin-top:12px">
+          · Apple 芯片（M 系列）的 Mac，macOS 26 及以上<br>
+          · 已安装 <strong>arm64 版 Python 3.11</strong>（<a href="https://www.python.org/downloads/macos/" target="_blank" rel="noopener">python.org 下载页</a>，选 macOS 64-bit universal2 installer）<br>
+          · 至少 <strong>8 GB 空闲磁盘</strong>（权重约 3.1 GB，另加 Python 与 MLX 依赖）<br>
+          · 首次安装需要联网，要能访问 <code>pypi.org</code> 与 <code>huggingface.co</code><br>
+          · 16 GB 统一内存是本机测试配置，8 GB 未验证
+        </p>
+
+        
+
+<h3 style="margin-top:36px">三步装好</h3>
+        
+
+<ol style="margin-top: 12px; padding-left: 22px; list-style: decimal;">
+          
+
+<li style="display: list-item; padding: 0px; margin-bottom: 12px; border-width: 0px; border-style: none; border-image: none;"><strong>装 Python 3.11。</strong>从上面的链接下载安装包，双击装完。终端里执行 <code>python3.11 --version</code> 能打印出版本号，就说明装好了。</li>
+          
+
+<li style="display: list-item; padding: 0px; margin-bottom: 12px; border-width: 0px; border-style: none; border-image: none;"><strong>解压，双击「安装模型.command」。</strong>如果 macOS 提示「无法验证开发者」，<strong>右键点这个文件 →「打开」→ 再点一次「打开」</strong>。会弹出一个终端窗口开始安装。<br><strong>国内网络连不上 Hugging Face 的话，改双击「国内网络安装.command」</strong>，见下一节。</li>
+          
+
+<li style="display: list-item; padding: 0px; border-width: 0px; border-style: none; border-image: none;"><strong>等它跑完。</strong>先装固定版本的 MLX 依赖，再从 Hugging Face 下载模型（约 3.1 GB，看网速），最后逐个文件校验 SHA256。看到「安装并校验完成」就是好了。</li>
+        </ol>
+
+        
+
+<h3 style="margin-top:36px">国内网络怎么装</h3>
+        
+
+<p class="sum" style="margin-top:12px">安装脚本默认从 <code>huggingface.co</code> 拉模型、从 <code>pypi.org</code> 拉依赖。<strong>这两个地址在部分网络下会连不上或极慢</strong>，尤其是 Hugging Face。不用代理也能装。</p>
+        
+
+<p class="sum" style="margin-top:12px"><strong>最简单的办法：解压后双击「国内网络安装.command」</strong>（4.0.1 起随包提供）。它会把两个下载源换成 hf-mirror 与清华 PyPI 镜像，其余流程和普通安装完全一样，不需要碰终端。</p>
+        
+
+<p class="sum" style="margin-top:12px">想手动跑、或者想自己指定别的镜像，就在解压后的文件夹里打开终端（文件夹上右键 →「服务」→「新建位于文件夹位置的终端窗口」），粘贴执行：</p>
+        <pre style="margin: 12px 0px 0px; padding: 14px 16px; background-image: none; background-position: 0% 0%; background-size: auto; background-repeat: repeat; background-origin: padding-box; background-clip: border-box; background-attachment: scroll; border-radius: 10px; overflow-x: auto;"><code style="padding: 0px; word-break: normal; white-space: pre;">HF_ENDPOINT=https://hf-mirror.com \
+PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple \
+python3.11 install_model.py</code></pre>
+        
+
+<p class="sum" style="margin-top:12px"><strong>镜像只影响从哪里下载，不改变校验</strong>：模型文件仍会按清单逐个比对 SHA256，镜像上的文件只要有一个字节不对就会报错停下，不会装进坏文件。想先确认镜像通不通，直接打开 <a href="https://hf-mirror.com/mlx-community/Qwen3-VL-4B-Instruct-4bit" target="_blank" rel="noopener">hf-mirror.com 上的模型页</a> 看看。</p>
+        
+
+<p class="sum" style="margin-top:12px">Python 安装包从 python.org 下得慢的话，可以用华为云镜像：<a href="https://mirrors.huaweicloud.com/python/" target="_blank" rel="noopener">mirrors.huaweicloud.com/python</a>，挑 3.11.x 的 macOS universal2 安装包。</p>
+
+        
+
+<h3 style="margin-top:36px">装完怎么用</h3>
+        
+
+<p class="sum" style="margin-top:12px">默认装在 <code>~/Library/Application Support/Phos/MLX</code>，Phos 会自动找到它 —— 打开任意照片，在调整面板顶部点「AI 修图」就能用，不需要再做配置。</p>
+        
+
+<p class="sum" style="margin-top:12px">想装到别处：终端执行 <code>python3.11 install_model.py --environment /绝对路径/新的Phos-MLX</code>，装完后在应用里走「AI 修图 → 选择模型环境」，选那个<strong>同时包含 <code>.venv</code> 和 <code>model</code> 的外层文件夹</strong>。</p>
+        
+
+<p class="sum" style="margin-top:12px">检查是否装好：<code>python3 install_model.py --verify-only</code>。想卸载，直接删掉那个文件夹即可。</p>
+
+        
+
+<h3 style="margin-top:36px">常见问题</h3>
+        
+
+<div class="faq" style="margin-top:14px">
+          
+
+<details>
+            
+
+<summary>提示「请先安装 Apple Silicon Python 3.11」</summary>
+            
+
+<div class="ans">
+
+<p>要么没装，要么装成了 Intel 版。从 python.org 重新下载 universal2 安装包；装完在终端跑一次 <code>python3.11 --version</code> 确认，再双击「安装模型.command」。</p></div>
+
+          </details>
+
+          
+
+<details>
+            
+
+<summary>下载到一半失败了怎么办</summary>
+            
+
+<div class="ans">
+
+<p>脚本不会覆盖已有环境，中断后现场会保留。换一个能稳定访问 Hugging Face 的网络，重新双击「安装模型.command」即可；也可以先用 <code>--environment</code> 指定一个全新的空目录重装。脚本不会自动切换到未审核的镜像站。</p></div>
+
+          </details>
+
+          
+
+<details>
+            
+
+<summary>我只下载了模型文件，为什么还是用不了</summary>
+            
+
+<div class="ans">
+
+<p>权重和运行环境是两件事。只把 <code>.safetensors</code> 放进目录不会有 MLX 依赖，必须由这个安装包装好 <code>.venv</code>。两者都齐了，Phos 才能启动本地推理服务。</p></div>
+
+          </details>
+
+          
+
+<details>
+            
+
+<summary>装好后能移动或复制那个文件夹吗</summary>
+            
+
+<div class="ans">
+
+<p>不建议移动。里面的 <code>.venv</code> 记录的是绝对解释器路径，换位置会失效。要换地方，用 <code>--environment</code> 重新装一份。</p></div>
+
+          </details>
+
+          
+
+<details>
+            
+
+<summary>AI 会把我的照片传到哪里吗</summary>
+            
+
+<div class="ans">
+
+<p>不会。推理在本机的 <code>127.0.0.1</code> 上跑，照片不离开这台 Mac。只有安装阶段下载模型和依赖时需要联网。</p></div>
+
+          </details>
+
+        </div>
+
+        
+
+<p class="sum" style="margin-top:24px">底模是 <a href="https://huggingface.co/mlx-community/Qwen3-VL-4B-Instruct-4bit" target="_blank" rel="noopener"><code>mlx-community/Qwen3-VL-4B-Instruct-4bit</code></a>（固定版本 <code>2fd8dacb…</code>；国内镜像见 <a href="https://hf-mirror.com/mlx-community/Qwen3-VL-4B-Instruct-4bit" target="_blank" rel="noopener">hf-mirror</a>），许可为 <strong>Apache-2.0</strong>，来源说明与许可原文随应用内 <code>PhotoAIAdapter</code> 目录一并保留。Phos 的学术用途声明不改变第三方模型的授权条件。</p>
+      </div>
+
+      
+
+<div class="channels" id="windows" style="margin-top:40px">
+        
+
+<h3>Windows 版 · 实验性移植</h3>
+        
+
+<ul>
+          
+
+<li><a href="https://github.com/Zenodeng/Phos/releases/download/windows-4.0.1/Phos-4.0.1-Windows-x64.zip">Phos-4.0.1-Windows-x64.zip</a><span>323 MB · Windows 11 x64</span></li>
+        </ul>
+
+        
+
+<p class="sum">从 macOS 4.0.1 的源码移植而来，<strong>与 macOS 版分开维护</strong>，版本号也不同步。解压后双击根目录的 <code>Phos.exe</code>，它必须和 <code>app\</code> 文件夹放在同一目录。</p>
+        
+
+<p class="sum" style="margin-top:12px"><strong>它和 macOS 版不完全一样。</strong>Apple 的 Vision 与 Core Image 换成了本地实现（MODNet / BiRefNet / OpenCV / D3D11），主体分割、边缘和色彩结果可能有差异；<strong>不含本地 AI 修图</strong>；也没有 macOS 4.1 那一轮的界面更新（高级编辑、玻璃统一、裁剪热区、自动水平）。</p>
+        
+
+<p class="sum" style="margin-top:12px"><strong>未做代码签名</strong>，首次运行会被 Windows SmartScreen 拦下，需要点「更多信息 → 仍要运行」。完整的差异与已知限制见 <a href="https://github.com/Zenodeng/Phos/releases/tag/windows-4.0.1" target="_blank" rel="noopener">发布说明</a>。</p>
+      </div>
+
+    </div>
+
+  </section>
+
+</div>
+
+</main>
+
+<footer class="site-footer">
+<div class="footer-inner"><a href="#top" class="footer-wordmark" aria-label="Phos"><img src="images/phos-sculpture.svg" width="1300" height="446" alt="Phos" loading="lazy"></a>
+<p class="footer-intro">原生 Mac 修图。照片不上传。</p>
+<div class="footer-columns">
+<div>
+<h3>产品</h3>
+<ul>
+<li><a href="download/Phos-macOS-apple-silicon.dmg">下载 Mac 版</a></li>
+<li><a href="help.html#download-help">下载渠道与校验</a></li></ul>
+
+<p>Phos 4.3.0 · 7.32 MB</p>
+<p>macOS 26+ · Apple 芯片</p></div>
+
+<div>
+<h3>功能</h3>
+<ul>
+<li><a href="features.html#light">明暗与色彩</a></li>
+<li><a href="features.html#masks">局部蒙版</a></li>
+<li><a href="features.html#workflow">工作区与批量</a></li>
+<li><a href="features.html#export">导出与水印</a></li></ul>
+</div>
+
+<div>
+<h3>支持</h3>
+<ul>
+<li><a href="help.html">安装帮助</a></li>
+<li><a href="help.html#ai-model">本地 AI 模型</a></li>
+<li><a href="https://github.com/Zenodeng/Phos/issues">反馈问题</a></li>
+<li><a href="https://github.com/Zenodeng/Phos/releases">Releases</a></li></ul>
+</div>
+
+<div>
+<h3>开源与来源</h3>
+<ul>
+<li><a href="https://github.com/Zenodeng/Phos">GitHub</a></li>
+<li><a href="https://github.com/Zenodeng/Phos/blob/main/LICENSE">MIT License</a></li>
+<li><a href="#photo-credits">摄影来源</a></li>
+<li><a href="en/help.html">English</a></li></ul>
+</div>
+</div>
+
+<div class="footer-bottom">
+<p>免费开源，无账号，无订阅。</p>
+<p>版本检查会联网；照片处理和 AI 推理均在本机完成。</p><p class="motion-explanation" id="motion-settings">动效遵循系统的减少动态效果设置。</p></div>
+
+<details class="photo-credits" id="photo-credits">
+<summary>摄影来源与样张参数</summary>
+<p>摄影: <a href="https://unsplash.com/photos/a-lake-surrounded-by-mountains-in-the-middle-of-a-forest-r8vMMxGmv4I" target="_blank" rel="noopener">Mushegh Hakobyan</a> / <a href="https://unsplash.com/photos/mountains-and-a-lake-reflect-under-a-cloudy-sky-RyoQe3BU8gI" target="_blank" rel="noopener">Willian Justen de Vasconcellos</a> · <a href="https://unsplash.com/license" target="_blank" rel="noopener">Unsplash License</a>.<br>样张修后图由 Phos Engine.render 生成。 <a href="images/photo-edits/manifest.json">查看来源与参数清单</a></p></details>
+</div>
+</footer>
+
+<script src="assets/brand-v2.js" defer=""></script>
+<script src="assets/navigation.js" defer=""></script>
+<script src="assets/motion.js" defer=""></script>
+<script>if(new URLSearchParams(location.search).has('audit')){const s=document.createElement('script');s.src='assets/audit-metrics.js';s.defer=true;document.body.append(s);}</script>
+
+
+</body></html>

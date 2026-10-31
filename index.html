@@ -1,49 +1,80 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="warm">
-<head>
+<html lang="zh-CN" data-theme="phos" class="photo-edition"><head>
+
 <meta charset="utf-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Phos — macOS 原生 RAW 照片编辑器</title>
-<meta name="description" content="Phos 是一款 macOS 原生非破坏性 RAW 照片编辑器，用 Swift、Core Image 与 AppKit 编写。RAW 解码、完整影调与色彩、胶片 CLUT 模拟、九种局部蒙版、批量工作流与专业导出。全部处理在本机完成，不联网、无账号、无订阅。">
+<title>Phos — 原生 Mac RAW 照片编辑器</title>
+
+<meta name="description" content="Phos 是为 macOS 而写的免费开源 RAW 照片编辑器。胶片、曲线、九种局部蒙版与批量导出；本机处理，旁档保存，无账号、无订阅。">
+
 <meta name="keywords" content="Phos, RAW 修图软件, macOS RAW 编辑器, RAW 照片编辑器, RAW editor macOS, 胶片模拟 LUT, photo editing app, Swift, Core Image, 非破坏性编辑">
+
 <link rel="canonical" href="https://zenodeng.com/">
+
 <link rel="alternate" hreflang="zh-CN" href="https://zenodeng.com/">
+
 <link rel="alternate" hreflang="en" href="https://zenodeng.com/en/">
+
 <link rel="alternate" hreflang="x-default" href="https://zenodeng.com/">
-<meta name="google-site-verification" content="VpFD-mee9gLzbt9L78dK2LwITVrWsh_sOPfUTFIICrg" />
-<meta name="theme-color" content="#0B0A09">
-<script>document.documentElement.classList.add('is-top');</script>
+
+<meta name="google-site-verification" content="VpFD-mee9gLzbt9L78dK2LwITVrWsh_sOPfUTFIICrg">
+
+<meta name="theme-color" content="#0c0d10">
+
 <meta property="og:type" content="website">
+
 <meta property="og:locale" content="zh_CN">
+
 <meta property="og:locale:alternate" content="en_US">
-<meta property="og:title" content="Phos — macOS 原生 RAW 照片编辑器">
-<meta property="og:description" content="非破坏性 RAW 修图、胶片 CLUT 模拟、九种局部蒙版、批量工作流。全部在本机完成，不联网、无账号、无订阅。">
+
+<meta property="og:title" content="Phos — 原生 Mac RAW 照片编辑器">
+
+<meta property="og:description" content="Phos 是为 macOS 而写的免费开源 RAW 照片编辑器。胶片、曲线、九种局部蒙版与批量导出；本机处理，旁档保存，无账号、无订阅。">
+
 <meta property="og:url" content="https://zenodeng.com/">
-<meta property="og:image" content="https://zenodeng.com/images/05-tone-adjustments.jpg">
+
+<meta property="og:image" content="https://zenodeng.com/images/native-20261031/workspace-b.webp">
+
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23000'/%3E%3Ctext x='50' y='68' font-size='58' font-family='Helvetica' font-weight='600' fill='%23C9A876' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
+
+<link rel="icon" href="images/phos-icon-dark.png" type="image/png">
+
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "Phos",
   "alternateName": "RawForge",
-  "operatingSystem": "macOS 26+",
+  "operatingSystem": "macOS 26.0 or later (Apple silicon)",
   "applicationCategory": "MultimediaApplication",
   "applicationSubCategory": "RAW 照片编辑器 / Photo Editing",
   "softwareVersion": "4.3.0",
   "fileSize": "7.32MB",
   "isAccessibleForFree": true,
-  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "CNY"},
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "CNY"
+  },
   "license": "https://opensource.org/licenses/MIT",
-  "description": "macOS 原生非破坏性 RAW 照片编辑器：RAW 解码、完整影调与色彩调整、胶片 CLUT 模拟、九种局部蒙版、批量同步与导出水印。全部在本机完成，不联网、无账号、无订阅。",
+  "description": "macOS 原生非破坏性 RAW 照片编辑器：RAW 解码、完整影调与色彩调整、胶片 CLUT 模拟、九种局部蒙版、批量同步与导出水印。全部在本机完成，照片不上传、无账号、无订阅。",
   "url": "https://zenodeng.com/",
   "downloadUrl": "https://zenodeng.com/download/Phos-macOS-apple-silicon.dmg",
-  "installUrl": "https://zenodeng.com/#install",
-  "screenshot": "https://zenodeng.com/images/05-tone-adjustments.jpg",
-  "inLanguage": ["zh-CN", "en"],
-  "sameAs": ["https://github.com/Zenodeng/Phos"],
-  "author": {"@type": "Person", "name": "Zenodeng", "url": "https://github.com/Zenodeng"},
+  "installUrl": "https://zenodeng.com/help.html#install",
+  "screenshot": "https://zenodeng.com/images/native-20261031/workspace-b.webp",
+  "inLanguage": [
+    "zh-CN",
+    "en"
+  ],
+  "sameAs": [
+    "https://github.com/Zenodeng/Phos"
+  ],
+  "author": {
+    "@type": "Person",
+    "name": "Zenodeng",
+    "url": "https://github.com/Zenodeng"
+  },
   "featureList": [
     "RAW 解码（走 macOS 系统内置解码器）",
     "完整影调与色彩调整",
@@ -52,144 +83,338 @@
     "批量同步与批量导出",
     "导出水印",
     "非破坏性编辑，参数保存在侧车文件",
-    "纯本地处理，不联网、无账号、无订阅"
+    "纯本地处理，照片不上传、无账号、无订阅"
   ]
 }
 </script>
+
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
-    {"@type": "Question", "name": "Phos 收费吗？", "acceptedAnswer": {"@type": "Answer", "text": "免费，开源，采用 MIT 协议。没有订阅、没有内购、不需要注册账号，也不存在「专业版」的区分。"}},
-    {"@type": "Question", "name": "Phos 支持哪些 macOS 版本和机型？", "acceptedAnswer": {"@type": "Answer", "text": "需要 macOS 26.0 或更高版本，且是 Apple 芯片（M 系列）的 Mac。3.2.5 起最低系统从 15.0 提高到 26.0；旧系统请继续使用 3.2.4。当前只提供 Apple 芯片构建，Intel 机型暂不支持。"}},
-    {"@type": "Question", "name": "Phos 支持哪些相机的 RAW 文件？", "acceptedAnswer": {"@type": "Answer", "text": "走 macOS 系统内置的 RAW 解码（Core Image 与 ImageIO），凡是系统「预览」能打开的 RAW 都能编辑，覆盖佳能 CR2 / CR3、尼康 NEF、索尼 ARW、富士 RAF、Adobe DNG 等主流格式。更新的机型能否支持，取决于所用的 macOS 版本是否已内置该机型的解码器。"}},
-    {"@type": "Question", "name": "Phos 会上传我的照片吗？联网是做什么的？", "acceptedAnswer": {"@type": "Answer", "text": "不会上传。照片全程在本机处理，没有云端、没有账号、没有遥测。唯一的联网行为是启动时向官网查一次最新版本号，请求里不含任何关于用户、照片或这台 Mac 的信息。"}},
-    {"@type": "Question", "name": "Phos 和 Lightroom 有什么不一样？", "acceptedAnswer": {"@type": "Answer", "text": "Phos 是本地优先：不订阅、不云同步、不做移动端，专注把 RAW 解码、影调与色彩、胶片 CLUT 模拟、局部蒙版和批量导出做扎实。适合希望照片完全留在自己机器上的个人摄影流程。"}},
-    {"@type": "Question", "name": "第一次打开 Phos 被 macOS 拦住了怎么办？", "acceptedAnswer": {"@type": "Answer", "text": "这是所有未做 Apple 公证的应用都会遇到的统一提示。双击 Phos，点弹窗里的「完成」，打开「系统设置 → 隐私与安全性」，滚到底部点「仍要打开」。也可以在终端执行 xattr -dr com.apple.quarantine /Applications/Phos.app 一次性去掉隔离标记。"}},
-    {"@type": "Question", "name": "Phos 支持批量处理吗？", "acceptedAnswer": {"@type": "Answer", "text": "支持。可以批量导入、把一张照片的调整同步到其他照片，并批量导出（含导出水印）。"}},
-    {"@type": "Question", "name": "Phos 有 Windows 或 iPad 版吗？", "acceptedAnswer": {"@type": "Answer", "text": "macOS 版是主线。Windows 另有一个实验性移植版（4.0.1，从 macOS 4.0.1 源码移植），与 macOS 分开维护：Apple 的 Vision 与 Core Image 换成本地实现，不含本地 AI 修图，也未做代码签名，可在下载区获取。iPad 版仍在可行性评估阶段，没有可发布的时间表。"}},
-    {"@type": "Question", "name": "怎么反馈问题或参与 Phos 的开发？", "acceptedAnswer": {"@type": "Answer", "text": "到 GitHub 仓库（github.com/Zenodeng/Phos）提 Issue 或 Pull Request 都可以。项目用 Swift 编写，基于 Core Image、Vision 与 AppKit。"}}
+    {
+      "@type": "Question",
+      "name": "Phos 收费吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "免费，开源，采用 MIT 协议。没有订阅、没有内购、不需要注册账号，也不存在「专业版」的区分。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "支持哪些 macOS 版本和机型？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "需要 macOS 26.0 或更高版本，且是 Apple 芯片（M 系列）的 Mac。3.2.5 起最低系统从 15.0 提高到 26.0，旧系统请继续使用 3.2.4。当前只提供 Apple 芯片构建，Intel 机型暂不支持。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "支持哪些相机的 RAW 文件？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "走 macOS 系统内置的 RAW 解码（Core Image 与 ImageIO），凡是系统「预览」能打开的 RAW 都能编辑 —— 覆盖佳能 CR2 / CR3、尼康 NEF、索尼 ARW、富士 RAF、Adobe DNG 等主流格式。更新的机型能否支持，取决于你所用的 macOS 版本是否已内置该机型的解码器。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "会上传我的照片吗？联网是做什么的？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不会上传。照片全程在本机处理，没有云端、没有账号、没有遥测。唯一的联网行为是启动时向官网查一次最新版本号，请求里不含任何关于你、你的照片或这台 Mac 的信息。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "和 Lightroom 有什么不一样？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Phos 是本地优先：不订阅、不云同步、不做移动端，专注把 RAW 解码、影调与色彩、胶片 CLUT 模拟、局部蒙版和批量导出做扎实。适合希望照片完全留在自己机器上的个人摄影流程。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "第一次打开被 macOS 拦住了怎么办？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "这是所有未做 Apple 公证的应用都会遇到的统一提示，不是 Phos 独有的问题。双击 Phos → 点弹窗里的「完成」→ 打开「系统设置 → 隐私与安全性」→ 滚到底部点「仍要打开」。也可以在「终端」执行 xattr -dr com.apple.quarantine /Applications/Phos.app 一次性去掉隔离标记。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "支持批量处理吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "支持。可以批量导入、把一张照片的调整同步到其他照片，并批量导出（含导出水印）。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "有 Windows 或 iPad 版吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "macOS 版是主线。Windows 另有一个实验性移植版（4.0.1，从 macOS 4.0.1 的源码移植），与 macOS 分开维护：Apple 的 Vision 与 Core Image 换成了本地实现，不含本地 AI 修图，也未做代码签名。可以在 下载区 获取。iPad 版仍在可行性评估阶段，没有可发布的时间表。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "怎么反馈问题或参与开发？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "到 GitHub 仓库提 Issue 或 Pull Request 都可以。项目用 Swift 编写，基于 Core Image、Vision 与 AppKit。"
+      }
+    }
   ]
 }
 </script>
-<script>/* 首屏淡入的前置状态只在「允许动效」时才加。
-   否则关掉动效（prefers-reduced-motion）或禁用 JS 时，body 会永远停在 opacity:0，整页空白。 */
-if(!matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentElement.className+=' anim-on';}</script>
-<link rel="stylesheet" href="assets/site.css">
-<link rel="stylesheet" href="assets/theme.css">
-</head>
-<body>
 
-<nav class="nav">
-  <div class="inner">
-    <a class="brand" href="#top"><span class="dot"></span>Phos</a>
-    <div class="links">
-      <a href="#studio">试一试</a>
-      <a href="#gallery">界面演示</a>
-      <a href="#design">设计语言</a>
-      <a href="#features">功能</a>
-      <a href="#ai">AI 修图</a>
-      <a href="#install">安装</a>
-    </div>
-    <div class="act">
-      <a class="lang" href="en/" hreflang="en" aria-label="切换到英文版"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M2 8h12M8 2c2.4 2.4 2.4 9.6 0 12M8 2c-2.4 2.4-2.4 9.6 0 12"/></svg><span lang="en">EN</span></a>
-      <a href="https://github.com/Zenodeng/Phos/releases">下载</a>
-    </div>
-  </div>
+<link rel="stylesheet" href="assets/editor-demo.css">
+
+<link rel="stylesheet" href="assets/home-layout.css">
+
+<link rel="stylesheet" href="assets/system.css">
+
+<link rel="stylesheet" href="assets/motion.css"></head>
+
+<body><a class="skip" href="#main">跳到正文</a>
+
+<nav class="site-nav" aria-label="主导航"><a class="wordmark" href="./" aria-label="Phos"><img class="nav-sculpture" src="images/phos-sculpture.svg" width="1300" height="446" alt=""></a>
+<div class="nav-links"><a href="index.html#workspace">工作区</a><a href="features.html">完整功能</a><a href="index.html#studio">试着修图</a><a href="help.html">安装帮助</a></div>
+
+<div class="nav-actions"><button class="command-trigger" type="button" aria-haspopup="dialog"><span>搜索</span><kbd>⌘ K</kbd></button><a class="language" href="en/" aria-label="Switch to English">EN</a><a class="nav-download" href="download/Phos-macOS-apple-silicon.dmg" download="">下载 Mac 版</a><button class="menu-toggle" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="mobile-menu" hidden="">菜单<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 6h14M3 14h14"></path></svg></button></div>
 </nav>
 
-<main id="top">
+<dialog class="mobile-menu" id="mobile-menu" aria-labelledby="mobile-menu-title">
+<div class="mobile-menu-header">
+<h2 id="mobile-menu-title">浏览 Phos</h2><button class="dialog-close menu-close" type="button">关闭</button></div>
 
-  <header class="hero dark">
-    <!-- 首屏只放文案：截图与数字一律推到折叠线以下 -->
-    <div class="wrap hero-intro">
-      <p class="eyebrow">macOS 原生 · Swift · Core Image</p>
-      <h1>Phos</h1>
-      <p class="subhead">把 RAW 修图做成一件工整的事。</p>
-      <p class="lead">非破坏性 RAW 照片编辑器，为 macOS 而写。所有像素处理都跑在你的 Mac 上，编辑结果写入原图旁的副档，原始文件一个字节都不会被改动。4.0 重做了整个工作区，并加入可选的本地 AI 修图。</p>
-      <div class="btnrow">
-        <a class="btn btn-primary" href="download/Phos-macOS-apple-silicon.dmg" download>下载 macOS 版</a>
-        <a class="btn btn-outline-d" href="https://github.com/Zenodeng/Phos">查看源码</a>
-      </div>
-    </div>
-    <!-- 下滑到这里才由 .hero-reveal.in 统一触发：截图放大淡入 → 四个数字依次上浮 -->
-    <div class="hero-reveal">
-      <div class="wide hero-shot">
-        <img class="shot" src="images/05-tone-adjustments.jpg" width="1920" height="1192" alt="Phos 主界面（A 列表布局）：左侧素材列表，中间照片画布与直方图，右侧白平衡、基本影调与质感调整面板">
-      </div>
-      <div class="wrap">
-        <div class="stats">
-          <div class="stat"><b data-mode="tween" data-count="100" data-suffix="%">100%</b><span>本机运行</span></div>
-          <div class="stat"><b data-mode="tween" data-count="9" data-suffix=" 种">9 种</b><span>局部蒙版</span></div>
-          <div class="stat"><b data-mode="step" data-count="64" data-suffix="³">64³</b><span>胶片 CLUT</span></div>
-          <div class="stat"><b data-mode="type" data-text="MIT">MIT</b><span>开源协议</span></div>
-        </div>
-      </div>
-    </div>
-  </header>
+<nav aria-label="移动端导航"><a href="index.html#workspace">工作区</a><a href="features.html">完整功能</a><a href="index.html#studio">试着修图</a><a href="help.html">安装帮助</a></nav>
 
-  <!-- ================= 实时试用 ================= -->
-  <section id="studio" class="dark demo-intro">
-    <div class="wrap rv">
-      <p class="eyebrow"><span class="idx">01</span>试一试</p>
-      <h2>不用下载，先拖两下滑杆。</h2>
-      <p class="lead">下面是按 Phos 的渲染顺序做的一个演示：影调、色彩、胶片 CLUT、局部蒙版，参数与真实面板一一对应。滑杆、色调曲线上的圆点、画面上的蒙版控制点，都可以直接拖，画面会实时跟着变。</p>
-    </div>
+<div class="mobile-menu-footer"><a class="language" href="en/">English</a><a class="button primary" href="download/Phos-macOS-apple-silicon.dmg" download="">下载 Mac 版</a></div>
+</dialog>
 
-    <div class="wide">
-      <div class="demo rv">
+<noscript>&lt;nav class="noscript-nav" aria-label="页面导航"&gt;&lt;a href="index.html#workspace"&gt;工作区&lt;/a&gt;&lt;a href="features.html"&gt;完整功能&lt;/a&gt;&lt;a href="index.html#studio"&gt;试着修图&lt;/a&gt;&lt;a href="help.html"&gt;安装帮助&lt;/a&gt;&lt;/nav&gt;</noscript>
+
+<main id="main">
+
+<header id="top" class="photo-hero">
+
+<div class="hero-intro page-width">
+
+<h1><span class="hero-brand-text" translate="no">Phos</span>，属于你的<br>RAW 照片编辑器。</h1>
+
+<div class="hero-purpose">
+
+<p>照片留在本机，调整随时可逆。免费开源，让精修没有订阅负担。</p>
+
+<div class="hero-actions"><a class="button primary" href="download/Phos-macOS-apple-silicon.dmg" download="">下载 Mac 版<span class="download-icon" aria-hidden="true"><svg class="download-arrow" viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true"><path d="M12 4v16m-6-6 6 6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a><a class="quiet-link" href="#gallery">看修图样张<span aria-hidden="true">↗</span></a></div>
+
+<p class="hero-requirements">macOS 26+ · Apple 芯片 · 无需账号</p></div>
+
+</div>
+
+<figure class="hero-photo-story page-width">
+
+<div class="photo-comparison signature-product hero-compare" data-compare="hero" data-split="48">
+
+<div class="compare-viewport"><img class="compare-after" src="images/photo-edits/braies-fuji-after-1600.webp" srcset="images/photo-edits/braies-fuji-after-800.webp 800w, images/photo-edits/braies-fuji-after-1600.webp 1600w" sizes="(max-width: 760px) 100vw, 1280px" width="2048" height="1280" alt="秋日山湖与木船，经 Phos 胶片和影调调整后的摄影作品" fetchpriority="high" decoding="async">
+
+<div class="compare-before"><img src="images/photo-edits/braies-fuji-before-1600.webp" srcset="images/photo-edits/braies-fuji-before-800.webp 800w, images/photo-edits/braies-fuji-before-1600.webp 1600w" sizes="(max-width: 760px) 100vw, 1280px" width="2048" height="1280" alt="" decoding="async"></div>
+
+<div class="compare-labels" aria-hidden="true"><span>编辑前</span><span>Phos 修后</span></div>
+
+<span class="compare-divider" aria-hidden="true"><span><svg viewBox="0 0 32 24" width="32" height="24" fill="none" aria-hidden="true"><path d="m9 7-4 5 4 5M23 7l4 5-4 5M16 5v14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span><input class="compare-range" type="range" min="0" max="100" value="48" step="1" aria-label="Fuji 400H 2 修图前后对比，编辑前画面占比"></div>
+
+</div>
+
+<figcaption>
+
+<div><strong>Fuji 400H 2</strong><span>胶片浓度 75% · 曝光 +0.10 EV</span></div>
+
+<p>左右拖动，看看光线与色彩的变化。<br>摄影: <a href="https://unsplash.com/photos/mountains-and-a-lake-reflect-under-a-cloudy-sky-RyoQe3BU8gI" target="_blank" rel="noopener">Willian Justen de Vasconcellos</a></p></figcaption></figure>
+
+</header>
+
+<section class="safety-strip page-width" aria-label="照片与编辑安全">
+
+<p>放心调整。<br>原片始终是原片。</p>
+
+<ul>
+
+<li><span aria-hidden="true">✓</span>旁档保存，原片不改</li>
+
+<li><span aria-hidden="true">✓</span>每次调整可以撤销</li>
+
+<li><span aria-hidden="true">✓</span>照片在本机处理</li>
+
+<li><span aria-hidden="true">✓</span>直接打开文件夹开始</li></ul>
+
+</section>
+
+<section id="workspace" class="workflow-section editorial-section">
+
+<div id="capabilities" class="page-width workflow-heading">
+
+<div class="section-heading">
+
+<h2>从找到感觉，<br>到最后一像素。</h2>
+
+<p>顺着摄影的工作流，把风格、精修与输出接起来。</p></div>
+
+<nav class="workflow-index" aria-label="修图工作流"><a href="#find-style">找风格</a><a href="#refine">精修</a><a href="#finish-export">导出</a></nav>
+
+</div>
+
+<article id="find-style" class="workflow-look page-width">
+
+<div class="workflow-copy">
+
+<h3>先找到这张照片的感觉。</h3>
+
+<p>挑一款胶片，调到刚好的浓度。保留照片自己的颜色，也留一点你的偏好。</p>
+
+<ul class="feature-notes">
+
+<li>胶片 CLUT，浓度可调</li>
+
+<li>支持导入 .cube 与保存命名预设</li></ul>
+
+<a class="text-link" href="#gallery">比较三种胶片风格</a></div>
+
+<figure><img src="images/photo-edits/landro-ektar-after-1600.webp" srcset="images/photo-edits/landro-ektar-after-800.webp 800w, images/photo-edits/landro-ektar-after-1600.webp 1600w" sizes="(max-width:760px) 100vw, 720px" width="2048" height="1536" alt="Kodak Ektar 100 胶片配方呈现的山湖层次" loading="lazy">
+
+<figcaption>Kodak Ektar 100 <span>浓度 65%</span></figcaption></figure>
+
+</article>
+
+<article id="refine" class="workflow-refine">
+
+<div class="page-width">
+
+<div class="section-heading">
+
+<h3>把调整，放在需要的地方。</h3>
+
+<div>
+
+<p>全局影调、五通道曲线与 HSL 负责整体；九种局部蒙版照顾天空、人物和画面的细节。</p></div>
+
+</div>
+
+<div class="workspace-slot">
+
+<div class="mode-picker" role="group" aria-label="工作区布局"><button type="button" data-workspace="a" aria-pressed="true">A 沉浸编辑</button><button type="button" data-workspace="b" aria-pressed="false">B 连续选片</button></div>
+
+<figure class="workspace-figure">
+
+<div class="workspace-image"><img src="images/native-20261031/workspace-a.webp" width="2160" height="1341" alt="A 沉浸编辑" class="workspace-shot active" loading="lazy" decoding="async"><img src="images/native-20261031/workspace-b.webp" width="2160" height="1341" alt="B 连续选片" class="workspace-shot" aria-hidden="true" loading="lazy" decoding="async"></div>
+
+<button class="image-zoom" type="button" data-zoom="workspace-real">放大工作区</button>
+
+<figcaption id="workspaceCaption" aria-live="polite" data-a="当前展示 A 沉浸布局。浮动面板之间，照片铺满画布。" data-b="当前展示 B 选片布局。完整画面与底部胶片条，适合连续选片。">当前展示 A 沉浸布局。浮动面板之间，照片铺满画布。</figcaption></figure>
+
+</div>
+
+<div class="refine-bottom">
+
+<p>两种布局，共享同一份编辑状态。</p><a class="text-link" href="#studio">在网页上试一张</a></div>
+
+</div>
+
+</article>
+
+<article id="finish-export" class="workflow-export page-width">
+
+<figure class="feature-shot export-shot"><img src="images/native-20261031/export.webp" width="880" height="1172" loading="lazy" alt="Phos 导出窗口，展示格式、尺寸和水印设置"><button class="image-zoom" type="button" data-zoom="export-real">放大导出设置</button></figure>
+
+<div class="workflow-copy">
+
+<h3>修好了，就交给下一步。</h3>
+
+<p>一次导出一张，也能处理一组。按交付需要选择格式、色域、尺寸和水印。</p>
+
+<ul class="feature-notes">
+
+<li>JPEG / PNG / TIFF / HEIC</li>
+
+<li>16 位 TIFF、多色域、批量输出</li>
+
+<li>文字与图片水印</li></ul>
+
+<a class="text-link" href="features.html#export">了解导出选项</a></div>
+
+</article>
+
+<details class="try-editor page-width">
+
+<summary>亲手试一张：影调、曲线、胶片与蒙版<span aria-hidden="true">+</span></summary>
+
+<div class="editor-slot">
+
+<section id="studio" class="studio-section section-pad">
+
+<div class="section-heading">
+
+<h2>先修一张试试。</h2>
+
+<p>拖动滑杆，试着改变光线与色彩。也可以切换曲线、胶片和渐变蒙版，找到你喜欢的感觉。</p></div>
+
+<noscript>
+
+<p>开启 JavaScript 可操作演示；下方仍可查看真实软件截图与功能介绍。</p></noscript>
+
+<div class="demo" data-ui="">
 
         <!-- 画布 -->
-        <div class="stage" id="stage">
-          <svg class="scene" viewBox="0 0 1200 760" preserveAspectRatio="xMidYMid slice" aria-label="演示用照片，会随右侧参数实时变化" role="img">
+        
+
+<div class="stage" id="stage">
+          <svg class="scene" viewBox="0 0 1200 760" preserveAspectRatio="xMidYMid slice" aria-label="演示用照片及可用键盘调整的蒙版控制点" role="group">
             <defs>
               <!-- 蒙版：从暖到透明，用来做局部曝光 -->
               <linearGradient id="maskGrad" gradientUnits="userSpaceOnUse" x1="240" y1="560" x2="900" y2="220">
-                <stop offset="0" stop-color="#ffd9a0" stop-opacity="0"/>
-                <stop offset="0.5" stop-color="#ffd9a0" stop-opacity="0.26"/>
-                <stop offset="1" stop-color="#ffd9a0" stop-opacity="0.52"/>
+                <stop offset="0" stop-color="#ffd9a0" stop-opacity="0"></stop>
+                <stop offset="0.5" stop-color="#ffd9a0" stop-opacity="0.26"></stop>
+                <stop offset="1" stop-color="#ffd9a0" stop-opacity="0.52"></stop>
               </linearGradient>
               <!-- 径向蒙版：中心亮、向外衰减 -->
               <radialGradient id="maskRadialGrad" gradientUnits="userSpaceOnUse" cx="552" cy="350" r="300">
-                <stop offset="0" stop-color="#ffd9a0" stop-opacity="0.5"/>
-                <stop offset="0.62" stop-color="#ffd9a0" stop-opacity="0.3"/>
-                <stop offset="1" stop-color="#ffd9a0" stop-opacity="0"/>
+                <stop offset="0" stop-color="#ffd9a0" stop-opacity="0.5"></stop>
+                <stop offset="0.62" stop-color="#ffd9a0" stop-opacity="0.3"></stop>
+                <stop offset="1" stop-color="#ffd9a0" stop-opacity="0"></stop>
               </radialGradient>
-              <clipPath id="frameClip"><rect x="0" y="0" width="1200" height="760"/></clipPath>
+              <clipPath id="frameClip"><rect x="0" y="0" width="1200" height="760"></rect></clipPath>
               <!-- 色调曲线：查找表由 JS 的 drawCurve() 实时写入 tableValues -->
               <!-- 影调滤镜：所有调整合并在这一个 SVG 滤镜里。
                    不要拆成「外层 SVG 滤镜 + 内层 CSS filter」——外层滤镜会缓存输入，
                    后代元素的 CSS filter 变化不会让它重算，症状就是
                    「只有曲线能动、其他滑杆没反应」。
                    顺序与 CSS filter 链一致：亮度/对比 -> 饱和 -> 棕调 -> 色相 -> 曲线 -->
-              <filter id="toneFx" color-interpolation-filters="sRGB"
-                      x="-2%" y="-2%" width="104%" height="104%">
+              <filter id="toneFx" color-interpolation-filters="sRGB" x="-2%" y="-2%" width="104%" height="104%">
                 <feComponentTransfer>
-                  <feFuncR type="linear" id="tfRS" slope="1" intercept="0"/>
-                  <feFuncG type="linear" id="tfGS" slope="1" intercept="0"/>
-                  <feFuncB type="linear" id="tfBS" slope="1" intercept="0"/>
+                  <feFuncR type="linear" id="tfRS" slope="1" intercept="0"></feFuncR>
+                  <feFuncG type="linear" id="tfGS" slope="1" intercept="0"></feFuncG>
+                  <feFuncB type="linear" id="tfBS" slope="1" intercept="0"></feFuncB>
                 </feComponentTransfer>
-                <feColorMatrix type="saturate" id="tfSat" values="1"/>
-                <feColorMatrix type="matrix" id="tfSep"
-                  values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"/>
-                <feColorMatrix type="hueRotate" id="tfHue" values="0"/>
+                <feColorMatrix type="saturate" id="tfSat" values="1"></feColorMatrix>
+                <feColorMatrix type="matrix" id="tfSep" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"></feColorMatrix>
+                <feColorMatrix type="hueRotate" id="tfHue" values="0"></feColorMatrix>
                 <feComponentTransfer>
-                  <feFuncR type="table" id="tfCR" tableValues="0 1"/>
-                  <feFuncG type="table" id="tfCG" tableValues="0 1"/>
-                  <feFuncB type="table" id="tfCB" tableValues="0 1"/>
+                  <feFuncR type="table" id="tfCR" tableValues="0 1"></feFuncR>
+                  <feFuncG type="table" id="tfCG" tableValues="0 1"></feFuncG>
+                  <feFuncB type="table" id="tfCB" tableValues="0 1"></feFuncB>
                 </feComponentTransfer>
               </filter>
               <!-- 颗粒：feTurbulence 生成噪点 -->
-              <filter id="grainFx" x="0" y="0" width="100%" height="100%"
-                      color-interpolation-filters="sRGB">
-                <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="7"/>
-                <feColorMatrix type="saturate" values="0"/>
+              <filter id="grainFx" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+                <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="7"></feTurbulence>
+                <feColorMatrix type="saturate" values="0"></feColorMatrix>
               </filter>
               <!-- 暗角：中心透明、四角压暗 -->
               <radialGradient id="vignetteGrad" cx="0.5" cy="0.48" r="0.72">
-                <stop offset="0.45" stop-color="#000000" stop-opacity="0"/>
-                <stop offset="1" stop-color="#000000" stop-opacity="0.85"/>
+                <stop offset="0.45" stop-color="#000000" stop-opacity="0"></stop>
+                <stop offset="1" stop-color="#000000" stop-opacity="0.85"></stop>
               </radialGradient>
             </defs>
 
@@ -198,632 +423,664 @@ if(!matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentEle
               <g filter="url(#toneFx)">
               <g id="sceneGroup">
                 <!-- 演示用照片：AI 生成，无水印 -->
-                <image href="images/demo-scene.jpg" x="0" y="0" width="1200" height="760"
-                       preserveAspectRatio="xMidYMid slice"/>
+                <image href="images/photo-edits/braies-fuji-before-1600.webp" x="0" y="0" width="1200" height="760" preserveAspectRatio="xMidYMid slice"></image>
                 <!-- 蒙版着色层（局部曝光） -->
-                <rect id="maskLayer" x="0" y="0" width="1200" height="760" fill="url(#maskGrad)" opacity="0" style="mix-blend-mode:screen;transition:opacity .3s ease"/>
+                <rect id="maskLayer" x="0" y="0" width="1200" height="760" fill="url(#maskGrad)" opacity="0" style="mix-blend-mode:screen;transition:opacity .3s ease"></rect>
               </g>
               </g>
 
               <!-- 颗粒与暗角：后期效果层，不参与上面的影调 / 色彩调整链 -->
-              <rect id="grainLayer" x="0" y="0" width="1200" height="760" filter="url(#grainFx)"
-                    opacity="0" style="mix-blend-mode:overlay;pointer-events:none;transition:opacity .25s ease"/>
-              <rect id="vignetteLayer" x="0" y="0" width="1200" height="760" fill="url(#vignetteGrad)"
-                    opacity="0" style="pointer-events:none;transition:opacity .25s ease"/>
+              <rect id="grainLayer" x="0" y="0" width="1200" height="760" filter="url(#grainFx)" opacity="0" style="mix-blend-mode:overlay;pointer-events:none;transition:opacity .25s ease"></rect>
+              <rect id="vignetteLayer" x="0" y="0" width="1200" height="760" fill="url(#vignetteGrad)" opacity="0" style="pointer-events:none;transition:opacity .25s ease"></rect>
 
               <!-- 蒙版参考线：线性为三线，径向为椭圆 -->
-              <g id="guides" opacity="0" style="transition:opacity .28s ease">
+              <g id="localEffects"><defs><mask id="paintedRegion"><path id="paintRegionPath" stroke="#fff" fill="none" stroke-width="70" stroke-linecap="round" stroke-linejoin="round"></path></mask><filter id="depthBlur"><feGaussianBlur stdDeviation="10"></feGaussianBlur></filter></defs><path id="brushEffect" fill="none" stroke="#fff" stroke-width="70" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"></path><image id="rangeEffect" x="0" y="0" width="1200" height="760" opacity="0"></image><image id="depthEffect" x="0" y="0" width="1200" height="760" href="images/photo-edits/braies-fuji-before-1600.webp" preserveAspectRatio="xMidYMid slice" mask="url(#paintedRegion)" filter="url(#depthBlur)" opacity="0"></image></g><g id="guides" opacity="0" style="transition:opacity .28s ease">
                 <g id="linearGuides" stroke="#fff" stroke-opacity="0.78" stroke-width="1.4" stroke-dasharray="7 6" fill="none">
-                  <line id="gA" x1="0" y1="0" x2="0" y2="0"/>
-                  <line id="gB" x1="0" y1="0" x2="0" y2="0"/>
-                  <line id="gC" x1="0" y1="0" x2="0" y2="0"/>
+                  <line id="gA" x1="0" y1="0" x2="0" y2="0"></line>
+                  <line id="gB" x1="0" y1="0" x2="0" y2="0"></line>
+                  <line id="gC" x1="0" y1="0" x2="0" y2="0"></line>
                 </g>
                 <g id="radialGuides" style="display:none">
-                  <ellipse id="rOuter" cx="0" cy="0" rx="1" ry="1" fill="none"
-                           stroke="#f5d94a" stroke-opacity="0.9" stroke-width="1.8"/>
-                  <ellipse id="rInner" cx="0" cy="0" rx="1" ry="1" fill="none"
-                           stroke="#f5d94a" stroke-opacity="0.4" stroke-width="1.2" stroke-dasharray="5 5"/>
+                  <ellipse id="rOuter" cx="0" cy="0" rx="1" ry="1" fill="none" stroke="#f5d94a" stroke-opacity="0.9" stroke-width="1.8"></ellipse>
+                  <ellipse id="rInner" cx="0" cy="0" rx="1" ry="1" fill="none" stroke="#f5d94a" stroke-opacity="0.4" stroke-width="1.2" stroke-dasharray="5 5"></ellipse>
                 </g>
                 <g id="handles">
-                  <circle id="hStart" r="11" fill="#3ad0e0" stroke="#fff" stroke-width="2.5" style="cursor:grab"/>
-                  <circle id="hEnd"   r="11" fill="#3ad0e0" stroke="#fff" stroke-width="2.5" style="cursor:grab"/>
-                  <circle id="hMid"   r="9"  fill="#ffffff" stroke="#fff" stroke-width="1.5" style="cursor:grab"/>
-                  <circle id="hRot"   r="8.5" fill="#e08b3a" stroke="#fff" stroke-width="2" style="cursor:grab"/>
+                  <circle id="hStart" r="11" fill="#3ad0e0" stroke="#fff" stroke-width="2.5" style="cursor:grab"></circle>
+                  <circle id="hEnd" r="11" fill="#3ad0e0" stroke="#fff" stroke-width="2.5" style="cursor:grab"></circle>
+                  <circle id="hMid" r="9" fill="#ffffff" stroke="#fff" stroke-width="1.5" style="cursor:grab"></circle>
+                  <circle id="hRot" r="8.5" fill="#e08b3a" stroke="#fff" stroke-width="2" style="cursor:grab"></circle>
                 </g>
               </g>
             </g>
           </svg>
 
-          <div class="cmp" role="group" aria-label="前后对比">
+          
+
+<div class="cmp" role="group" aria-label="前后对比">
             <button type="button" id="btnAfter" aria-pressed="true">调整后</button>
             <button type="button" id="btnBefore" aria-pressed="false">原图</button>
           </div>
-          <div class="badge"><i></i><span id="badgeText">已渲染 24ms · 4096 × 6144</span></div>
+
+          
+
+<div class="badge"><span id="badgeText">交互效果示意</span></div>
+
         </div>
 
         <!-- 面板 -->
-        <div class="panel">
-          <div class="tabs" role="tablist">
-            <button type="button" role="tab" aria-selected="true" data-pane="p-light">
-              <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.1"/><path d="M8 1.2v1.5M8 13.3v1.5M1.2 8h1.5M13.3 8h1.5M3.2 3.2l1.1 1.1M11.7 11.7l1.1 1.1M12.8 3.2l-1.1 1.1M4.3 11.7l-1.1 1.1"/></svg>明暗</button>
-            <button type="button" role="tab" aria-selected="false" data-pane="p-color">
-              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 4.4h12.8M1.6 8h12.8M1.6 11.6h12.8"/><circle cx="5.4" cy="4.4" r="1.7"/><circle cx="10.6" cy="8" r="1.7"/><circle cx="6.6" cy="11.6" r="1.7"/></svg>色彩</button>
-            <button type="button" role="tab" aria-selected="false" data-pane="p-film">
-              <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.6" y="2.6" width="12.8" height="10.8" rx="1.6"/><path d="M1.6 6.2h12.8M1.6 9.8h12.8M5.2 2.6v10.8M10.8 2.6v10.8"/></svg>胶片</button>
-            <button type="button" role="tab" aria-selected="false" data-pane="p-mask">
-              <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.6" stroke-dasharray="2.3 2.1"/><circle cx="8" cy="8" r="2.1"/></svg>蒙版</button>
+        
+
+<div class="panel">
+          
+
+<div class="tabs" role="tablist">
+            <button type="button" role="tab" aria-selected="true" data-pane="p-light" id="tab-p-light" aria-controls="p-light" tabindex="0">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.1"></circle><path d="M8 1.2v1.5M8 13.3v1.5M1.2 8h1.5M13.3 8h1.5M3.2 3.2l1.1 1.1M11.7 11.7l1.1 1.1M12.8 3.2l-1.1 1.1M4.3 11.7l-1.1 1.1"></path></svg>明暗</button>
+            <button type="button" role="tab" aria-selected="false" data-pane="p-color" id="tab-p-color" aria-controls="p-color" tabindex="-1">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 4.4h12.8M1.6 8h12.8M1.6 11.6h12.8"></path><circle cx="5.4" cy="4.4" r="1.7"></circle><circle cx="10.6" cy="8" r="1.7"></circle><circle cx="6.6" cy="11.6" r="1.7"></circle></svg>色彩</button>
+            <button type="button" role="tab" aria-selected="false" data-pane="p-film" id="tab-p-film" aria-controls="p-film" tabindex="-1">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.6" y="2.6" width="12.8" height="10.8" rx="1.6"></rect><path d="M1.6 6.2h12.8M1.6 9.8h12.8M5.2 2.6v10.8M10.8 2.6v10.8"></path></svg>胶片</button>
+            <button type="button" role="tab" aria-selected="false" data-pane="p-mask" id="tab-p-mask" aria-controls="p-mask" tabindex="-1">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.6" stroke-dasharray="2.3 2.1"></circle><circle cx="8" cy="8" r="2.1"></circle></svg>蒙版</button>
           </div>
 
-          <div class="body">
+          
+
+<div class="body">
             <!-- 明暗 -->
-            <div class="pane on" id="p-light" role="tabpanel">
-              <h4>影调与明暗</h4>
-              <div class="ctrl"><label for="rExp">曝光</label><input type="range" id="rExp" min="-100" max="100" value="14"><output id="oExp">+0.14</output></div>
-              <div class="ctrl"><label for="rCon">对比</label><input type="range" id="rCon" min="-100" max="100" value="18"><output id="oCon">+18</output></div>
-              <div class="ctrl"><label for="rHi">高光</label><input type="range" id="rHi" min="-100" max="100" value="-22"><output id="oHi">−22</output></div>
-              <div class="ctrl"><label for="rSh">阴影</label><input type="range" id="rSh" min="-100" max="100" value="26"><output id="oSh">+26</output></div>
-              <div class="sep"></div>
-              <h4>直方图</h4>
-              <div class="hist" id="hist" aria-hidden="true"></div>
-              <div class="hint">拖动滑杆时，直方图会跟着影调重新分布——和 Phos 面板里一样，它读的是真实渲染结果。</div>
-            </div>
+            
+
+<div class="pane on" id="p-light" role="tabpanel" aria-labelledby="tab-p-light">
+              
+
+<h3 class="control-heading">影调与明暗</h3>
+              
+
+<div class="ctrl"><label for="rExp">曝光</label><input type="range" id="rExp" min="-100" max="100" value="14"><output id="oExp">+0.14</output></div>
+
+              
+
+<div class="ctrl"><label for="rCon">对比</label><input type="range" id="rCon" min="-100" max="100" value="18"><output id="oCon">+18</output></div>
+
+              
+
+<div class="ctrl"><label for="rHi">高光</label><input type="range" id="rHi" min="-100" max="100" value="-22"><output id="oHi">−22</output></div>
+
+              
+
+<div class="ctrl"><label for="rSh">阴影</label><input type="range" id="rSh" min="-100" max="100" value="26"><output id="oSh">+26</output></div>
+
+              
+
+<div class="sep"></div>
+
+              
+            
+
+<h3 class="control-heading">预览直方图</h3>
+
+<div id="hist" class="real-hist" role="img" aria-label="网页预览亮度分布"></div>
+
+<p id="histStatus" class="hint" aria-live="polite">正在读取网页预览…</p></div>
 
             <!-- 色彩 -->
-            <div class="pane" id="p-color" role="tabpanel">
-              <h4>色彩</h4>
-              <div class="ctrl"><label for="rSat">饱和</label><input type="range" id="rSat" min="-100" max="100" value="8"><output id="oSat">+8</output></div>
-              <div class="ctrl"><label for="rTem">色温</label><input type="range" id="rTem" min="-100" max="100" value="6"><output id="oTem">+6</output></div>
-              <div class="ctrl"><label for="rVib">鲜艳度</label><input type="range" id="rVib" min="-100" max="100" value="16"><output id="oVib">+16</output></div>
-              <div class="sep"></div>
-              <h4>色调曲线</h4>
-              <div class="curve-box">
+            
+
+<div class="pane" id="p-color" role="tabpanel" aria-labelledby="tab-p-color">
+              
+
+<h3 class="control-heading">色彩</h3>
+              
+
+<div class="ctrl"><label for="rSat">饱和</label><input type="range" id="rSat" min="-100" max="100" value="8"><output id="oSat">+8</output></div>
+
+              
+
+<div class="ctrl"><label for="rTem">色温</label><input type="range" id="rTem" min="-100" max="100" value="6"><output id="oTem">+6</output></div>
+
+              
+
+<div class="ctrl"><label for="rVib">鲜艳度</label><input type="range" id="rVib" min="-100" max="100" value="16"><output id="oVib">+16</output></div>
+
+              
+
+<div class="sep"></div>
+
+              
+
+<h3 class="control-heading">色调曲线</h3>
+              
+
+<div class="curve-box">
                 <svg id="curveSvg" viewBox="0 0 260 110" preserveAspectRatio="none" aria-label="色调曲线，可拖动圆点调整" role="img">
                   <g stroke="rgba(255,255,255,.13)" stroke-width="1">
-                    <line x1="0" y1="27.5" x2="260" y2="27.5"/>
-                    <line x1="0" y1="55" x2="260" y2="55"/>
-                    <line x1="0" y1="82.5" x2="260" y2="82.5"/>
-                    <line x1="65" y1="0" x2="65" y2="110"/>
-                    <line x1="130" y1="0" x2="130" y2="110"/>
-                    <line x1="195" y1="0" x2="195" y2="110"/>
+                    <line x1="0" y1="27.5" x2="260" y2="27.5"></line>
+                    <line x1="0" y1="55" x2="260" y2="55"></line>
+                    <line x1="0" y1="82.5" x2="260" y2="82.5"></line>
+                    <line x1="65" y1="0" x2="65" y2="110"></line>
+                    <line x1="130" y1="0" x2="130" y2="110"></line>
+                    <line x1="195" y1="0" x2="195" y2="110"></line>
                   </g>
-                  <polyline id="curveLine" fill="none" stroke="#C9A876" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points=""/>
+                  <polyline id="curveLine" fill="none" stroke="#C9A876" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points=""></polyline>
                   <g id="curvePts" fill="#C9A876" stroke="#0b0c0e" stroke-width="1.5"></g>
                 </svg>
               </div>
-              <div class="hint" style="margin-top:12px"><strong>拖动曲线上的圆点</strong>就能改形状，画面会实时跟着变；切到「明暗」页拖对比、高光、阴影，它也会一起动。双击复位。</div>
+
+              
+
+<div class="curve-access"><label for="curvePoint">曲线控制点</label><select id="curvePoint"><option value="0">0%</option><option value="1">12%</option><option value="2">25%</option><option value="3">37%</option><option value="4" selected="">50%</option><option value="5">62%</option><option value="6">75%</option><option value="7">87%</option><option value="8">100%</option></select>
+
+<div class="curve-input"><label for="curveValue">输出</label><input id="curveValue" type="range" min="0" max="100" value="50"></div>
+
+<button id="resetCurve" type="button" class="text-button">复位曲线</button></div>
+
+<div class="hint" style="margin-top:12px"><strong>拖动曲线上的圆点</strong>就能改形状，画面会实时跟着变；切到「明暗」页拖对比、高光、阴影，它也会一起动。双击复位。</div>
+
             </div>
 
             <!-- 胶片 -->
-            <div class="pane" id="p-film" role="tabpanel">
-              <h4>胶片 CLUT</h4>
-              <div class="films" id="films">
+            
+
+<div class="pane" id="p-film" role="tabpanel" aria-labelledby="tab-p-film">
+              
+
+<h3 class="control-heading">胶片色彩示意</h3>
+              
+
+<div class="films" id="films">
                 <button type="button" data-film="none" aria-pressed="false"><b>不使用</b><span>保持原始色彩</span></button>
-                <button type="button" data-film="k2383" aria-pressed="true"><b>Kodak 2383</b><span>印片模拟 · 64³</span></button>
-                <button type="button" data-film="k2393" aria-pressed="false"><b>Kodak 2393</b><span>印片模拟 · 64³</span></button>
-                <button type="button" data-film="f3510" aria-pressed="false"><b>Fuji 3510</b><span>印片模拟 · 64³</span></button>
+                <button type="button" data-film="k2383" aria-pressed="true"><b>Kodak 2383</b><span>色彩近似</span></button>
+                <button type="button" data-film="k2393" aria-pressed="false"><b>Kodak 2393</b><span>色彩近似</span></button>
+                <button type="button" data-film="f3510" aria-pressed="false"><b>Fuji 3510</b><span>色彩近似</span></button>
               </div>
-              <div class="sep"></div>
-              <div class="ctrl"><label for="rStr">浓度</label><input type="range" id="rStr" min="0" max="100" value="85"><output id="oStr">85%</output></div>
-              <div class="sep"></div>
-              <h4>颗粒与暗角</h4>
-              <div class="ctrl"><label for="rGr">颗粒</label><input type="range" id="rGr" min="0" max="100" value="22"><output id="oGr">22</output></div>
-              <div class="ctrl"><label for="rVig">暗角</label><input type="range" id="rVig" min="0" max="100" value="18"><output id="oVig">18</output></div>
-              <div class="hint" style="margin-top:14px">Phos 内置 303 个 HALD 胶片模拟 LUT，也可以扫描你自备的外置 HaldCLUT 目录；浓度连续可调，不是开关式的。</div>
+
+              
+
+<div class="sep"></div>
+
+              
+
+<div class="ctrl"><label for="rStr">浓度</label><input type="range" id="rStr" min="0" max="100" value="85"><output id="oStr">85%</output></div>
+
+              
+
+<div class="sep"></div>
+
+              
+
+<h3 class="control-heading">颗粒与暗角</h3>
+              
+
+<div class="ctrl"><label for="rGr">颗粒</label><input type="range" id="rGr" min="0" max="100" value="22"><output id="oGr">22</output></div>
+
+              
+
+<div class="ctrl"><label for="rVig">暗角</label><input type="range" id="rVig" min="0" max="100" value="18"><output id="oVig">18</output></div>
+
+              
             </div>
 
             <!-- 蒙版 -->
-            <div class="pane" id="p-mask" role="tabpanel">
-              <h4>局部调整（蒙版）</h4>
-              <div class="masklist">
-                <div class="maskrow" data-mask="linear" aria-pressed="true" role="button" tabindex="0"><span class="g"></span>线性渐变<em>可拖动</em></div>
-                <div class="maskrow" data-mask="radial" aria-pressed="false" role="button" tabindex="0"><span class="g"></span>径向渐变<em>拖出椭圆</em></div>
-                <div class="maskrow" data-mask="brush" aria-pressed="false" role="button" tabindex="0"><span class="g"></span>画笔<em>按住涂抹</em></div>
-                <div class="maskrow" data-mask="range" aria-pressed="false" role="button" tabindex="0"><span class="g"></span>颜色 / 亮度范围<em>画布取样</em></div>
-                <div class="maskrow" data-mask="ai" aria-pressed="false" role="button" tabindex="0"><span class="g"></span>选择主体 · 人物 · 抠图<em>本地 Vision</em></div>
-                <div class="maskrow" data-mask="depth" aria-pressed="false" role="button" tabindex="0"><span class="g"></span>深度涂绘<em>焦外散景</em></div>
+            
+
+<div class="pane" id="p-mask" role="tabpanel" aria-labelledby="tab-p-mask">
+              
+
+<h3 class="control-heading">局部调整（蒙版）</h3>
+              
+
+<div class="masklist">
+                
+
+<div class="maskrow" data-mask="linear" aria-pressed="true" role="button" tabindex="0"><span class="g"></span>线性渐变<em>可拖动</em></div>
+
+                
+
+<div class="maskrow" data-mask="radial" aria-pressed="false" role="button" tabindex="0"><span class="g"></span>径向渐变<em>拖出椭圆</em></div>
+
+                
+
+<div class="maskrow" data-mask="brush" aria-pressed="false" role="button" tabindex="0"><span class="g"></span>画笔<em>按住涂抹</em></div>
+
+                
+
+<div class="maskrow" data-mask="range" aria-pressed="false" role="button" tabindex="0"><span class="g"></span>颜色 / 亮度范围<em>画布取样</em></div>
+
+                
+
+<div class="maskrow" data-mask="ai" aria-pressed="false" role="button" tabindex="0"><span class="g"></span>选择主体 · 人物 · 抠图<em>本地 Vision</em></div>
+
+                
+
+<div class="maskrow" data-mask="depth" aria-pressed="false" role="button" tabindex="0"><span class="g"></span>深度涂绘<em>焦外散景</em></div>
+
               </div>
-              <div class="sep"></div>
-              <div class="ctrl"><label for="rMExp">曝光</label><input type="range" id="rMExp" min="-100" max="100" value="52"><output id="oMExp">+52</output></div>
-              <div class="ctrl"><label for="rMFe">羽化</label><input type="range" id="rMFe" min="0" max="100" value="60"><output id="oMFe">0.60</output></div>
-              <div class="sep"></div>
-              <div class="hint" id="maskHint">线性渐变工具已激活：<strong>直接拖动画面上的三个圆点</strong>——青色改范围，白色移中轴。参数只作用在选区内，和全局调整互不干扰。</div>
+
+              
+
+<div class="sep"></div>
+
+              
+
+<div class="ctrl"><label for="rMExp">曝光</label><input type="range" id="rMExp" min="-100" max="100" value="52"><output id="oMExp">+52</output></div>
+
+              
+
+<div class="ctrl"><label for="rMFe">羽化</label><input type="range" id="rMFe" min="0" max="100" value="60"><output id="oMFe">0.60</output></div>
+
+              
+
+<div class="sep"></div>
+
+              
+
+<div class="paint-tools" hidden=""><label for="brushSize">笔刷大小</label><input id="brushSize" type="range" min="12" max="180" value="70">
+
+<div><button id="sampleStroke" class="text-button" type="button">添加中心笔画</button><button id="clearPaint" class="text-button" type="button">清除涂绘</button></div>
+
+</div>
+
+<div class="hint" id="maskHint">线性渐变工具已激活：<strong>直接拖动画面上的三个圆点</strong>——青色改范围，白色移中轴。参数只作用在选区内，和全局调整互不干扰。</div>
+
             </div>
+
           </div>
+
         </div>
 
       </div>
-    </div>
-  </section>
 
-  <!-- ================= 界面演示 ================= -->
-  <section id="gallery" class="light">
-    <div class="wrap rv">
-      <p class="eyebrow"><span class="idx">02</span>界面演示</p>
-      <h2>看得见的工作流。</h2>
-      <p class="lead">下面五张是真实界面截图，对应 Phos 现有的功能，没有虚构的能力。工作区提供两种布局：<strong>A 列表</strong>适合逐张精修，<strong>B 胶片</strong>适合连续选片，两者共用同一份编辑状态。</p>
-    </div>
-    <div class="wide">
-      <div class="gal">
-        <figure class="rv">
-          <img class="shot" src="images/07-color-grading.jpg" width="1920" height="1192" loading="lazy" alt="Phos 曲线面板：RGB 合成曲线带五个控制点，下方是饱和度补偿，以及折叠的颜色分级、HSL、黑白、校准与胶片 CLUT">
-          <figcaption>
-            <div class="t">曲线 · 影调</div>
-            <div class="d">五个控制点的 RGB 合成曲线，可切到亮度与 R / G / B 单通道；下方是饱和度补偿，颜色分级、HSL、黑白、校准与胶片 CLUT 依次折叠，需要时再展开。</div>
-          </figcaption>
-        </figure>
-        <figure class="rv">
-          <img class="shot" src="images/06-linear-gradient-mask.jpg" width="1920" height="1193" loading="lazy" alt="Phos 线性渐变蒙版：画布上三条平行参考线与三个控制点，右侧为蒙版工具与独立调整栈">
-          <figcaption>
-            <div class="t">线性渐变蒙版</div>
-            <div class="d">画布上三条参考线对应渐变的起止与中轴：拖中心移动，拖端点改宽度，拖旋转柄改变方向。每个蒙版都带独立调整栈。</div>
-          </figcaption>
-        </figure>
-        <figure class="rv">
-          <img class="shot" src="images/08-radial-gradient-mask.jpg" width="1920" height="1192" loading="lazy" alt="Phos 径向渐变蒙版：画布上的椭圆选区与三个控制点，右侧为横半径、纵半径、旋转与羽化">
-          <figcaption>
-            <div class="t">径向渐变蒙版</div>
-            <div class="d">拖出椭圆后由三个控制点接管：中心移动、边缘缩放、旋转柄改角度。横纵半径各自独立，羽化控制内外过渡。</div>
-          </figcaption>
-        </figure>
-        <figure class="rv">
-          <img class="shot" src="images/12-b-filmstrip.jpg" width="1920" height="1192" loading="lazy" alt="Phos B 胶片布局：底部横向胶片条用于连续选片，上方是画布与右侧检查器">
-          <figcaption>
-            <div class="t">B 胶片布局</div>
-            <div class="d">底部胶片条横向排列，方向键连续选片；画布自动 fit 到不被面板和胶片遮挡的区域。切回 A 列表时，编辑状态、视口与撤销栈都保持不变。</div>
-          </figcaption>
-        </figure>
-        <figure class="rv">
-          <img class="shot" src="images/04-export-dialog.jpg" width="1920" height="1192" loading="lazy" alt="Phos 导出面板：格式与位深、色彩空间、长边缩放、水印叠加与导出目录设置">
-          <figcaption>
-            <div class="t">专业导出</div>
-            <div class="d">8 位与 16 位 TIFF 多色域输出，长边缩放，文字与图片水印九宫格叠加，可固定导出目录。</div>
-          </figcaption>
-        </figure>
-      </div>
-    </div>
-  </section>
+<div class="demo-actions"><button class="text-button" type="button" id="resetDemo">恢复初始效果</button>
 
-  <!-- ================= 设计语言 ================= -->
-  <section id="design" class="dark">
-    <div class="wrap rv">
-      <p class="eyebrow"><span class="idx">03</span>设计语言</p>
-      <h2>石墨 × 香槟金。</h2>
-      <p class="lead">界面以中性石墨灰面板打底，香槟金只点在「选中」与「编辑态」两处，其余全部克制。工整来自严格网格：固定行高节奏、等宽数字对齐、发丝分隔线。</p>
-      <div class="tiles">
-        <div class="tile rv-stagger">
-          <h3>克制的金色</h3>
-          <p>金色不装饰，只表达状态：选中环、滑杆填充、胶片卡、导出主按钮。看到金色，就是在编辑。</p>
-          <div class="chips"><span class="chip">#C9A876</span><span class="chip">仅选中 / 编辑态</span></div>
-        </div>
-        <div class="tile rv-stagger">
-          <h3>严格网格</h3>
-          <p>26 / 27 / 34 px 固定行高节奏，16 px 统一内边距，数值列右对齐等宽。密度高而不乱。</p>
-          <div class="chips"><span class="chip">tabular-nums</span><span class="chip">hairline</span></div>
-        </div>
-        <div class="tile rv-stagger">
-          <h3>蒙版可视化</h3>
-          <p>参考线是 1 px 白色虚线，控制点用颜色区分职责：线性渐变端点为青、中心为白、旋转柄为琥珀；径向渐变为黄。看到颜色就知道能拖什么。</p>
-          <div class="chips"><span class="chip">color-coded handles</span></div>
-        </div>
-      </div>
-    </div>
+<p>浏览器交互示意，使用 SVG 滤镜近似效果；不等同于 Phos 原生 RAW 渲染，也不代表性能测试。</p></div>
 
-    <div class="wide">
-      <div class="anatomy rv">
-        <svg viewBox="0 0 1000 420" role="img" aria-label="线性渐变蒙版示意图：三条平行虚线参考线，两个青色端点控制点、一个白色中心控制点与一个琥珀色旋转柄">
-          <defs>
-            <linearGradient id="anatBg" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#1d2a3c"/><stop offset="0.5" stop-color="#6b5a60"/>
-              <stop offset="0.78" stop-color="#c98a5c"/><stop offset="1" stop-color="#2a3026"/>
-            </linearGradient>
-            <linearGradient id="anatMask" gradientUnits="userSpaceOnUse" x1="250" y1="330" x2="760" y2="120">
-              <stop offset="0" stop-color="#ffd9a0" stop-opacity="0"/>
-              <stop offset="1" stop-color="#ffd9a0" stop-opacity="0.34"/>
-            </linearGradient>
-          </defs>
-          <rect width="1000" height="420" rx="14" fill="url(#anatBg)"/>
-          <rect width="1000" height="420" rx="14" fill="url(#anatMask)"/>
-          <!-- 三条参考线 -->
-          <g stroke="#fff" stroke-opacity="0.8" stroke-width="1.4" stroke-dasharray="7 6">
-            <line x1="118" y1="404" x2="612" y2="60"/>
-            <line x1="310" y1="430" x2="804" y2="86"/>
-            <line x1="500" y1="456" x2="994" y2="112"/>
-          </g>
-          <!-- 控制点 -->
-          <circle cx="161" cy="374" r="12" fill="#3ad0e0" stroke="#fff" stroke-width="2.5"/>
-          <circle cx="741" cy="126" r="12" fill="#3ad0e0" stroke="#fff" stroke-width="2.5"/>
-          <circle cx="451" cy="250" r="10" fill="#fff"/>
-          <circle cx="520" cy="196" r="9" fill="#e08b3a" stroke="#fff" stroke-width="2"/>
-          <!-- 标注 -->
-          <g font-family="-apple-system,BlinkMacSystemFont,PingFang SC,sans-serif" font-size="13" fill="rgba(255,255,255,.82)">
-            <line x1="161" y1="374" x2="92" y2="374" stroke="rgba(58,208,224,.6)" stroke-width="1"/>
-            <text x="20" y="362">拖端点</text><text x="20" y="380" fill="rgba(255,255,255,.5)" font-size="11.5">改范围</text>
+</section>
 
-            <line x1="741" y1="126" x2="880" y2="86" stroke="rgba(58,208,224,.6)" stroke-width="1"/>
-            <text x="888" y="82">拖端点</text><text x="888" y="100" fill="rgba(255,255,255,.5)" font-size="11.5">改范围</text>
+</div>
 
-            <line x1="451" y1="250" x2="300" y2="182" stroke="rgba(255,255,255,.4)" stroke-width="1"/>
-            <text x="212" y="172">拖中心整条平移</text>
+</details>
 
-            <line x1="520" y1="196" x2="592" y2="300" stroke="rgba(224,139,58,.6)" stroke-width="1"/>
-            <text x="600" y="306">旋转柄 · 改方向</text>
-          </g>
-        </svg>
-        <div class="legend">
-          <div><i style="background:#3ad0e0"></i>端点：控制渐变宽度</div>
-          <div><i style="background:#fff"></i>中心：整条平移</div>
-          <div><i style="background:#e08b3a"></i>旋转柄：改变方向</div>
-          <div><i style="background:#f5d94a"></i>径向渐变：椭圆与羽化边界</div>
-        </div>
-      </div>
-    </div>
-  </section>
+</section>
 
-  <!-- ================= 功能 ================= -->
-  <section id="features" class="light">
-    <div class="wrap rv">
-      <p class="eyebrow"><span class="idx">04</span>功能</p>
-      <h2>把高频能力做全做透。</h2>
-      <p class="lead">不堆砌功能。所有调整写入原图旁的副档，原始文件永不修改，随时可以退回原点。</p>
-      <div class="feats">
-        <div class="feat rv-stagger">
-          <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M4 15l4-4 4 4 3-3 5 5"/></svg></div>
-          <h3>RAW 解码</h3>
-          <p>ARW / CR3 / NEF 等主流 RAW，另支持 HEIF / HEIC / HIF、JPEG、PNG、TIFF、AVIF。</p>
-        </div>
-        <div class="feat rv-stagger">
-          <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16"/></svg></div>
-          <h3>影调与色彩</h3>
-          <p>曝光、对比、高光、阴影、白色与黑色、纹理 / 清晰度 / 去朦胧、白平衡灰点吸管、HDR；五通道色调曲线、HSL 混色、颜色分级、黑白、校准。</p>
-        </div>
-        <div class="feat rv-stagger">
-          <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="7" cy="18" r="2"/></svg></div>
-          <h3>胶片 CLUT 模拟</h3>
-          <p>HALD CLUT 加载，含 Kodak 2383 / 2393 印片模拟，64³ 立方体重采样，强度可调。</p>
-        </div>
-        <div class="feat rv-stagger">
-          <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18"/></svg></div>
-          <h3>局部蒙版</h3>
-          <p>线性与径向渐变、画笔、颜色范围、亮度范围、选择主体、选择人物、主体抠图、深度涂绘，共九种。每个蒙版带独立调整栈，可反转、复制、删除。</p>
-        </div>
-        <div class="feat rv-stagger">
-          <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg></div>
-          <h3>批量工作流</h3>
-          <p>多选同步调整、恢复快照、命名预设、命名快照，以及多重曝光合成。</p>
-        </div>
-        <div class="feat rv-stagger">
-          <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></svg></div>
-          <h3>专业导出</h3>
-          <p>8 位与 16 位 TIFF 多色域、长边缩放、文字与图片水印九宫格叠加、固定导出目录。</p>
-        </div>
-        <div class="feat rv-stagger">
-          <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/><path d="M3 14h6"/></svg></div>
-          <h3>A / B 双布局工作区</h3>
-          <p>4.0 重做的主窗口：A 列表逐张精修，B 胶片连续选片。工具条与系统交通灯共用中线，列表与检查器宽度可拖，切布局不打断编辑。</p>
-        </div>
-        <div class="feat rv-stagger">
-          <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3l2.2 5.4L20 10.6l-4.4 3.6L17 20l-5-3-5 3 1.4-5.8L4 10.6l5.8-2.2z"/></svg></div>
-          <h3>本地 AI 修图</h3>
-          <p>用中文描述想怎么改，模型给出全局滑杆与局部蒙版建议，先预览再应用。推理在本机完成，照片不上传。属实验性功能，模型需<a href="#ai-model">单独安装</a>。</p>
-        </div>
-        <div class="feat rv-stagger">
-          <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.4 4 5.6 4 9s-1.5 6.6-4 9c-2.5-2.4-4-5.6-4-9s1.5-6.6 4-9z"/></svg></div>
-          <h3>中英文界面</h3>
-          <p>界面语言可选「跟随系统 / 简体中文 / English」，即时切换、不用重启。菜单、参数、表单与提示共 668 条词条，工具提示与无障碍标签也会跟着变。</p>
-        </div>
-      </div>
+<section id="gallery" class="looks-section editorial-section page-width">
 
-      <div class="ai-zone">
-      <div class="rv" id="ai" style="margin-top:72px">
-        <p class="eyebrow"><span class="idx">04</span>本地 AI · 实验性</p>
-        <h2>用中文说，让它改。</h2>
-        <p class="lead">在调整面板顶部打开 AI 修图，直接写要求 —— 比如「压暗天空，人物提亮一点，绿色别太艳」。模型只输出参数，不生成、不替换你的照片。</p>
-        <p class="note-sm" style="margin-top:16px">4.1 换上了新的微调权重：同一批 301 条受控验证指令上，首次严格完成率从 51.8% 提升到 <strong>94.0%</strong>。<strong>换的只是随应用附带的 1.3 MB 适配器，底模不用重新下载。</strong>这组成绩来自开发验证集，不是独立测试，也不代表审美。</p>
-      </div>
-      <div class="feats">
-        <div class="feat rv-stagger">
-          <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/></svg></div>
-          <h3>说清楚就照做</h3>
-          <p>「只裁去左右各 5%、保留完整高度」这类要求由代码直接计算范围，不交给模型估。自动裁切会先验证尺寸与保留面积，方案不合法就退回重试一次，两次失败不应用。</p>
-        </div>
-        <div class="feat rv-stagger">
-          <div class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg></div>
-          <h3>说保留就真的保留</h3>
-          <p>明确要求「别动曝光」「白平衡保持原样」时，这些滑杆会从模型可写字段里移除，解码后再复核一次。全局与局部混合的要求照样支持。</p>
-        </div>
-        <div class="feat rv-stagger">
-          <div class="ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></div>
-          <h3>先看，再决定</h3>
-          <p>生成的方案先出预览，确认后才写入；一次应用对应一次撤销。局部效果会用真实渲染像素核对方向，不符合要求会重试或拦截。</p>
-        </div>
-      </div>
-      <figure class="rv" style="margin-top:56px">
-        <img class="shot" src="images/11-ai-panel.jpg" width="1920" height="1192" loading="lazy" alt="Phos AI 修图面板：输入中文要求后给出曝光、色温、鲜艳度等参数建议，左右并排显示当前效果与建议效果，右上角标注「微调实验版」">
-        <figcaption>
-          <div class="t">AI 修图 · 微调实验版</div>
-          <div class="d">写一句要求，模型给出曝光、色温、鲜艳度等参数与局部蒙版建议。左边是当前效果，右边是建议效果，确认后才写入；不满意可以关掉，原图一个字节都没动。</div>
-        </figcaption>
-      </figure>
-      <p class="note-sm">AI 需要单独安装底模（约 3.1 GB，首次安装需联网），随应用附带的小型适配器约 1.3 MB。<strong>不安装模型也能正常使用全部常规编辑功能。</strong>这一功能仍属实验性：细节理解、局部调整与自动构图都可能误判，请以预览为准。<a href="#ai-model">安装步骤 →</a></p>
-      </div>
-    </div>
-  </section>
+<div id="presets" class="section-heading">
 
-  <!-- ================= 安装 ================= -->
-  <section id="install" class="dark">
-    <div class="wrap rv">
-      <p class="eyebrow"><span class="idx">05</span>安装</p>
-      <h2>四步就能开始修图。</h2>
-      <p class="lead">Phos 目前没有做 Apple 公证，所以首次打开需要手动放行一次，之后不会再问。这是 macOS 对所有未公证应用的统一处理，不是 Phos 独有的问题。</p>
-    </div>
-    <div class="wide">
-      <div class="install-shots">
-        <figure class="rv">
-          <img class="shot" src="images/09-gatekeeper-dialog.jpg" width="3024" height="1572" loading="lazy" alt="macOS 弹窗提示无法打开 Phos，因为 Apple 无法检查其是否包含恶意软件，弹窗中提供「完成」与「移到废纸篓」按钮">
-          <figcaption>双击 Phos 会被拦一次。这个弹窗里只有「完成」和「移到废纸篓」两个按钮 —— 点「完成」，别点废纸篓。</figcaption>
-        </figure>
-        <figure class="rv">
-          <img class="shot" src="images/10-system-settings-open-anyway.jpg" width="1920" height="998" loading="lazy" alt="系统设置中的隐私与安全性面板，在安全性一栏显示 Phos 已被阻止，右侧有「仍要打开」按钮">
-          <figcaption>如果已经双击过，也可以到「系统设置 → 隐私与安全性」点「仍要打开」。</figcaption>
-        </figure>
-      </div>
-    </div>
-    <div class="wrap">
-      <div class="steps">
-        <div class="step rv">
-          <div>
-            <h3>下载并打开磁盘映像</h3>
-            <p>点页面上的「下载 macOS 版」按钮，或直接访问 <a href="download/Phos-macOS-apple-silicon.dmg">这个直链</a>，下载 <code>Phos-macOS-apple-silicon.dmg</code>，双击打开。</p>
-          </div>
-        </div>
-        <div class="step rv">
-          <div>
-            <h3>拖进「应用程序」</h3>
-            <p>映像窗口里把 <strong>Phos</strong> 拖到旁边的「应用程序」文件夹，然后弹出映像即可。</p>
-          </div>
-        </div>
-        <div class="step rv">
-          <div>
-            <h3>首次打开时放行</h3>
-            <p>Phos 是本地签名、未做 Apple 公证，所以第一次会被拦一次。双击 Phos，点弹窗里的「<strong>完成</strong>」关掉它，然后<strong>立刻</strong>打开「系统设置 → 隐私与安全性」，滚到最下面点「<strong>仍要打开</strong>」。</p>
-            <p><em>那个按钮在弹窗出现后大约一小时就会消失，所以要马上点。之后双击就能正常打开了。</em></p>
-          </div>
-        </div>
-        <div class="step rv">
-          <div>
-            <h3>嫌麻烦就用一条命令</h3>
-            <p>在「终端」里执行下面这行，可以直接去掉隔离标记，之后双击即可打开：</p>
-            <p style="margin-top:10px"><code>xattr -dr com.apple.quarantine /Applications/Phos.app</code></p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+<h2>一种照片。<br>不止一种表达。</h2>
 
-  <!-- ================= 常见问题 ================= -->
-  <section id="faq" class="light">
-    <div class="wrap rv">
-      <p class="eyebrow"><span class="idx">06</span>常见问题</p>
-      <h2>你可能想问的。</h2>
-      <p class="lead">价格、格式支持、隐私与安装 —— 关于 Phos 最常见的疑问都在这儿。</p>
-    </div>
-    <div class="wrap">
-      <div class="faq">
-        <details class="rv-stagger">
-          <summary>Phos 收费吗？</summary>
-          <div class="ans"><p>免费，开源，采用 MIT 协议。没有订阅、没有内购、不需要注册账号，也不存在「专业版」的区分。</p></div>
-        </details>
-        <details class="rv-stagger">
-          <summary>支持哪些 macOS 版本和机型？</summary>
-          <div class="ans"><p>需要 macOS 26.0 或更高版本，且是 Apple 芯片（M 系列）的 Mac。3.2.5 起最低系统从 15.0 提高到 26.0，旧系统请继续使用 3.2.4。当前只提供 Apple 芯片构建，Intel 机型暂不支持。</p></div>
-        </details>
-        <details class="rv-stagger">
-          <summary>支持哪些相机的 RAW 文件？</summary>
-          <div class="ans"><p>走 macOS 系统内置的 RAW 解码（Core Image 与 ImageIO），凡是系统「预览」能打开的 RAW 都能编辑 —— 覆盖佳能 CR2 / CR3、尼康 NEF、索尼 ARW、富士 RAF、Adobe DNG 等主流格式。</p><p>更新的机型能否支持，取决于你所用的 macOS 版本是否已内置该机型的解码器。</p></div>
-        </details>
-        <details class="rv-stagger">
-          <summary>会上传我的照片吗？联网是做什么的？</summary>
-          <div class="ans"><p>不会上传。照片全程在本机处理，没有云端、没有账号、没有遥测。</p><p>唯一的联网行为是启动时向官网查一次最新版本号，请求里不含任何关于你、你的照片或这台 Mac 的信息。</p></div>
-        </details>
-        <details class="rv-stagger">
-          <summary>和 Lightroom 有什么不一样？</summary>
-          <div class="ans"><p>Phos 是本地优先：不订阅、不云同步、不做移动端，专注把 RAW 解码、影调与色彩、胶片 CLUT 模拟、局部蒙版和批量导出做扎实。</p><p>适合希望照片完全留在自己机器上的个人摄影流程。</p></div>
-        </details>
-        <details class="rv-stagger">
-          <summary>第一次打开被 macOS 拦住了怎么办？</summary>
-          <div class="ans"><p>这是所有未做 Apple 公证的应用都会遇到的统一提示，不是 Phos 独有的问题。双击 Phos → 点弹窗里的「完成」→ 打开「系统设置 → 隐私与安全性」→ 滚到底部点「仍要打开」。</p><p>也可以在「终端」执行 <code>xattr -dr com.apple.quarantine /Applications/Phos.app</code> 一次性去掉隔离标记。</p></div>
-        </details>
-        <details class="rv-stagger">
-          <summary>支持批量处理吗？</summary>
-          <div class="ans"><p>支持。可以批量导入、把一张照片的调整同步到其他照片，并批量导出（含导出水印）。</p></div>
-        </details>
-        <details class="rv-stagger">
-          <summary>有 Windows 或 iPad 版吗？</summary>
-          <div class="ans"><p><strong>macOS 版是主线。</strong>Windows 另有一个<strong>实验性移植版</strong>（4.0.1，从 macOS 4.0.1 的源码移植），与 macOS 分开维护：Apple 的 Vision 与 Core Image 换成了本地实现，<strong>不含本地 AI 修图</strong>，也未做代码签名。可以在 <a href="#windows">下载区</a> 获取。</p><p>iPad 版仍在可行性评估阶段，没有可发布的时间表。</p></div>
-        </details>
-        <details class="rv-stagger">
-          <summary>怎么反馈问题或参与开发？</summary>
-          <div class="ans"><p>到 <a href="https://github.com/Zenodeng/Phos">GitHub 仓库</a>提 Issue 或 Pull Request 都可以。项目用 Swift 编写，基于 Core Image、Vision 与 AppKit。</p></div>
-        </details>
-      </div>
-    </div>
-  </section>
+<p>先看风格，再看参数。每组都可以拖动比较编辑前后。</p></div>
 
-  <!-- ================= 下载 ================= -->
-  <section class="dl light">
-    <div class="wrap center rv">
-      <p class="eyebrow"><span class="idx">07</span>开始使用</p>
-      <h2>免费，开源，不联网。</h2>
-      <p class="lead">没有账号，没有订阅，没有云端上传。你的照片始终留在自己的 Mac 上。</p>
-      <div class="btnrow">
-        <a class="btn btn-primary" href="download/Phos-macOS-apple-silicon.dmg" download>下载 macOS 版</a>
-        <a class="btn btn-outline-l" href="https://github.com/Zenodeng/Phos">在 GitHub 上查看</a>
-      </div>
-      <p class="note">需要 macOS 26.0 或更高版本 · Apple 芯片 · MIT 协议 · 当前版本 v4.3.0（7.32 MB）</p>
-      <div class="channels">
-        <h3>下载渠道 · 慢就换一个</h3>
-        <ul>
-          <li><a href="download/Phos-macOS-apple-silicon.dmg" download>本站直链</a><span>Cloudflare，推荐</span></li>
-          <li><a href="https://cdn.jsdelivr.net/gh/Zenodeng/Phos@gh-pages/download/Phos-macOS-apple-silicon.dmg">jsDelivr CDN</a><span>国内有节点</span></li>
-          <li><a href="https://testingcf.jsdelivr.net/gh/Zenodeng/Phos@gh-pages/download/Phos-macOS-apple-silicon.dmg">jsDelivr 备用节点</a><span>换线路再试</span></li>
-          <li><a href="https://zenodeng.github.io/Phos/download/Phos-macOS-apple-silicon.dmg">GitHub Pages</a><span>备用</span></li>
-          <li><a href="https://github.com/Zenodeng/Phos/releases">GitHub Releases</a><span>需能访问 GitHub</span></li>
-        </ul>
-        <p class="sum">以上是同一个文件，SHA256 完全一致：<code>286e1e8f…3b7c</code>（完整值见 <a href="download/SHA256.txt">SHA256.txt</a>）。下载后可在终端执行 <code>shasum -a 256 下载的文件.dmg</code> 核对。</p>
-        <p class="sum">习惯用 zip 的话，<a href="download/Phos-macOS-apple-silicon.zip">这里也有一份</a>（内容相同）。</p>
-      </div>
+<div class="look-grid">
 
-      <div class="channels" id="ai-model" style="margin-top:40px">
-        <h3>可选：本地 AI 修图模型</h3>
-        <ul>
-          <li><a href="download/Phos-Optional-Model-Installer.zip" download>Phos-Optional-Model-Installer.zip</a><span>5.9 KB · 只含脚本与校验清单</span></li>
-        </ul>
+<article class="look-card">
 
-        <p class="sum">主程序里已经带了约 1.3 MB 的微调适配器，<strong>打开 AI 面板不需要再下载任何东西</strong>；但要让 AI 真正给出建议，还需要一份约 3.1 GB 的底模和一套 MLX 运行环境。这个 5.9 KB 的小包就是用来准备它们的 —— 它本身不含权重，会按固定版本从 Hugging Face 拉取并逐个文件校验 SHA256。</p>
-        <p class="sum" style="margin-top:14px"><strong>不安装也能正常使用全部常规编辑功能。</strong>AI 属实验性，装不装都不影响修图本身。</p>
+<figure>
 
-        <h3 style="margin-top:36px">安装前请确认</h3>
-        <p class="sum" style="margin-top:12px">
-          · Apple 芯片（M 系列）的 Mac，macOS 26 及以上<br>
-          · 已安装 <strong>arm64 版 Python 3.11</strong>（<a href="https://www.python.org/downloads/macos/" target="_blank" rel="noopener">python.org 下载页</a>，选 macOS 64-bit universal2 installer）<br>
-          · 至少 <strong>8 GB 空闲磁盘</strong>（权重约 3.1 GB，另加 Python 与 MLX 依赖）<br>
-          · 首次安装需要联网，要能访问 <code>pypi.org</code> 与 <code>huggingface.co</code><br>
-          · 16 GB 统一内存是本机测试配置，8 GB 未验证
-        </p>
+<div class="photo-comparison " data-compare="look-0" data-split="0">
 
-        <h3 style="margin-top:36px">三步装好</h3>
-        <ol style="margin-top:12px;padding-left:22px;list-style:decimal;font-size:13px;line-height:1.85;letter-spacing:-.012em;color:var(--ink-64)">
-          <li style="display:list-item;border:0;padding:0;margin-bottom:12px"><strong>装 Python 3.11。</strong>从上面的链接下载安装包，双击装完。终端里执行 <code>python3.11 --version</code> 能打印出版本号，就说明装好了。</li>
-          <li style="display:list-item;border:0;padding:0;margin-bottom:12px"><strong>解压，双击「安装模型.command」。</strong>如果 macOS 提示「无法验证开发者」，<strong>右键点这个文件 →「打开」→ 再点一次「打开」</strong>。会弹出一个终端窗口开始安装。<br><strong>国内网络连不上 Hugging Face 的话，改双击「国内网络安装.command」</strong>，见下一节。</li>
-          <li style="display:list-item;border:0;padding:0"><strong>等它跑完。</strong>先装固定版本的 MLX 依赖，再从 Hugging Face 下载模型（约 3.1 GB，看网速），最后逐个文件校验 SHA256。看到「安装并校验完成」就是好了。</li>
-        </ol>
+<div class="compare-viewport"><img class="compare-after" src="images/photo-edits/landro-ektar-after-1600.webp" srcset="images/photo-edits/landro-ektar-after-800.webp 800w, images/photo-edits/landro-ektar-after-1600.webp 1600w" sizes="(max-width: 760px) 100vw, 400px" width="2048" height="1536" alt="让山野，多一点日光。 胶片效果" loading="lazy" decoding="async">
 
-        <h3 style="margin-top:36px">国内网络怎么装</h3>
-        <p class="sum" style="margin-top:12px">安装脚本默认从 <code>huggingface.co</code> 拉模型、从 <code>pypi.org</code> 拉依赖。<strong>这两个地址在部分网络下会连不上或极慢</strong>，尤其是 Hugging Face。不用代理也能装。</p>
-        <p class="sum" style="margin-top:12px"><strong>最简单的办法：解压后双击「国内网络安装.command」</strong>（4.0.1 起随包提供）。它会把两个下载源换成 hf-mirror 与清华 PyPI 镜像，其余流程和普通安装完全一样，不需要碰终端。</p>
-        <p class="sum" style="margin-top:12px">想手动跑、或者想自己指定别的镜像，就在解压后的文件夹里打开终端（文件夹上右键 →「服务」→「新建位于文件夹位置的终端窗口」），粘贴执行：</p>
-        <pre style="margin:12px 0 0;padding:14px 16px;background:rgba(0,0,0,.055);border-radius:10px;overflow-x:auto;font-size:12px;line-height:1.75"><code style="background:none;padding:0;font-size:12px;word-break:normal;white-space:pre">HF_ENDPOINT=https://hf-mirror.com \
-PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple \
-python3.11 install_model.py</code></pre>
-        <p class="sum" style="margin-top:12px"><strong>镜像只影响从哪里下载，不改变校验</strong>：模型文件仍会按清单逐个比对 SHA256，镜像上的文件只要有一个字节不对就会报错停下，不会装进坏文件。想先确认镜像通不通，直接打开 <a href="https://hf-mirror.com/mlx-community/Qwen3-VL-4B-Instruct-4bit" target="_blank" rel="noopener">hf-mirror.com 上的模型页</a> 看看。</p>
-        <p class="sum" style="margin-top:12px">Python 安装包从 python.org 下得慢的话，可以用华为云镜像：<a href="https://mirrors.huaweicloud.com/python/" target="_blank" rel="noopener">mirrors.huaweicloud.com/python</a>，挑 3.11.x 的 macOS universal2 安装包。</p>
+<div class="compare-before"><img src="images/photo-edits/landro-ektar-before-1600.webp" srcset="images/photo-edits/landro-ektar-before-800.webp 800w, images/photo-edits/landro-ektar-before-1600.webp 1600w" sizes="(max-width: 760px) 100vw, 400px" width="2048" height="1536" alt="" loading="lazy" decoding="async"></div>
 
-        <h3 style="margin-top:36px">装完怎么用</h3>
-        <p class="sum" style="margin-top:12px">默认装在 <code>~/Library/Application Support/Phos/MLX</code>，Phos 会自动找到它 —— 打开任意照片，在调整面板顶部点「AI 修图」就能用，不需要再做配置。</p>
-        <p class="sum" style="margin-top:12px">想装到别处：终端执行 <code>python3.11 install_model.py --environment /绝对路径/新的Phos-MLX</code>，装完后在应用里走「AI 修图 → 选择模型环境」，选那个<strong>同时包含 <code>.venv</code> 和 <code>model</code> 的外层文件夹</strong>。</p>
-        <p class="sum" style="margin-top:12px">检查是否装好：<code>python3 install_model.py --verify-only</code>。想卸载，直接删掉那个文件夹即可。</p>
+<div class="compare-labels" aria-hidden="true"><span>编辑前</span><span>Phos 修后</span></div>
 
-        <h3 style="margin-top:36px">常见问题</h3>
-        <div class="faq" style="margin-top:14px">
-          <details>
-            <summary>提示「请先安装 Apple Silicon Python 3.11」</summary>
-            <div class="ans"><p>要么没装，要么装成了 Intel 版。从 python.org 重新下载 universal2 安装包；装完在终端跑一次 <code>python3.11 --version</code> 确认，再双击「安装模型.command」。</p></div>
-          </details>
-          <details>
-            <summary>下载到一半失败了怎么办</summary>
-            <div class="ans"><p>脚本不会覆盖已有环境，中断后现场会保留。换一个能稳定访问 Hugging Face 的网络，重新双击「安装模型.command」即可；也可以先用 <code>--environment</code> 指定一个全新的空目录重装。脚本不会自动切换到未审核的镜像站。</p></div>
-          </details>
-          <details>
-            <summary>我只下载了模型文件，为什么还是用不了</summary>
-            <div class="ans"><p>权重和运行环境是两件事。只把 <code>.safetensors</code> 放进目录不会有 MLX 依赖，必须由这个安装包装好 <code>.venv</code>。两者都齐了，Phos 才能启动本地推理服务。</p></div>
-          </details>
-          <details>
-            <summary>装好后能移动或复制那个文件夹吗</summary>
-            <div class="ans"><p>不建议移动。里面的 <code>.venv</code> 记录的是绝对解释器路径，换位置会失效。要换地方，用 <code>--environment</code> 重新装一份。</p></div>
-          </details>
-          <details>
-            <summary>AI 会把我的照片传到哪里吗</summary>
-            <div class="ans"><p>不会。推理在本机的 <code>127.0.0.1</code> 上跑，照片不离开这台 Mac。只有安装阶段下载模型和依赖时需要联网。</p></div>
-          </details>
-        </div>
+<span class="compare-divider" aria-hidden="true"><span><svg viewBox="0 0 32 24" width="32" height="24" fill="none" aria-hidden="true"><path d="m9 7-4 5 4 5M23 7l4 5-4 5M16 5v14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span><input class="compare-range" type="range" min="0" max="100" value="0" step="1" aria-label="Kodak Ektar 100 修图前后对比，编辑前画面占比"></div>
 
-        <p class="sum" style="margin-top:24px">底模是 <a href="https://huggingface.co/mlx-community/Qwen3-VL-4B-Instruct-4bit" target="_blank" rel="noopener"><code>mlx-community/Qwen3-VL-4B-Instruct-4bit</code></a>（固定版本 <code>2fd8dacb…</code>；国内镜像见 <a href="https://hf-mirror.com/mlx-community/Qwen3-VL-4B-Instruct-4bit" target="_blank" rel="noopener">hf-mirror</a>），许可为 <strong>Apache-2.0</strong>，来源说明与许可原文随应用内 <code>PhotoAIAdapter</code> 目录一并保留。Phos 的学术用途声明不改变第三方模型的授权条件。</p>
-      </div>
+</div>
 
-      <div class="channels" id="windows" style="margin-top:40px">
-        <h3>Windows 版 · 实验性移植</h3>
-        <ul>
-          <li><a href="https://github.com/Zenodeng/Phos/releases/download/windows-4.0.1/Phos-4.0.1-Windows-x64.zip">Phos-4.0.1-Windows-x64.zip</a><span>323 MB · Windows 11 x64</span></li>
-        </ul>
-        <p class="sum">从 macOS 4.0.1 的源码移植而来，<strong>与 macOS 版分开维护</strong>，版本号也不同步。解压后双击根目录的 <code>Phos.exe</code>，它必须和 <code>app\</code> 文件夹放在同一目录。</p>
-        <p class="sum" style="margin-top:12px"><strong>它和 macOS 版不完全一样。</strong>Apple 的 Vision 与 Core Image 换成了本地实现（MODNet / BiRefNet / OpenCV / D3D11），主体分割、边缘和色彩结果可能有差异；<strong>不含本地 AI 修图</strong>；也没有 macOS 4.1 那一轮的界面更新（高级编辑、玻璃统一、裁剪热区、自动水平）。</p>
-        <p class="sum" style="margin-top:12px"><strong>未做代码签名</strong>，首次运行会被 Windows SmartScreen 拦下，需要点「更多信息 → 仍要运行」。完整的差异与已知限制见 <a href="https://github.com/Zenodeng/Phos/releases/tag/windows-4.0.1" target="_blank" rel="noopener">发布说明</a>。</p>
-      </div>
-    </div>
-  </section>
+<figcaption>
+
+<h3>Kodak Ektar 100</h3><span class="look-strength">浓度 65%</span></figcaption></figure>
+
+<div class="compare-actions" role="group" aria-label="Kodak Ektar 100 显示方式" data-for="look-0"><button type="button" data-show="100" aria-pressed="false">编辑前</button><button type="button" data-show="0" aria-pressed="true">修后</button><button type="button" data-show="50" aria-pressed="false">对比</button></div>
+
+<h4>让山野，多一点日光。</h4>
+
+<p>色彩更鲜明，层次仍然自然。适合山野、旅行与有暖光的风景。</p>
+
+<p class="recipe-params">曝光 +0.20 EV<br>高光 −18 · 阴影 +12</p><p class="photo-credit">摄影: <a href="https://unsplash.com/photos/a-lake-surrounded-by-mountains-in-the-middle-of-a-forest-r8vMMxGmv4I" target="_blank" rel="noopener">Mushegh Hakobyan</a></p><a class="recipe-link" href="images/photo-edits/landro-ektar-params.json" download="">查看完整参数 ↗</a></article>
+
+<article class="look-card">
+
+<figure>
+
+<div class="photo-comparison " data-compare="look-1" data-split="0">
+
+<div class="compare-viewport"><img class="compare-after" src="images/photo-edits/braies-fuji-after-1600.webp" srcset="images/photo-edits/braies-fuji-after-800.webp 800w, images/photo-edits/braies-fuji-after-1600.webp 1600w" sizes="(max-width: 760px) 100vw, 400px" width="2048" height="1280" alt="让阴天，也有柔和的颜色。 胶片效果" loading="lazy" decoding="async">
+
+<div class="compare-before"><img src="images/photo-edits/braies-fuji-before-1600.webp" srcset="images/photo-edits/braies-fuji-before-800.webp 800w, images/photo-edits/braies-fuji-before-1600.webp 1600w" sizes="(max-width: 760px) 100vw, 400px" width="2048" height="1280" alt="" loading="lazy" decoding="async"></div>
+
+<div class="compare-labels" aria-hidden="true"><span>编辑前</span><span>Phos 修后</span></div>
+
+<span class="compare-divider" aria-hidden="true"><span><svg viewBox="0 0 32 24" width="32" height="24" fill="none" aria-hidden="true"><path d="m9 7-4 5 4 5M23 7l4 5-4 5M16 5v14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span><input class="compare-range" type="range" min="0" max="100" value="0" step="1" aria-label="Fuji 400H 2 修图前后对比，编辑前画面占比"></div>
+
+</div>
+
+<figcaption>
+
+<h3>Fuji 400H 2</h3><span class="look-strength">浓度 75%</span></figcaption></figure>
+
+<div class="compare-actions" role="group" aria-label="Fuji 400H 2 显示方式" data-for="look-1"><button type="button" data-show="100" aria-pressed="false">编辑前</button><button type="button" data-show="0" aria-pressed="true">修后</button><button type="button" data-show="50" aria-pressed="false">对比</button></div>
+
+<h4>让阴天，也有柔和的颜色。</h4>
+
+<p>柔和高光，留下青绿与秋色。适合湖泊、树林和阴天的照片。</p>
+
+<p class="recipe-params">曝光 +0.10 EV<br>高光 −12 · 阴影 +16</p><p class="photo-credit">摄影: <a href="https://unsplash.com/photos/mountains-and-a-lake-reflect-under-a-cloudy-sky-RyoQe3BU8gI" target="_blank" rel="noopener">Willian Justen de Vasconcellos</a></p><a class="recipe-link" href="images/photo-edits/braies-fuji-params.json" download="">查看完整参数 ↗</a></article>
+
+<article class="look-card">
+
+<figure>
+
+<div class="photo-comparison " data-compare="look-2" data-split="0">
+
+<div class="compare-viewport"><img class="compare-after" src="images/photo-edits/landro-tmax-after-1600.webp" srcset="images/photo-edits/landro-tmax-after-800.webp 800w, images/photo-edits/landro-tmax-after-1600.webp 1600w" sizes="(max-width: 760px) 100vw, 400px" width="2048" height="1536" alt="把目光，留给光与形。 胶片效果" loading="lazy" decoding="async">
+
+<div class="compare-before"><img src="images/photo-edits/landro-tmax-before-1600.webp" srcset="images/photo-edits/landro-tmax-before-800.webp 800w, images/photo-edits/landro-tmax-before-1600.webp 1600w" sizes="(max-width: 760px) 100vw, 400px" width="2048" height="1536" alt="" loading="lazy" decoding="async"></div>
+
+<div class="compare-labels" aria-hidden="true"><span>编辑前</span><span>Phos 修后</span></div>
+
+<span class="compare-divider" aria-hidden="true"><span><svg viewBox="0 0 32 24" width="32" height="24" fill="none" aria-hidden="true"><path d="m9 7-4 5 4 5M23 7l4 5-4 5M16 5v14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span><input class="compare-range" type="range" min="0" max="100" value="0" step="1" aria-label="Kodak T-Max 400 修图前后对比，编辑前画面占比"></div>
+
+</div>
+
+<figcaption>
+
+<h3>Kodak T-Max 400</h3><span class="look-strength">浓度 100%</span></figcaption></figure>
+
+<div class="compare-actions" role="group" aria-label="Kodak T-Max 400 显示方式" data-for="look-2"><button type="button" data-show="100" aria-pressed="false">编辑前</button><button type="button" data-show="0" aria-pressed="true">修后</button><button type="button" data-show="50" aria-pressed="false">对比</button></div>
+
+<h4>把目光，留给光与形。</h4>
+
+<p>用黑白拉开明暗，关注纹理与结构。适合山体、建筑和线条感强的画面。</p>
+
+<p class="recipe-params">曝光 +0.10 EV<br>高光 −10 · 阴影 +8</p><p class="photo-credit">摄影: <a href="https://unsplash.com/photos/a-lake-surrounded-by-mountains-in-the-middle-of-a-forest-r8vMMxGmv4I" target="_blank" rel="noopener">Mushegh Hakobyan</a></p><a class="recipe-link" href="images/photo-edits/landro-tmax-params.json" download="">查看完整参数 ↗</a></article>
+
+</div>
+
+<div class="sample-provenance">
+
+<p>JPEG 摄影样张，经 Phos 实际渲染管线处理，使用单独导入的胶片 LUT。浓度与影调参数见各卡片。</p><a class="text-link" href="features.html#screenshots">查看软件工作流截图</a></div>
+
+</section>
+
+<section id="ai" class="editorial-ai editorial-section">
+
+<div class="page-width ai-layout">
+
+<div class="workflow-copy">
+
+<p class="plain-label">可选 · 实验性本地 AI</p>
+
+<h2>说出想法。<br>先看，再决定。</h2>
+
+<p>用中文描述调整要求，让本地模型给出可编辑的参数与局部蒙版建议。满意了，再应用。</p>
+
+<ul class="ai-actions-list">
+
+<li>
+
+<h3>“整体提亮 0.2 档。”</h3>
+
+<p>把要求转成滑杆建议，继续手动微调。</p></li>
+
+<li>
+
+<h3>“白平衡保持原样。”</h3>
+
+<p>说明想保留的调整，对照预览再决定。</p></li>
+
+<li>
+
+<h3>“只提亮这部分。”</h3>
+
+<p>支持局部蒙版建议，先对照效果再写入。</p></li></ul>
+
+<p class="ai-footnote">实验性功能，结果需人工核对。约 3.1 GB 底模单独安装；不安装也能正常修图。</p><a class="text-link" href="help.html#ai-model">了解模型安装</a></div>
+
+<figure class="ai-story">
+
+<div class="ai-story-header">
+
+<p>输入与建议示意</p><blockquote>“仅将曝光滑杆设为 +0.20 EV，其他参数保持原样。”</blockquote></div>
+
+<div class="ai-photo"><img src="images/photo-edits/braies-fuji-before-800.webp" width="800" height="500" loading="lazy" alt="用于解释本地 AI 工作流的当前山湖照片，并非 AI 修后图"><span>当前照片</span></div>
+
+<div class="ai-plan">
+
+<p>参数草稿 · 等待人工核对</p><dl><dt>曝光建议</dt><dd>+0.20 EV</dd></dl><a class="text-link" href="help.html#ai-model">在 Mac 上了解并安装模型</a></div>
+
+<figcaption>输入与参数示意，不是 AI 实测修后图。实际结果需在应用内核对后再应用。</figcaption></figure>
+
+</div>
+
+</section>
+
+<section class="learn-section editorial-section page-width">
+
+<div class="section-heading">
+
+<h2>需要的细节，<br>也都在这里。</h2>
+
+<p>从一根曲线到一次导出，按你的需要继续深入。</p></div>
+
+<div class="resource-links"><a class="resource-link" href="features.html"><span><strong>完整功能指南</strong><small>曲线、蒙版与完整工作区</small></span><span aria-hidden="true">↗</span></a><a class="resource-link" href="help.html"><span><strong>安装与下载帮助</strong><small>下载渠道、首次打开与可选模型</small></span><span aria-hidden="true">↗</span></a></div>
+
+</section>
+
+<section class="faq-section editorial-section page-width" id="faq">
+
+<h2>先回答几个问题。</h2>
+
+<div class="faq-list">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="faq-column"><details class="rv-stagger">
+          
+
+<summary>Phos 收费吗？</summary>
+          
+
+<div class="ans">
+
+<p>免费，开源，采用 MIT 协议。没有订阅、没有内购、不需要注册账号，也不存在「专业版」的区分。</p></div>
+
+        </details><details class="rv-stagger">
+          
+
+<summary>支持哪些 macOS 版本和机型？</summary>
+          
+
+<div class="ans">
+
+<p>需要 macOS 26.0 或更高版本，且是 Apple 芯片（M 系列）的 Mac。3.2.5 起最低系统从 15.0 提高到 26.0，旧系统请继续使用 3.2.4。当前只提供 Apple 芯片构建，Intel 机型暂不支持。</p></div>
+
+        </details><details class="rv-stagger">
+          
+
+<summary>支持哪些相机的 RAW 文件？</summary>
+          
+
+<div class="ans">
+
+<p>走 macOS 系统内置的 RAW 解码（Core Image 与 ImageIO），凡是系统「预览」能打开的 RAW 都能编辑 —— 覆盖佳能 CR2 / CR3、尼康 NEF、索尼 ARW、富士 RAF、Adobe DNG 等主流格式。</p>
+
+<p>更新的机型能否支持，取决于你所用的 macOS 版本是否已内置该机型的解码器。</p></div>
+
+        </details><details class="rv-stagger">
+          
+
+<summary>会上传我的照片吗？联网是做什么的？</summary>
+          
+
+<div class="ans">
+
+<p>不会上传。照片全程在本机处理，没有云端、没有账号、没有遥测。</p>
+
+<p>唯一的联网行为是启动时向官网查一次最新版本号，请求里不含任何关于你、你的照片或这台 Mac 的信息。</p></div>
+
+        </details><details class="rv-stagger">
+          
+
+<summary>和 Lightroom 有什么不一样？</summary>
+          
+
+<div class="ans">
+
+<p>Phos 是本地优先：不订阅、不云同步、不做移动端，专注把 RAW 解码、影调与色彩、胶片 CLUT 模拟、局部蒙版和批量导出做扎实。</p>
+
+<p>适合希望照片完全留在自己机器上的个人摄影流程。</p></div>
+
+        </details></div><div class="faq-column"><details class="rv-stagger">
+          
+
+<summary>第一次打开被 macOS 拦住了怎么办？</summary>
+          
+
+<div class="ans">
+
+<p>这是所有未做 Apple 公证的应用都会遇到的统一提示，不是 Phos 独有的问题。双击 Phos → 点弹窗里的「完成」→ 打开「系统设置 → 隐私与安全性」→ 滚到底部点「仍要打开」。</p>
+
+<p>也可以在「终端」执行 <code>xattr -dr com.apple.quarantine /Applications/Phos.app</code> 一次性去掉隔离标记。</p></div>
+
+        </details><details class="rv-stagger">
+          
+
+<summary>支持批量处理吗？</summary>
+          
+
+<div class="ans">
+
+<p>支持。可以批量导入、把一张照片的调整同步到其他照片，并批量导出（含导出水印）。</p></div>
+
+        </details><details class="rv-stagger">
+          
+
+<summary>有 Windows 或 iPad 版吗？</summary>
+          
+
+<div class="ans">
+
+<p><strong>macOS 版是主线。</strong>Windows 另有一个<strong>实验性移植版</strong>（4.0.1，从 macOS 4.0.1 的源码移植），与 macOS 分开维护：Apple 的 Vision 与 Core Image 换成了本地实现，<strong>不含本地 AI 修图</strong>，也未做代码签名。可以在 <a href="help.html#windows">下载区</a> 获取。</p>
+
+<p>iPad 版仍在可行性评估阶段，没有可发布的时间表。</p></div>
+
+        </details><details class="rv-stagger">
+          
+
+<summary>怎么反馈问题或参与开发？</summary>
+          
+
+<div class="ans">
+
+<p>到 <a href="https://github.com/Zenodeng/Phos">GitHub 仓库</a>提 Issue 或 Pull Request 都可以。项目用 Swift 编写，基于 Core Image、Vision 与 AppKit。</p></div>
+
+        </details><a class="text-link" href="help.html">完整安装与下载帮助</a></div></div>
+
+<aside class="support-card">
+
+<div>
+
+<h3>还需要帮助？</h3>
+
+<p>附上系统版本、操作步骤和截图，方便一起定位问题。</p></div>
+
+<a class="text-link" href="https://github.com/Zenodeng/Phos/issues">前往 GitHub Issues ↗</a></aside>
+
+</section>
+
+<section id="download" class="final-cta editorial-section">
+
+<div class="page-width">
+
+<h2>下一张，<br>按你的眼光来。</h2>
+
+<p>免费开源。打开文件夹，从一张熟悉的照片开始。</p><a class="button primary" href="download/Phos-macOS-apple-silicon.dmg" download="">下载 Mac 版<span class="download-icon" aria-hidden="true"><svg class="download-arrow" viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true"><path d="M12 4v16m-6-6 6 6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a>
+
+<p class="cta-requirements">macOS 26+ · Apple 芯片 · 首次打开需手动放行</p></div>
+
+</section>
 
 </main>
 
-<footer>
-  <div class="wrap">
-    <div>Phos — 用 Swift 编写，基于 Core Image、Vision 与 AppKit。不联网、无账号、无订阅。项目曾用名 RawForge。</div>
-    <div><a href="https://github.com/Zenodeng/Phos">GitHub</a> · <a href="https://github.com/Zenodeng/Phos/releases">Releases</a> · MIT License</div>
-  </div>
+<footer class="site-footer">
+<div class="footer-inner"><a href="#top" class="footer-wordmark" aria-label="Phos"><img src="images/phos-sculpture.svg" width="1300" height="446" alt="Phos" loading="lazy"></a>
+<p class="footer-intro">原生 Mac 修图。照片不上传。</p>
+<div class="footer-columns">
+<div>
+<h3>产品</h3>
+<ul>
+<li><a href="download/Phos-macOS-apple-silicon.dmg">下载 Mac 版</a></li>
+<li><a href="help.html#download-help">下载渠道与校验</a></li></ul>
+
+<p>Phos 4.3.0 · 7.32 MB</p>
+<p>macOS 26+ · Apple 芯片</p></div>
+
+<div>
+<h3>功能</h3>
+<ul>
+<li><a href="features.html#light">明暗与色彩</a></li>
+<li><a href="features.html#masks">局部蒙版</a></li>
+<li><a href="features.html#workflow">工作区与批量</a></li>
+<li><a href="features.html#export">导出与水印</a></li></ul>
+</div>
+
+<div>
+<h3>支持</h3>
+<ul>
+<li><a href="help.html">安装帮助</a></li>
+<li><a href="help.html#ai-model">本地 AI 模型</a></li>
+<li><a href="https://github.com/Zenodeng/Phos/issues">反馈问题</a></li>
+<li><a href="https://github.com/Zenodeng/Phos/releases">Releases</a></li></ul>
+</div>
+
+<div>
+<h3>开源与来源</h3>
+<ul>
+<li><a href="https://github.com/Zenodeng/Phos">GitHub</a></li>
+<li><a href="https://github.com/Zenodeng/Phos/blob/main/LICENSE">MIT License</a></li>
+<li><a href="#photo-credits">摄影来源</a></li>
+<li><a href="en/">English</a></li></ul>
+</div>
+</div>
+
+<div class="footer-bottom">
+<p>免费开源，无账号，无订阅。</p>
+<p>版本检查会联网；照片处理和 AI 推理均在本机完成。</p><p class="motion-explanation" id="motion-settings">动效遵循系统的减少动态效果设置。</p></div>
+
+<details class="photo-credits" id="photo-credits">
+<summary>摄影来源与样张参数</summary>
+<p>摄影: <a href="https://unsplash.com/photos/a-lake-surrounded-by-mountains-in-the-middle-of-a-forest-r8vMMxGmv4I" target="_blank" rel="noopener">Mushegh Hakobyan</a> / <a href="https://unsplash.com/photos/mountains-and-a-lake-reflect-under-a-cloudy-sky-RyoQe3BU8gI" target="_blank" rel="noopener">Willian Justen de Vasconcellos</a> · <a href="https://unsplash.com/license" target="_blank" rel="noopener">Unsplash License</a>.<br>样张修后图由 Phos Engine.render 生成。 <a href="images/photo-edits/manifest.json">查看来源与参数清单</a></p></details>
+</div>
 </footer>
 
-<script src="assets/site.js"></script>
-<script>
-/* 首屏全屏：滚过 24px 才让导航浮出、hero 收成圆角卡片 */
-(function(){
-  var root = document.documentElement, TH = 24, ticking = false;
-  function apply(){
-    var y = window.scrollY || window.pageYOffset || 0;
-    root.classList.toggle('is-top', y <= TH);
-    ticking = false;
-  }
-  window.addEventListener('scroll', function(){
-    if (!ticking){ ticking = true; requestAnimationFrame(apply); }
-  }, {passive:true});
-  apply();
-})();
-</script>
-<script>
-/* 整页堆叠：按段高算 sticky 的 top，长的段滚到底才钉住。
-   段高会变（图片解码、字体替换、窗口缩放），所以用 ResizeObserver 持续校正，
-   否则 top 是旧值，段落在错的位置钉住 —— 表现就是滚动时「跳一下」把下层露出来。 */
-(function(){
-  /* 桌面端不做叠卡（见 theme.css 的降级媒体查询），直接退出 */
-  if (window.matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+<script src="assets/demo.js" defer=""></script>
+<script src="assets/showcase.js" defer=""></script>
+<script src="assets/brand-v2.js" defer=""></script>
+<script src="assets/photo-edition.js" defer=""></script>
+<script src="assets/navigation.js" defer=""></script>
+<script src="assets/motion.js" defer=""></script>
+<script>if(new URLSearchParams(location.search).has('audit')){const s=document.createElement('script');s.src='assets/audit-metrics.js';s.defer=true;document.body.append(s);}</script>
 
-  var els = [].slice.call(document.querySelectorAll('main > section'))
-    .filter(function(el){ return el.id !== 'scene'; });
-  if (!els.length) return;
 
-  var pending = false;
-  function apply(){
-    pending = false;
-    var vh = window.innerHeight;
-    for (var i = 0; i < els.length; i++){
-      var el = els[i];
-      var h = el.offsetHeight;
-      var top = vh - h;
-      var v = (top < 0 ? top : 0) + 'px';
-      if (el.style.top !== v) el.style.top = v;
-    }
-  }
-  function schedule(){
-    if (pending) return;
-    pending = true;
-    requestAnimationFrame(apply);
-  }
 
-  window.addEventListener('resize', schedule);
-  window.addEventListener('load', schedule);
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
 
-  if (window.ResizeObserver){
-    var ro = new ResizeObserver(schedule);
-    els.forEach(function(el){ ro.observe(el); });
-  }
-  /* 图片解码后段高可能变，补一发 */
-  els.forEach(function(el){
-    el.querySelectorAll('img').forEach(function(img){
-      if (!img.complete) img.addEventListener('load', schedule, {once:true});
-    });
-  });
 
-  schedule();
-})();
-</script>
-</body>
-</html>
+</body></html>

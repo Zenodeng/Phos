@@ -1,0 +1,12 @@
+(()=>{'use strict';const root=document.documentElement,body=document.body,rm=matchMedia('(prefers-reduced-motion: reduce)'),fine=matchMedia('(hover:hover) and (pointer:fine)');
+const setProgress=()=>{const max=document.documentElement.scrollHeight-innerHeight;root.style.setProperty('--kinetic-progress',max>0?scrollY/max:0)};
+addEventListener('scroll',setProgress,{passive:true});setProgress();
+const hero=document.querySelector('.signature-hero');
+if(hero&&fine.matches&&!rm.matches){hero.classList.add('kinetic-hero');hero.addEventListener('pointermove',e=>{const r=hero.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*2-1,y=(e.clientY-r.top)/r.height*2-1;hero.style.setProperty('--hero-shift-x',`${x*5}px`);hero.style.setProperty('--hero-shift-y',`${y*4}px`);hero.style.setProperty('--hero-rotate-x',`${-y*1.2}deg`);hero.style.setProperty('--hero-rotate-y',`${x*1.6}deg`);root.style.setProperty('--kinetic-x',`${e.clientX}px`);root.style.setProperty('--kinetic-y',`${e.clientY}px`);body.style.setProperty('--cursor-glow','.7')},{passive:true});hero.addEventListener('pointerleave',()=>{hero.style.cssText+=';--hero-shift-x:0px;--hero-shift-y:0px;--hero-rotate-x:0deg;--hero-rotate-y:0deg';body.style.setProperty('--cursor-glow','0')})}
+const reveal=[...document.querySelectorAll('main section,main figure,main .feature-shot,main .look-card,main .support-card,main .final-cta')];reveal.forEach((el,i)=>{el.setAttribute('data-kinetic-reveal','');el.dataset.delay=i%4});
+if('IntersectionObserver'in window&&!rm.matches){const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('is-visible');io.unobserve(e.target)}}),{threshold:.08,rootMargin:'0px 0px -8% 0px'});reveal.forEach(el=>io.observe(el))}else reveal.forEach(el=>el.classList.add('is-visible'));
+[...document.querySelectorAll('main section,main .workspace-figure,main .gallery-panel')].forEach(el=>el.classList.add('kinetic-section'));
+const sectionIO='IntersectionObserver'in window?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('is-visible')}),{threshold:.05}):null;if(sectionIO)[...document.querySelectorAll('.kinetic-section')].forEach(el=>sectionIO.observe(el));
+[...document.querySelectorAll('.button,.nav-download,.gallery-tabs button,.mode-picker button')].forEach(el=>el.classList.add('kinetic-button'));
+[...document.querySelectorAll('.workspace-shot,.look-card img,.feature-shot img,.photo-comparison')].forEach(el=>el.classList.add('kinetic-photo'));
+})();

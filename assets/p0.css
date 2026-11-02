@@ -73,3 +73,497 @@ html { scrollbar-gutter: stable; }
 
 @media (max-width: 760px) {
 }
+
+/* --------------------------------------------------------------------------
+   Button system (2026-10-31): A + jelly big download, C glass small download,
+   B directional tide for the other actions, soft tide for jump links.
+   -------------------------------------------------------------------------- */
+
+/* A · big download: gold two-cell + jelly press */
+:is(.photo-edition,.system-page) a.button.primary[href*="download"] {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 54px;
+  padding: 0 0 0 24px;
+  gap: 0;
+  border: 1px solid #e4cca6;
+  border-radius: 999px;
+  overflow: hidden;
+  isolation: isolate;
+  color: #14110d;
+  font-weight: 600;
+  background:
+    radial-gradient(120% 180% at 18% -10%, rgb(255 255 255 / .36), transparent 42%),
+    linear-gradient(180deg, #e2c9a3 0%, #d1b080 38%, #c9a876 62%, #b18b58 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / .5),
+    inset 0 -1px 0 rgb(80 54 24 / .18),
+    0 0 0 1px rgb(90 66 35 / .35),
+    0 14px 28px -22px rgb(0 0 0 / .8);
+  transition:
+    transform 220ms var(--motion-ease),
+    box-shadow 220ms var(--motion-ease),
+    background-color 220ms var(--motion-ease);
+}
+:is(.photo-edition,.system-page) a.button.primary[href*="download"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(110deg, transparent 0 39%, rgb(255 255 255 / .14) 46%, transparent 55%);
+  pointer-events: none;
+}
+:is(.photo-edition,.system-page) a.button.primary[href*="download"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(105deg, transparent 30%, rgb(255 255 255 / .3) 48%, transparent 66%);
+  transform: translateX(-120%);
+  transition: transform 650ms var(--motion-ease);
+  pointer-events: none;
+}
+:is(.photo-edition,.system-page) a.button.primary[href*="download"]:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / .55),
+    inset 0 -1px 0 rgb(80 54 24 / .16),
+    0 0 0 1px rgb(90 66 35 / .4),
+    0 20px 34px -22px rgb(0 0 0 / .9);
+}
+:is(.photo-edition,.system-page) a.button.primary[href*="download"]:hover::after { transform: translateX(120%); }
+:is(.photo-edition,.system-page) a.button.primary[href*="download"] .download-icon {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  margin-left: 20px;
+  padding: 0;
+  align-self: stretch;
+  flex-shrink: 0;
+  border-left: 1px solid rgb(12 13 16 / .16);
+  background: rgb(12 13 16 / .07);
+  transition: background 220ms var(--motion-ease), width 220ms var(--motion-ease);
+}
+:is(.photo-edition,.system-page) a.button.primary[href*="download"]:hover .download-icon { background: rgb(12 13 16 / .12); width: 58px; }
+:is(.photo-edition,.system-page) a.button.primary[href*="download"] .download-arrow { transition: transform 220ms var(--motion-ease); }
+:is(.photo-edition,.system-page) a.button.primary[href*="download"]:hover .download-arrow { transform: translateY(2px); }
+:is(.photo-edition,.system-page) a.button.primary[href*="download"]:focus-visible {
+  outline: 2px solid var(--gold-light);
+  outline-offset: 3px;
+}
+
+/* Jelly press: 90ms squash + 420ms overshoot; only the big download */
+.jelly-btn.is-squish { transform: scale(.97, .94) !important; transition-duration: 90ms !important; }
+.jelly-btn.is-release { animation: jelly-pop 420ms var(--motion-ease); }
+@keyframes jelly-pop {
+  0% { transform: scale(.97, .94); }
+  38% { transform: scale(1.018, 1.012); }
+  68% { transform: scale(.996, 1.002); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jelly-btn.is-squish, .jelly-btn.is-release { animation: none !important; transform: none !important; }
+}
+
+/* C · small download: black glass, no backdrop-filter */
+:is(.photo-edition,.system-page) .nav-download,
+:is(.photo-edition,.system-page) .mobile-menu-footer a.button.primary[href*="download"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  gap: 10px;
+  border: 1px solid rgb(255 255 255 / .18);
+  border-radius: 999px;
+  background: rgb(255 255 255 / .055);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .08);
+  transition: background 220ms var(--motion-ease), border-color 220ms var(--motion-ease), transform 220ms var(--motion-ease);
+}
+:is(.photo-edition,.system-page) .nav-download:hover,
+:is(.photo-edition,.system-page) .mobile-menu-footer a.button.primary[href*="download"]:hover {
+  border-color: rgb(201 168 118 / .6);
+  background: rgb(201 168 118 / .1);
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .08);
+}
+:is(.photo-edition,.system-page) .mobile-menu-footer a.button.primary[href*="download"]::before,
+:is(.photo-edition,.system-page) .mobile-menu-footer a.button.primary[href*="download"]::after { display: none; }
+
+/* B · the other buttons: gold edge + directional tide */
+:is(.photo-edition,.system-page) a.button.primary:not([href*="download"]),
+:is(.photo-edition,.system-page) .quiet-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 0 22px;
+  gap: 14px;
+  border: 1px solid rgb(201 168 118 / .5);
+  border-radius: 999px;
+  overflow: hidden;
+  isolation: isolate;
+  background: transparent;
+  color: #d3bd9a;
+  font-size: 17px;
+  font-weight: 500;
+  box-shadow: none;
+  transition: color 220ms var(--motion-ease), border-color 220ms var(--motion-ease);
+}
+:is(.photo-edition,.system-page) a.button.primary:not([href*="download"]):hover,
+:is(.photo-edition,.system-page) .quiet-link:hover { color: #14110d; border-color: var(--gold-light); }
+
+/* directional tide: JS sets --tide-x / --tide-y on pointer entry */
+.tide-full,
+.tide-soft { position: relative; overflow: hidden; isolation: isolate; }
+.tide-full::before,
+.tide-soft::before {
+  content: "";
+  position: absolute;
+  left: var(--tide-x, 50%);
+  top: var(--tide-y, 110%);
+  width: 170%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 520ms var(--motion-ease);
+  pointer-events: none;
+  z-index: -1;
+}
+.tide-full::before { background: linear-gradient(180deg, #dfc59f, #b8935f); }
+.tide-soft::before { background: rgb(201 168 118 / .13); width: 220%; }
+@media (hover: hover) and (pointer: fine) {
+  .tide-full:hover::before,
+  .tide-full:focus-visible::before { transform: translate(-50%, -50%) scale(1); }
+  .tide-soft:hover::before,
+  .tide-soft:focus-visible::before { transform: translate(-50%, -50%) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tide-full::before, .tide-soft::before { transition: none; }
+}
+
+/* soft tide for small jump links / demo controls / resource cards */
+.tide-soft { color: inherit; }
+.tide-soft:hover { color: var(--gold-light); }
+@media (prefers-reduced-motion: reduce) {
+  :is(.photo-edition,.system-page) a.button.primary[href*="download"]::after { transition: none; }
+}
+
+/* Keep the 390px hero pair on one line: compact secondary only. */
+@media (max-width: 760px) {
+  :is(.photo-edition,.system-page) .quiet-link { min-height: 48px; padding: 0 16px; font-size: 15px; gap: 8px; }
+  :is(.photo-edition,.system-page) a.button.primary[href*="download"] { min-height: 52px; padding-left: 20px; }
+  :is(.photo-edition,.system-page) a.button.primary[href*="download"] .download-icon { width: 46px; height: 52px; margin-left: 14px; }
+  :is(.photo-edition,.system-page) a.button.primary[href*="download"]:hover .download-icon { width: 50px; }
+}
+
+/* Quieter primary: matte brass, no foil sheen, no outer ring. Jelly press stays. */
+:is(.photo-edition,.system-page) a.button.primary[href*="download"] {
+  min-height: 52px;
+  padding-left: 22px;
+  color: #171410;
+  border-color: rgb(255 255 255 / .12);
+  background: #c3a97f;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .18);
+}
+:is(.photo-edition,.system-page) a.button.primary[href*="download"]::before,
+:is(.photo-edition,.system-page) a.button.primary[href*="download"]::after { display: none; }
+:is(.photo-edition,.system-page) a.button.primary[href*="download"]:hover {
+  background: #ccb388;
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .2);
+}
+:is(.photo-edition,.system-page) a.button.primary[href*="download"] .download-icon {
+  width: 52px;
+  height: 52px;
+  margin-left: 18px;
+  background: rgb(12 13 16 / .07);
+  border-left-color: rgb(12 13 16 / .12);
+}
+:is(.photo-edition,.system-page) a.button.primary[href*="download"]:hover .download-icon {
+  width: 54px;
+  background: rgb(12 13 16 / .1);
+}
+@media (max-width: 760px) {
+  :is(.photo-edition,.system-page) a.button.primary[href*="download"] { min-height: 50px; padding-left: 18px; }
+  :is(.photo-edition,.system-page) a.button.primary[href*="download"] .download-icon { width: 48px; height: 50px; margin-left: 14px; }
+  :is(.photo-edition,.system-page) a.button.primary[href*="download"]:hover .download-icon { width: 50px; }
+}
+
+/* RubberSegment, vanilla: thumb slides and squashes; no React/Motion. */
+.rubber-segment {
+  position: relative;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  gap: 0;
+  padding: 3px;
+  border-radius: 12px;
+  background: #27272a;
+  isolation: isolate;
+  overflow-x: auto;
+  max-width: 100%;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+.rubber-segment::-webkit-scrollbar { display: none; }
+.rubber-segment.rubber-equal { grid-auto-columns: minmax(0, 1fr); }
+.rubber-segment button {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: rgb(244 244 241 / .72);
+  font: 500 13px/1 var(--font);
+  white-space: nowrap;
+  cursor: pointer;
+  opacity: 1;
+  transition: color 160ms var(--motion-ease), background 160ms var(--motion-ease);
+}
+.rubber-segment button[aria-pressed="true"],
+.rubber-segment button[aria-selected="true"],
+.rubber-segment button.rubber-active {
+  color: transparent !important;
+  background: transparent !important;
+}
+.rubber-segment button:focus-visible {
+  outline: 2px solid var(--gold-light);
+  outline-offset: 3px;
+}
+.rubber-segment button:active { transform: scale(.97); }
+.rubber-segment .motion-indicator { display: none !important; }
+.rubber-segment .rubber-thumb {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid rgb(230 205 164 / .85);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #d8bd95, #c9a876);
+  box-shadow: inset 0 0 0 1px rgb(20 17 13 / .22), 0 2px 8px rgb(0 0 0 / .12);
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+  transition:
+    left 360ms cubic-bezier(.34,1.56,.64,1),
+    top 360ms cubic-bezier(.34,1.56,.64,1),
+    width 360ms cubic-bezier(.34,1.56,.64,1),
+    height 360ms cubic-bezier(.34,1.56,.64,1),
+    transform 120ms var(--motion-ease);
+}
+.rubber-segment[data-dragging] .rubber-thumb { cursor: grabbing; transition: none; }
+.rubber-segment[data-ready] .rubber-thumb { /* no-op hook for initial paint */ }
+.rubber-segment .rubber-thumb.is-squashing { transform: scale(1.035, .94); }
+.rubber-segment .rubber-thumb-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 16px;
+  color: #18181b;
+  font: 500 13px/1 var(--font);
+  white-space: nowrap;
+}
+.rubber-segment .rubber-thumb-label svg { width: 20px; height: 20px; flex: 0 0 auto; }
+@media (max-width: 760px) {
+  .rubber-segment { border-radius: 11px; }
+  .rubber-segment button { min-height: 44px; padding: 0 13px; }
+  .rubber-segment .rubber-thumb-label { padding: 0 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rubber-segment .rubber-thumb { transition: none; }
+  .rubber-segment .rubber-thumb.is-squashing { transform: none; }
+}
+
+/* Existing segmented controls keep their JS; only the skin changes. */
+.mode-picker.rubber-segment { display: inline-grid; width: max-content; flex-wrap: nowrap; padding: 3px; }
+.compare-actions.rubber-segment { display: grid; width: 100%; grid-auto-columns: minmax(0, 1fr); }
+.tabs.rubber-segment { display: inline-grid; width: max-content; flex-wrap: nowrap; }
+.gallery-tabs.rubber-segment { display: inline-grid; width: max-content; max-width: 100%; flex-wrap: nowrap; gap: 0; margin-bottom: 28px; }
+
+
+/* The demo's tabs are vertical icon tabs (34x71 originally); give the thumb label a column layout. */
+.tabs.rubber-segment {
+  grid-auto-columns: 62px;
+  width: max-content;
+  padding: 3px;
+}
+.tabs.rubber-segment button {
+  min-height: 64px;
+  height: 64px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 4px;
+}
+.tabs.rubber-segment .rubber-thumb {
+  border-radius: 10px;
+}
+.tabs.rubber-segment .rubber-thumb-label {
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 2px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+.tabs.rubber-segment .rubber-thumb-label svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Demo before/after toggle (.cmp) is its own rubber segment. */
+.cmp.rubber-segment {
+  display: inline-grid;
+  grid-auto-columns: max-content;
+  width: max-content;
+  padding: 3px;
+  border-radius: 999px;
+  background: #27272a;
+}
+.cmp.rubber-segment button {
+  min-height: 38px;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 999px;
+}
+.cmp.rubber-segment .rubber-thumb {
+  border-radius: 999px;
+}
+.cmp.rubber-segment .rubber-thumb-label {
+  padding: 0 18px;
+  font-size: 13px;
+}
+@media (max-width: 760px) {
+  .tabs.rubber-segment { grid-auto-columns: 56px; }
+  .tabs.rubber-segment button { min-height: 60px; height: 60px; }
+  .cmp.rubber-segment button { min-height: 36px; height: 36px; padding: 0 14px; }
+  .cmp.rubber-segment .rubber-thumb-label { padding: 0 14px; }
+}
+
+/* Help-page secondary: no inherited underline from the legacy .dl section. */
+:is(.photo-edition,.system-page) .quiet-link { text-decoration: none !important; }
+
+/* The demo tabs are stroke icons; the cloned thumb label must inherit the stroke rules. */
+.tabs.rubber-segment .rubber-thumb-label svg,
+.tabs.rubber-segment .rubber-thumb-label svg * {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* One underline only + directional gold frame for text jump buttons. */
+.text-button,
+.recipe-link {
+  text-decoration: none !important;
+}
+.text-button,
+.recipe-link {
+  position: relative;
+  border-bottom: 1px solid var(--strong-line);
+  transition: color 220ms var(--motion-ease), border-color 220ms var(--motion-ease);
+}
+.try-editor .text-button {
+  border-bottom: 1px solid currentColor;
+  text-decoration: none !important;
+}
+.jump-link {
+  --frame-top: 0;
+  --frame-right: 100%;
+  --frame-bottom: 0;
+  --frame-left: 0;
+  position: relative;
+  isolation: isolate;
+}
+.jump-link::before {
+  content: "";
+  position: absolute;
+  inset: -6px -10px;
+  border: 1px solid rgb(201 168 118 / .82);
+  border-radius: 7px;
+  clip-path: inset(var(--frame-top) var(--frame-right) var(--frame-bottom) var(--frame-left));
+  opacity: 0;
+  pointer-events: none;
+  transition: clip-path 380ms var(--motion-ease), opacity 160ms var(--motion-ease);
+}
+.jump-link:hover,
+.jump-link:focus-visible { color: var(--gold-light); border-bottom-color: transparent; }
+.jump-link:hover::before,
+.jump-link:focus-visible::before {
+  opacity: 1;
+  clip-path: inset(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .jump-link::before { transition: none; }
+}
+
+/* Icon arrows: ports of the supplied Motion icons. */
+.ui-arrow-down { overflow: visible; }
+.ui-arrow-down .ui-arrow-dash,
+.ui-arrow-down .ui-arrow-body { transform-box: fill-box; transform-origin: center; }
+.ui-arrow-up-right { display: block; width: 18px; height: 18px; overflow: visible; }
+.ui-arrow-up-right g { transform-box: fill-box; transform-origin: 100% 0; }
+.ui-arrow-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+@keyframes ui-arrow-dash { 0%,100% { transform: translateY(0); } 50% { transform: translateY(1px); } }
+@keyframes ui-arrow-body { 0%,100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
+@keyframes ui-arrow-up-right {
+  0%,100% { transform: translate(0,0) scale(1); }
+  50% { transform: translate(-4px,4px) scale(.85); }
+}
+a:hover .ui-arrow-up-right g,
+button:hover .ui-arrow-up-right g { animation: ui-arrow-up-right 500ms ease-in-out; }
+.button:hover .ui-arrow-down .ui-arrow-dash { animation: ui-arrow-dash 400ms ease-in-out; }
+.button:hover .ui-arrow-down .ui-arrow-body { animation: ui-arrow-body 400ms ease-in-out; }
+@media (prefers-reduced-motion: reduce) {
+  a:hover .ui-arrow-up-right g,
+  button:hover .ui-arrow-up-right g,
+  .button:hover .ui-arrow-down .ui-arrow-dash,
+  .button:hover .ui-arrow-down .ui-arrow-body { animation: none; }
+}
+
+/* Text links: same color handoff, without a frame around every inline link. */
+.text-link { transition: color 220ms var(--motion-ease); }
+.text-link:hover { color: var(--gold-light); }
+
+/* Gallery: break the 3-equal-card template at desktop only.
+   Tablet 761–1100 already uses the existing one-column card list; leave it alone. */
+@media (min-width: 1201px) {
+  .look-grid {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, .875fr) minmax(0, .875fr);
+    gap: 24px;
+  }
+  .look-card:first-child .compare-viewport { aspect-ratio: 1.18; }
+}
+
+/* AVIF <picture> wrappers must not create a layout box. */
+picture { display: contents; }

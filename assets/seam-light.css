@@ -1,0 +1,164 @@
+/* Seam Light: a restrained material edge, used only where a light surface meets Phos's dark canvas. */
+:root {
+  --seam-champagne: #e6d3b3;
+  --seam-graphite: #2a2622;
+  --seam-ease: cubic-bezier(.16, 1, .3, 1);
+}
+
+[data-seam] {
+  --seam-line: var(--seam-champagne);
+  --seam-rest: .06;
+  --seam-active: .45;
+  --seam-x: 50%;
+  --seam-y: 50%;
+  position: relative;
+  isolation: isolate;
+}
+
+[data-seam][data-tone="dark"] {
+  --seam-line: var(--seam-graphite);
+  --seam-active: .25;
+}
+
+[data-seam][data-strength="quiet"] {
+  --seam-active: .34;
+}
+
+[data-seam]::before,
+[data-seam]::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  z-index: 6;
+  opacity: var(--seam-rest);
+}
+
+/* A compact line follows the actual edge. The gradient fades its ends instead of stopping square. */
+[data-seam]::before {
+  background: linear-gradient(90deg, transparent 0%, var(--seam-line) 14%, var(--seam-line) 86%, transparent 100%);
+  transform: scaleX(.08);
+  transform-origin: left center;
+  transition: transform 560ms var(--seam-ease), opacity 560ms var(--seam-ease) !important;
+}
+
+/* The bloom is a small soft material spill, never a full-card glow. */
+[data-seam]::after {
+  background: radial-gradient(ellipse 22% 100% at var(--seam-x) var(--seam-y), color-mix(in srgb, var(--seam-line) 100%, transparent) 0%, transparent 72%);
+  transform: scale(.96);
+  opacity: 0;
+  transition: transform 200ms var(--seam-ease), opacity 200ms var(--seam-ease) !important;
+}
+
+[data-seam][data-edge="top"]::before,
+[data-seam][data-edge="bottom"]::before {
+  left: 8%;
+  width: 84%;
+  height: 1px;
+}
+
+[data-seam][data-edge="top"]::before { top: 0; }
+[data-seam][data-edge="bottom"]::before { bottom: 0; transform-origin: right center; }
+
+[data-seam][data-edge="top"]::after,
+[data-seam][data-edge="bottom"]::after {
+  left: 8%;
+  width: 84%;
+  height: 18px;
+}
+
+[data-seam][data-edge="top"]::after { top: 0; transform-origin: center top; }
+[data-seam][data-edge="bottom"]::after { bottom: 0; transform-origin: center bottom; }
+
+[data-seam][data-edge="left"]::before,
+[data-seam][data-edge="right"]::before {
+  top: 8%;
+  width: 1px;
+  height: 84%;
+  background: linear-gradient(180deg, transparent 0%, var(--seam-line) 14%, var(--seam-line) 86%, transparent 100%);
+  transform: scaleY(.08);
+  transform-origin: center top;
+}
+
+[data-seam][data-edge="left"]::before { left: 0; }
+[data-seam][data-edge="right"]::before { right: 0; transform-origin: center bottom; }
+
+[data-seam][data-edge="left"]::after,
+[data-seam][data-edge="right"]::after {
+  top: 8%;
+  width: 18px;
+  height: 84%;
+}
+
+[data-seam][data-edge="left"]::after { left: 0; transform-origin: left center; }
+[data-seam][data-edge="right"]::after { right: 0; transform-origin: right center; }
+
+/* All four edges are reserved for the hero and lead sample. They settle as a quiet outline. */
+[data-seam][data-edge="all"]::before {
+  inset: 0;
+  border: 1px solid var(--seam-line);
+  border-radius: inherit;
+  background: none;
+  transform: none;
+}
+
+[data-seam][data-edge="all"]::after {
+  inset: -10px;
+  border-radius: inherit;
+  background: radial-gradient(ellipse 24% 100% at var(--seam-x) var(--seam-y), color-mix(in srgb, var(--seam-line) 100%, transparent) 0%, transparent 72%);
+}
+
+[data-seam].is-lit::before { opacity: var(--seam-active); }
+[data-seam].is-lit::after { opacity: .075; }
+[data-seam].is-animating::before { will-change: transform, opacity; }
+[data-seam].is-animating::after { will-change: transform, opacity; }
+
+[data-seam].is-hovering::after,
+[data-seam].is-focus-seam::after { opacity: .12; transform: scale(1); }
+[data-seam].is-hovering::before,
+[data-seam].is-focus-seam::before { opacity: calc(var(--seam-active) + .08); }
+
+/* The hero compare divider is the only seam that can charge during direct manipulation. */
+[data-seam] .seam-divider::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -12px;
+  width: 24px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgb(230 211 179 / .1), transparent);
+  opacity: 0;
+  transition: opacity 100ms var(--seam-ease) !important;
+}
+
+[data-seam] .seam-divider.is-charged { background: var(--seam-champagne); }
+[data-seam] .seam-divider.is-charged::after { opacity: .9; }
+
+@media (hover: hover) and (pointer: fine) {
+  [data-seam][data-trigger="hover"] { cursor: default; }
+}
+
+@media (prefers-contrast: more) {
+  [data-seam]::before { opacity: .2; }
+  [data-seam]::after { display: none; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  [data-seam]::after { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-seam]::before,
+  [data-seam]::after,
+  [data-seam] .seam-divider::after {
+    transition: opacity 140ms linear !important;
+    transform: none !important;
+  }
+  [data-seam].is-lit::before { opacity: .16; }
+  [data-seam].is-lit::after { opacity: 0; }
+  [data-seam] .seam-divider.is-charged { background: var(--seam-line); }
+}
+
+@media (max-width: 760px) {
+  [data-seam][data-trigger="hover"]::after { display: none; }
+}

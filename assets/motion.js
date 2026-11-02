@@ -295,3 +295,206 @@
     });
   });
 })();
+
+/* P0.1 button system: directional tide + jelly press. Vanilla, no dependencies. */
+(() => {
+  const hoverFine = matchMedia('(hover: hover) and (pointer: fine)');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const full = [...document.querySelectorAll('a.button.primary:not([href*="download"]), .quiet-link')];
+  const soft = [...document.querySelectorAll('.resource-link')];
+  const jump = [...document.querySelectorAll('.text-button, .recipe-link')];
+
+  full.forEach(el => el.classList.add('tide-full'));
+  soft.forEach(el => el.classList.add('tide-soft'));
+  jump.forEach(el => el.classList.add('jump-link'));
+
+  function origin(el, event) {
+    if (!hoverFine.matches || (event.pointerType && event.pointerType !== 'mouse')) return;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const x = Math.max(0, Math.min(r.width, event.clientX - r.left));
+    const y = Math.max(0, Math.min(r.height, event.clientY - r.top));
+    const left = x, right = r.width - x, top = y, bottom = r.height - y;
+    const min = Math.min(left, right, top, bottom);
+    let px = 50, py = 110;
+    let frame;
+    if (min === left) { px = 0; py = (y / r.height) * 100; frame = ['0', '100%', '0', '0']; }
+    else if (min === right) { px = 100; py = (y / r.height) * 100; frame = ['0', '0', '0', '100%']; }
+    else if (min === top) { px = (x / r.width) * 100; py = 0; frame = ['0', '0', '100%', '0']; }
+    else { px = (x / r.width) * 100; py = 100; frame = ['100%', '0', '0', '0']; }
+    el.style.setProperty('--tide-x', `${px}%`);
+    el.style.setProperty('--tide-y', `${py}%`);
+    if (el.classList.contains('jump-link') && frame) {
+      el.style.setProperty('--frame-top', frame[0]);
+      el.style.setProperty('--frame-right', frame[1]);
+      el.style.setProperty('--frame-bottom', frame[2]);
+      el.style.setProperty('--frame-left', frame[3]);
+    }
+  }
+
+  [...full, ...soft, ...jump].forEach(el => {
+    el.addEventListener('pointerenter', event => origin(el, event), {passive:true});
+    el.addEventListener('focus', () => {
+      el.style.setProperty('--tide-x', '50%');
+      el.style.setProperty('--tide-y', '110%');
+    });
+  });
+
+  if (reduce.matches) return;
+  document.querySelectorAll('a.button.primary[href*="download"]').forEach(btn => {
+    if (btn.closest('.mobile-menu')) return; // mobile menu uses the small glass download
+    btn.classList.add('jelly-btn');
+    let pressed = false;
+    const down = () => { pressed = true; btn.classList.remove('is-release'); btn.classList.add('is-squish'); };
+    const up = () => {
+      if (!pressed) return;
+      pressed = false;
+      btn.classList.remove('is-squish');
+      btn.classList.add('is-release');
+      btn.addEventListener('animationend', () => btn.classList.remove('is-release'), {once:true});
+    };
+    btn.addEventListener('pointerdown', down);
+    btn.addEventListener('pointerup', up);
+    btn.addEventListener('pointerleave', up);
+    btn.addEventListener('pointercancel', up);
+    btn.addEventListener('keydown', event => {
+      if (event.key === ' ' || event.key === 'Enter') down();
+    });
+    btn.addEventListener('keyup', event => {
+      if (event.key === ' ' || event.key === 'Enter') up();
+    });
+  });
+})();
+
+/* RubberSegment, simplified vanilla: moving thumb + squash; existing JS keeps state. */
+(() => {
+  const groups = [...document.querySelectorAll('.mode-picker, .compare-actions, .tabs, .cmp, .gallery-tabs')];
+  groups.forEach(group => {
+    if (group.dataset.rubberReady) return;
+    group.classList.add('rubber-segment');
+    if (group.matches('.mode-picker, .compare-actions')) group.classList.add('rubber-equal');
+    const thumb = document.createElement('span');
+    const label = document.createElement('span');
+    thumb.className = 'rubber-thumb';
+    thumb.setAttribute('aria-hidden', 'true');
+    label.className = 'rubber-thumb-label';
+    thumb.append(label);
+    group.append(thumb);
+    const buttons = [...group.querySelectorAll('button')];
+    buttons.forEach(button => button.classList.add('rubber-item'));
+    let last = -1;
+
+    const activeIndex = () => {
+      const current = buttons.findIndex(button =>
+        button.getAttribute('aria-pressed') === 'true' ||
+        button.getAttribute('aria-selected') === 'true'
+      );
+      if (current >= 0) return current;
+      return buttons.findIndex(button => button.classList.contains('active'));
+    };
+
+    const sync = (animate) => {
+      const index = activeIndex();
+      if (index < 0 || !buttons[index]) { thumb.hidden = true; return; }
+      thumb.hidden = false;
+      const active = buttons[index];
+      const changed = last !== -1 && last !== index;
+      thumb.style.left = `${active.offsetLeft}px`;
+      thumb.style.top = `${active.offsetTop}px`;
+      thumb.style.width = `${active.offsetWidth}px`;
+      thumb.style.height = `${active.offsetHeight}px`;
+      label.innerHTML = active.innerHTML;
+      buttons.forEach((button, i) => button.classList.toggle('rubber-active', i === index));
+      if (animate && changed && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        thumb.classList.add('is-squashing');
+        clearTimeout(thumb._squash);
+        thumb._squash = setTimeout(() => thumb.classList.remove('is-squashing'), 150);
+      }
+      last = index;
+    };
+
+    sync(false);
+    group.dataset.rubberReady = '';
+    requestAnimationFrame(() => sync(false));
+    group.addEventListener('click', event => {
+      if (event.target.closest('button')) requestAnimationFrame(() => sync(true));
+    });
+    new MutationObserver(() => sync(true)).observe(group, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['aria-pressed', 'aria-selected']
+    });
+    // Drag the active thumb; inactive buttons remain clickable.
+    if (buttons.length > 1 && group.scrollWidth <= group.clientWidth + 1) {
+      let drag = null;
+      const endDrag = event => {
+        if (!drag || event.pointerId !== drag.id) return;
+        group.removeAttribute('data-dragging');
+        const moved = Math.abs(event.clientX - drag.startX) > 5;
+        const current = drag;
+        drag = null;
+        if (!moved) { sync(false); return; }
+        const center = thumb.offsetLeft + thumb.offsetWidth / 2;
+        let nearest = 0, best = Infinity;
+        buttons.forEach((button, i) => {
+          const c = button.offsetLeft + button.offsetWidth / 2;
+          const d = Math.abs(c - center);
+          if (d < best) { best = d; nearest = i; }
+        });
+        buttons[nearest].click();
+      };
+      thumb.addEventListener('pointerdown', event => {
+        if (event.button !== 0 || event.target.closest('button')) return;
+        drag = { id: event.pointerId, startX: event.clientX, left: thumb.offsetLeft };
+        group.dataset.dragging = '';
+        try { thumb.setPointerCapture(event.pointerId); } catch (_) {}
+        event.preventDefault();
+      });
+      thumb.addEventListener('pointermove', event => {
+        if (!drag || event.pointerId !== drag.id) return;
+        const first = buttons[0].offsetLeft;
+        const last = buttons[buttons.length - 1];
+        const max = last.offsetLeft + last.offsetWidth - thumb.offsetWidth;
+        const next = Math.max(first, Math.min(max, drag.left + event.clientX - drag.startX));
+        thumb.style.left = `${next}px`;
+        event.preventDefault();
+      });
+      thumb.addEventListener('pointerup', endDrag);
+      thumb.addEventListener('pointercancel', endDrag);
+    }
+
+    if ('ResizeObserver' in window) {
+      const ro = new ResizeObserver(() => sync(false));
+      ro.observe(group);
+      buttons.forEach(button => ro.observe(button));
+    }
+  });
+})();
+/* Arrow icon replacement: Motion icons ported to static SVG + CSS. */
+(() => {
+  document.querySelectorAll('.download-arrow').forEach(svg => {
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.classList.add('ui-arrow-down');
+    svg.innerHTML = '<path class="ui-arrow-dash" d="M15 5H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="ui-arrow-body" d="M15 9v3h4l-7 7-7-7h4V9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+  });
+  const up = '<svg class="ui-arrow-up-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g><path d="M7 7H17"/><path d="M17 7V17"/><path d="M7 17L17 7"/></g></svg>';
+  document.querySelectorAll('span[aria-hidden="true"]').forEach(span => {
+    if (span.textContent.trim() === '↗') {
+      span.innerHTML = up;
+      span.classList.add('ui-arrow-wrap');
+    }
+  });
+  // Recipe / text links carry the arrow as plain text; move it into the same icon span.
+  document.querySelectorAll('.recipe-link, .text-link').forEach(el => {
+    [...el.childNodes].forEach(node => {
+      if (node.nodeType === 3 && node.nodeValue.includes('↗')) {
+        node.nodeValue = node.nodeValue.replace('↗', '').replace(/\s+$/, '');
+        const span = document.createElement('span');
+        span.className = 'ui-arrow-wrap';
+        span.setAttribute('aria-hidden', 'true');
+        span.innerHTML = up;
+        el.append(span);
+      }
+    });
+  });
+})();

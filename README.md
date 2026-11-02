@@ -11,7 +11,7 @@ Older releases may still use the former application and archive names.
 
 ![Release](https://img.shields.io/github/v/release/Zenodeng/Phos)
 
-![Platform](https://img.shields.io/badge/platform-macOS%2015%2B-blue)
+![Platform](https://img.shields.io/badge/platform-macOS%2026%2B-blue)
 
 ![License](https://img.shields.io/badge/license-MIT-green)
 

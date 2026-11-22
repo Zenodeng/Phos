@@ -70,12 +70,14 @@ enum ParameterGroupSchema {
         for field in ParameterDescriptor.all where field.group == group { p[keyPath:field.keyPath] = field.defaultValue }
         switch group {
         case "白平衡": p.whiteBalanceGains = d.whiteBalanceGains
+        case "基本": p.contrastPivot = d.contrastPivot; p.highlightRolloff = d.highlightRolloff
         case "质感与饱和度": p.hdrMode = d.hdrMode
         case "曲线": p.curve = d.curve; p.lumaCurve = d.lumaCurve; p.curveR = d.curveR; p.curveG = d.curveG; p.curveB = d.curveB
         case "颜色分级": p.gradeShadow = d.gradeShadow; p.gradeMid = d.gradeMid; p.gradeHigh = d.gradeHigh
-        case "HSL · 混色": p.hsl = d.hsl
+        case "HSL · 混色": p.hsl = d.hsl; p.pointColors = d.pointColors
         case "黑白": p.mono = d.mono
-        case "镜头校正": p.lensCorrection = nil
+        case "细节": p.grainRoughness = d.grainRoughness; p.retouchSpots = d.retouchSpots
+        case "镜头校正": p.lensCorrection = nil; p.rawEmbeddedLensCorrection = d.rawEmbeddedLensCorrection
         case "校准": p.primRed = d.primRed; p.primGreen = d.primGreen; p.primBlue = d.primBlue
         case "胶片 CLUT": p.clutName = d.clutName
         case "变换与裁剪": p.rotation = d.rotation; p.flipped = d.flipped; p.perspectiveAuto = d.perspectiveAuto

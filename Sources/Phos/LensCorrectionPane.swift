@@ -12,6 +12,12 @@ struct LensCorrectionPane: View {
     }
     var body:some View {
         VStack(alignment:.leading,spacing:8) {
+            Toggle(L10n.tr("内置 RAW 镜头校正"), isOn: Binding(
+                get: { s.params.rawEmbeddedLensCorrection },
+                set: { s.parameterEdits.finishCurrent(); var p = s.params; p.rawEmbeddedLensCorrection = $0; s.commit(p) }
+            ))
+            .font(.system(size: 11))
+            .help(L10n.tr("开启则使用相机厂商内嵌 RAW 镜头校正配置文件；关闭则由 Lensfun 几何模型自行校正"))
             Button(L10n.tr("镜头配置与导入…")) { s.parameterEdits.finishCurrent(); manage=true }.controlSize(.small)
                 .sheet(isPresented:$manage) { LensProfileSheet().environmentObject(s).environment(\.locale,language.locale) }
             if let c=s.params.lensCorrection {

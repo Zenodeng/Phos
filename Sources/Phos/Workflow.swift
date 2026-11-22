@@ -244,6 +244,7 @@ enum EditGroup: String, CaseIterable, Identifiable {
         }
         if groups.contains(.tone) {
             p.exposure = source.exposure; p.contrast = source.contrast
+            p.contrastPivot = source.contrastPivot; p.highlightRolloff = source.highlightRolloff
             p.highlights = source.highlights; p.shadows = source.shadows
             p.whites = source.whites; p.blacks = source.blacks
             p.clarity = source.clarity; p.texture = source.texture; p.dehaze = source.dehaze
@@ -254,6 +255,7 @@ enum EditGroup: String, CaseIterable, Identifiable {
             p.curve = source.curve; p.lumaCurve = source.lumaCurve
             p.curveR = source.curveR; p.curveG = source.curveG; p.curveB = source.curveB
             p.refineSat = source.refineSat; p.hsl = source.hsl
+            p.pointColors = source.pointColors
             p.gradeShadow = source.gradeShadow; p.gradeMid = source.gradeMid; p.gradeHigh = source.gradeHigh
             p.gradeBlend = source.gradeBlend; p.gradeBalance = source.gradeBalance
             p.mono = source.mono; p.monoRed = source.monoRed; p.monoGreen = source.monoGreen; p.monoBlue = source.monoBlue
@@ -265,13 +267,18 @@ enum EditGroup: String, CaseIterable, Identifiable {
             p.sharpen = source.sharpen; p.sharpenRadius = source.sharpenRadius
             p.sharpenDetail = source.sharpenDetail; p.sharpenMask = source.sharpenMask
             p.denoise = source.denoise; p.denoiseColor = source.denoiseColor
+            p.retouchSpots = source.retouchSpots
         }
         if groups.contains(.effects) {
-            p.grain = source.grain; p.grainSize = source.grainSize
+            p.grain = source.grain; p.grainSize = source.grainSize; p.grainRoughness = source.grainRoughness
             p.vignette = source.vignette; p.vignetteStart = source.vignetteStart
             p.halation = source.halation; p.halationRadius = source.halationRadius; p.halationThreshold = source.halationThreshold
         }
-        if groups.contains(.lens) { p.lensCorrection = source.lensCorrection; p.caAmount = source.caAmount; p.purpleFringe = source.purpleFringe }
+        if groups.contains(.lens) {
+            p.lensCorrection = source.lensCorrection
+            p.rawEmbeddedLensCorrection = source.rawEmbeddedLensCorrection
+            p.caAmount = source.caAmount; p.purpleFringe = source.purpleFringe
+        }
         if groups.contains(.geometry) {
             p.rotation = source.rotation; p.flipped = source.flipped; p.straighten = source.straighten
             p.cropX = source.cropX; p.cropY = source.cropY; p.cropW = source.cropW; p.cropH = source.cropH

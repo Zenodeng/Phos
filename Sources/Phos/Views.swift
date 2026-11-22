@@ -445,16 +445,20 @@ struct CanvasPane: View {
     @State private var painting = false
     @State private var sampled = false
     @State private var maskToken: ParameterEditCoordinator.Token?
+    @State private var retouchDraft: RetouchSpot?
+    @State private var retouchAdjustingSource = false
+    @State private var retouchToken: ParameterEditCoordinator.Token?
     @State private var originalViewport = CanvasViewport()
 
-    /// 当前可以在画布上直接拖控制点的蒙版：位置调整模式、非裁剪、非对比、非白平衡取样。
-    /// 适合窗口与 1:1 两个分支共用，避免两边条件写歪。
+    /// 当前可以在画布上直接拖控制点的蒙版：位置调整模式、非裁剪、非对比、非取样或污点修复。
     private var editableMask: Mask? {
-        guard !s.cropMode, !s.showBefore, !s.whiteBalancePicker, s.maskTool == .position else { return nil }
+        guard !s.cropMode, !s.showBefore, !s.whiteBalancePicker, !s.pointColorPicker, !s.retouchActive, s.maskTool == .position else { return nil }
         return s.maskDraft ?? s.selectedMask.flatMap { id in s.params.masks.first(where: { $0.id == id }) }
     }
 
-    private var preciseTool: Bool { s.cropMode || s.whiteBalancePicker || s.selectedMask != nil || s.maskDrawingKind != nil }
+    private var preciseTool: Bool {
+        s.cropMode || s.whiteBalancePicker || s.pointColorPicker || s.retouchActive || s.selectedMask != nil || s.maskDrawingKind != nil
+    }
     private func layout(_ size: CGSize) -> WorkspaceLayout {
         WorkspaceLayout.resolve(size: size, topInset: session.topInset, browserVisible: session.browserVisible,
                                 inspectorVisible: session.inspectorVisible, mode: session.mode,
@@ -485,6 +489,21 @@ struct CanvasPane: View {
         return frame.key.purpose == purpose ? frame : nil
     }
     var body: some View {
+        Group {
+            switch s.canvasDisplayMode {
+            case .grid:
+                GridCanvasView()
+            case .compare:
+                CompareCanvasView()
+            case .reference:
+                ReferenceCanvasView()
+            case .single:
+                singleCanvas
+            }
+        }
+    }
+
+    private var singleCanvas: some View {
         GeometryReader { geo in
             let shell = layout(geo.size)
             let displayed = frame
@@ -493,11 +512,23 @@ struct CanvasPane: View {
             ZStack(alignment: .topLeading) {
                 StudioStyle.canvas
                 if let displayed {
-                    Image(decorative: displayed.image, scale: 1).resizable()
+                    MetalCanvasView(
+                        metalImage: displayed.metalImage,
+                        fallbackCG: displayed.image,
+                        viewportSize: geo.size,
+                        imageRect: rect,
+                        edrEnabled: s.edrEnabled,
+                        clippingWarning: s.showClippingWarning
+                    )
+                    Color.clear
                         .frame(width: rect.width, height: rect.height)
                         .overlay { selectionOverlay(width: rect.width, height: rect.height) }
                         .overlay(alignment: .topLeading) {
                             if let mask = editableMask, !s.temporaryPan { MaskOverlay(mask: mask, frame: CGRect(origin: .zero, size: rect.size)) }
+                            if s.retouchActive, !s.cropMode, !s.showBefore {
+                                let spots = retouchDraft.map { s.params.retouchSpots + [$0] } ?? s.params.retouchSpots
+                                RetouchOverlay(spots: spots, selectedSpotID: retouchDraft?.id ?? s.selectedRetouchSpotID, frameSize: rect.size)
+                            }
                             if s.splitComparison, let before = s.geometryBeforeFrame,
                                before.key.photoID == displayed.key.photoID, before.key.revision == displayed.key.revision {
                                 Image(decorative:before.image,scale:1).resizable().frame(width:rect.width,height:rect.height)
@@ -594,7 +625,11 @@ struct CanvasPane: View {
             .onChanged { v in
                 guard !s.cropMode, !s.splitComparison else { return }
                 guard frame.contains(v.startLocation) else { return }
-                if s.whiteBalancePicker && !s.temporaryPan { return }
+                if (s.whiteBalancePicker || s.pointColorPicker) && !s.temporaryPan { return }
+                if !s.showBefore, !s.temporaryPan, s.retouchActive {
+                    handleRetouchDrag(v.location, frame: frame)
+                    return
+                }
                 if !s.showBefore, !s.temporaryPan, let drawingKind = s.maskDrawingKind {
                     drawGradient(v.location, start: v.startLocation, frame: frame, kind: drawingKind)
                     return
@@ -625,7 +660,7 @@ struct CanvasPane: View {
                     case .colorRange, .luminanceRange:
                         // 取样类蒙版：在画布上拖到哪儿就取哪儿的颜色/亮度
                         sample(v.location, frame: frame, mask: m)
-                    case .subject, .person, .foreground:
+                    case .subject, .person, .foreground, .sky, .background, .faceSkin, .eyes, .lips, .teeth, .hair:
                         break        // AI 蒙版不需要手绘
                     }
                 } else {
@@ -649,6 +684,17 @@ struct CanvasPane: View {
                 if s.whiteBalancePicker, !s.cropMode, !s.showBefore, panOrigin == nil, frame.contains(value.location) {
                     s.sampleWhiteBalance(at: CGPoint(x: (value.location.x - frame.minX) / frame.width,
                                                     y: 1 - (value.location.y - frame.minY) / frame.height))
+                } else if s.pointColorPicker, !s.cropMode, !s.showBefore, panOrigin == nil, frame.contains(value.location) {
+                    s.samplePointColor(at: CGPoint(x: (value.location.x - frame.minX) / frame.width,
+                                                   y: 1 - (value.location.y - frame.minY) / frame.height))
+                }
+                if s.retouchActive {
+                    if retouchAdjustingSource {
+                        if s.parameterEdits.complete(retouchToken) { s.endEdit() }
+                    } else if let draft = retouchDraft {
+                        s.addRetouchSpot(draft)
+                    }
+                    retouchDraft = nil; retouchAdjustingSource = false; retouchToken = nil; lastBrush = nil
                 }
                 if s.maskDrawingKind != nil {
                     s.finishMaskDrawing()
@@ -660,6 +706,54 @@ struct CanvasPane: View {
                 drawingStart = nil; drawingOriginal = nil; maskOriginSize = .zero
                 lastBrush = nil; sampled = false
             }
+    }
+
+    private func handleRetouchDrag(_ loc: CGPoint, frame: CGRect) {
+        guard frame.contains(loc), frame.width > 1, frame.height > 1 else { return }
+        let nx = min(max((loc.x - frame.minX) / frame.width, 0), 1)
+        let ny = min(max(1 - (loc.y - frame.minY) / frame.height, 0), 1)
+        if !retouchAdjustingSource, retouchDraft == nil,
+           NSEvent.modifierFlags.contains(.option),
+           let selID = s.selectedRetouchSpotID,
+           let spot = s.params.retouchSpots.first(where: { $0.id == selID }) {
+            retouchAdjustingSource = true
+            retouchToken = s.parameterEdits.begin()
+            var updated = spot
+            updated.sourceX = Double(nx)
+            updated.sourceY = Double(ny)
+            s.updateRetouchSpotLive(updated)
+            return
+        }
+        if retouchAdjustingSource, let selID = s.selectedRetouchSpotID,
+           let spot = s.params.retouchSpots.first(where: { $0.id == selID }),
+           s.parameterEdits.valid(retouchToken) {
+            var updated = spot
+            updated.sourceX = Double(nx)
+            updated.sourceY = Double(ny)
+            s.updateRetouchSpotLive(updated)
+            return
+        }
+        let p = CGPoint(x: nx, y: ny)
+        if retouchDraft == nil {
+            var spot = RetouchSpot(mode: s.retouchMode, pts: [[Double(p.x), Double(p.y)]],
+                                   radius: s.retouchRadius, feather: s.retouchFeather)
+            spot.opacity = s.retouchOpacity
+            retouchDraft = spot
+            lastBrush = p
+            return
+        }
+        guard var draft = retouchDraft else { return }
+        let from = lastBrush ?? p
+        let step = max(0.003, draft.radius / 4)
+        let dx = Double(p.x - from.x), dy = Double(p.y - from.y)
+        let dist = (dx * dx + dy * dy).squareRoot()
+        let n = max(1, Int(dist / step))
+        for i in 1...n {
+            let t = Double(i) / Double(n)
+            draft.points.append([Double(from.x) + dx * t, Double(from.y) + dy * t])
+        }
+        retouchDraft = draft
+        lastBrush = p
     }
 
     /// 画笔：屏幕点 → 归一化坐标（y 向上，跟引擎里的笔刷位图一致）
@@ -1201,6 +1295,19 @@ struct StatusBar: View {
                 .lineLimit(1)
             Spacer()
             if let it = s.current {
+                HStack(spacing: 4) {
+                    ForEach([ColorLabel.red, .yellow, .green, .blue, .purple], id: \.self) { lbl in
+                        Circle()
+                            .fill(colorForLabel(lbl))
+                            .frame(width: 8, height: 8)
+                            .overlay(Circle().stroke(.white, lineWidth: it.colorLabel == lbl ? 1.5 : 0))
+                            .opacity(it.colorLabel == lbl ? 1.0 : 0.45)
+                            .onTapGesture { s.setColorLabel(lbl) }
+                            .help(L10n.tr(lbl.label))
+                    }
+                }
+                .padding(.horizontal, 4)
+
                 HStack(spacing: 3) {
                     ForEach(1...5, id: \.self) { i in
                         Image(systemName: i <= it.rating ? "star.fill" : "star")
@@ -1221,10 +1328,55 @@ struct StatusBar: View {
                                                       : Color(nsColor: .rfPill)))
                 }
                 .buttonStyle(.plain)
+
+                Button {
+                    s.toggleReject()
+                } label: {
+                    Label(L10n.tr(it.rejected ? "已淘汰" : "淘汰"),
+                          systemImage: "xmark")
+                        .font(.system(size: 10.5, weight: .medium))
+                        .padding(.horizontal, 7).padding(.vertical, 2)
+                        .foregroundStyle(it.rejected ? Color.white : Color.primary)
+                        .background(Capsule().fill(it.rejected ? Color.red.opacity(0.85)
+                                                               : Color(nsColor: .rfPill)))
+                }
+                .buttonStyle(.plain)
             }
+            Button {
+                s.showClippingWarning.toggle()
+            } label: {
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(s.showClippingWarning ? .orange : .secondary)
+            }
+            .buttonStyle(.plain)
+            .help(L10n.tr("高光/暗部溢出警示 (J)"))
+
+            Button {
+                s.edrEnabled.toggle()
+            } label: {
+                Text("EDR")
+                    .font(.system(size: 9.5, weight: .bold))
+                    .padding(.horizontal, 5).padding(.vertical, 2)
+                    .foregroundStyle(s.edrEnabled ? .white : .secondary)
+                    .background(Capsule().fill(s.edrEnabled ? WorkspaceTokens.accent : Color(nsColor: .rfPill)))
+            }
+            .buttonStyle(.plain)
+            .help(L10n.tr("切换 HDR 扩展动态范围显示"))
         }
         .padding(.horizontal, 12).padding(.vertical, 5)
         .background(.bar)
+    }
+
+    private func colorForLabel(_ l: ColorLabel) -> Color {
+        switch l {
+        case .none: return .clear
+        case .red: return .red
+        case .yellow: return .yellow
+        case .green: return .green
+        case .blue: return .blue
+        case .purple: return .purple
+        }
     }
 }
 

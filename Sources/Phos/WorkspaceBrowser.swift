@@ -69,10 +69,13 @@ final class WorkspacePhotoCell: NSButton {
     private let name = NSTextField(labelWithString: "")
     private let detail = NSTextField(labelWithString: "")
     private let currentMark = NSImageView(), multiMark = NSImageView()
+    private let colorDot = NSView()
     var perform: () -> Void = {}
+    var buildContextMenu: (() -> NSMenu)?
     let film: Bool
     override var isFlipped: Bool { true }
     override var acceptsFirstResponder: Bool { false }
+    override func menu(for event: NSEvent) -> NSMenu? { buildContextMenu?() }
     init(film: Bool) {
         self.film = film
         super.init(frame: .zero)
@@ -80,22 +83,30 @@ final class WorkspacePhotoCell: NSButton {
         wantsLayer = true; layer?.cornerRadius = 7
         thumbnail.imageScaling = .scaleProportionallyUpOrDown
         thumbnail.wantsLayer = true; thumbnail.layer?.cornerRadius = 4; thumbnail.layer?.masksToBounds = true
+        colorDot.wantsLayer = true; colorDot.layer?.cornerRadius = 4; colorDot.isHidden = true
         name.font = .systemFont(ofSize: 11, weight: .medium); name.lineBreakMode = .byTruncatingMiddle
         detail.font = .systemFont(ofSize: 10); detail.textColor = .secondaryLabelColor
         currentMark.image = NSImage(systemSymbolName: "checkmark", accessibilityDescription: "当前照片")
         multiMark.image = NSImage(systemSymbolName: "checkmark.square.fill", accessibilityDescription: "已加入多选")
-        for view in [thumbnail, name, detail, currentMark, multiMark] { addSubview(view) }
+        for view in [thumbnail, colorDot, name, detail, currentMark, multiMark] { addSubview(view) }
         target = self; action = #selector(activate)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
     @objc private func activate() { perform() }
     func configure(_ item: PhotoItem, current: Bool, multi: Bool, failed: Bool) {
         let title = item.url.lastPathComponent
-        name.stringValue = item.url.deletingPathExtension().lastPathComponent
-        detail.stringValue = item.url.pathExtension.uppercased() + (item.picked ? L10n.tr(" · 已标记") : "") + (failed ? L10n.tr(" · 无法预览") : "")
+        name.stringValue = item.displayName
+        detail.stringValue = item.url.pathExtension.uppercased()
+            + (item.picked ? L10n.tr(" · 已标记") : "")
+            + (item.rejected ? L10n.tr(" · 已淘汰") : "")
+            + (item.isVirtualCopy ? L10n.tr(" · 虚拟副本") : "")
+            + (failed ? L10n.tr(" · 无法预览") : "")
         thumbnail.image = item.thumb.map { NSImage(cgImage: $0, size: .zero) }
             ?? NSImage(systemSymbolName: failed ? "exclamationmark.triangle" : "photo", accessibilityDescription: failed ? "缩略图加载失败" : "缩略图加载中")
         thumbnail.contentTintColor = .tertiaryLabelColor
+        thumbnail.alphaValue = item.rejected ? 0.42 : 1.0
+        colorDot.isHidden = item.colorLabel == .none
+        colorDot.layer?.backgroundColor = Self.nsColor(for: item.colorLabel).cgColor
         currentMark.isHidden = !current; multiMark.isHidden = !multi
         currentMark.contentTintColor = .rfGold; multiMark.contentTintColor = .rfGold
         layer?.backgroundColor = (current ? NSColor.rfGold.withAlphaComponent(0.14) : multi ? NSColor.rfGold.withAlphaComponent(0.08) : .clear).cgColor
@@ -106,15 +117,27 @@ final class WorkspacePhotoCell: NSButton {
         setAccessibilityHelp(L10n.isEnglish ? "\(item.url.pathExtension.uppercased()), \(item.rating) stars\(item.picked ? ", flagged" : ""). Command-click to toggle selection; Shift-click to select a range." : "\(item.url.pathExtension.uppercased())，\(item.rating)星\(item.picked ? "，已标记" : "")。Command切换多选，Shift选择范围。")
         needsLayout = true
     }
+    private static func nsColor(for label: ColorLabel) -> NSColor {
+        switch label {
+        case .none: return .clear
+        case .red: return .systemRed
+        case .yellow: return .systemYellow
+        case .green: return .systemGreen
+        case .blue: return .systemBlue
+        case .purple: return .systemPurple
+        }
+    }
     override func layout() {
         super.layout()
         if film {
             thumbnail.frame = CGRect(x: 7, y: 4, width: bounds.width - 14, height: 50)
+            colorDot.frame = CGRect(x: 9, y: 6, width: 8, height: 8)
             name.alignment = .center; name.frame = CGRect(x: 4, y: 59, width: bounds.width - 8, height: 15)
             detail.isHidden = true
             currentMark.frame = CGRect(x: bounds.width - 19, y: 6, width: 12, height: 12)
         } else {
             thumbnail.frame = CGRect(x: 6, y: 5, width: 46, height: 36)
+            colorDot.frame = CGRect(x: 44, y: 5, width: 8, height: 8)
             name.frame = CGRect(x: 62, y: 7, width: max(20, bounds.width - 84), height: 16)
             detail.frame = CGRect(x: 62, y: 25, width: max(20, bounds.width - 70), height: 14)
             currentMark.frame = CGRect(x: bounds.width - 20, y: 16, width: 12, height: 12)
@@ -239,6 +262,20 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
             model.selection.activate(index, modifiers: NSApp.currentEvent?.modifierFlags ?? [])
             window?.makeFirstResponder(self)
         }
+        cell.buildContextMenu = { [weak self] in
+            let m = NSMenu()
+            let vcItem = NSMenuItem(title: L10n.tr("创建虚拟副本"), action: #selector(self?.ctxCreateVirtualCopy(_:)), keyEquivalent: "")
+            vcItem.target = self; vcItem.representedObject = item.id; m.addItem(vcItem)
+            if item.isVirtualCopy {
+                let delVC = NSMenuItem(title: L10n.tr("删除虚拟副本"), action: #selector(self?.ctxDeleteVirtualCopy(_:)), keyEquivalent: "")
+                delVC.target = self; delVC.representedObject = item.id; m.addItem(delVC)
+            }
+            let refItem = NSMenuItem(title: L10n.tr("设为参考图"), action: #selector(self?.ctxSetReference(_:)), keyEquivalent: "")
+            refItem.target = self; refItem.representedObject = item.url; m.addItem(refItem)
+            let xmpItem = NSMenuItem(title: L10n.tr("导出 XMP 旁档"), action: #selector(self?.ctxExportXMP(_:)), keyEquivalent: "")
+            xmpItem.target = self; xmpItem.representedObject = item.id; m.addItem(xmpItem)
+            return m
+        }
     }
     func refresh() {
         search.placeholderString = L10n.tr("搜索照片"); search.setAccessibilityLabel(L10n.tr("搜索照片"))
@@ -341,7 +378,7 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
     @objc private func synchronize() { model.perform(.sync) }
     private func updateFilter() {
         let s = model.state
-        let filterState = AppLanguage.shared.code + "\(s.filterRating)-\(s.filterPicked)"
+        let filterState = AppLanguage.shared.code + "\(s.filterRating)-\(s.filterPicked)-\(s.filterColorLabel?.rawValue ?? "all")-\(s.hideRejected)"
         guard lastFilterState != filterState else { return }
         lastFilterState = filterState
         let menu = NSMenu()
@@ -354,15 +391,55 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
         }
         menu.addItem(.separator())
         let picked = NSMenuItem(title: L10n.tr("仅已标记"), action: #selector(filterPicked), keyEquivalent: ""); picked.target = self; picked.state = s.filterPicked ? .on : .off; menu.addItem(picked)
+        let hideRej = NSMenuItem(title: L10n.tr("隐藏已淘汰"), action: #selector(toggleHideRejected), keyEquivalent: ""); hideRej.target = self; hideRej.state = s.hideRejected ? .on : .off; menu.addItem(hideRej)
+        menu.addItem(.separator())
+        let allColor = NSMenuItem(title: L10n.tr("所有颜色标签"), action: #selector(filterColor(_:)), keyEquivalent: "")
+        allColor.target = self; allColor.representedObject = nil; allColor.state = s.filterColorLabel == nil ? .on : .off; menu.addItem(allColor)
+        for lbl in [ColorLabel.red, .yellow, .green, .blue, .purple] {
+            let item = NSMenuItem(title: L10n.tr(lbl.label), action: #selector(filterColor(_:)), keyEquivalent: "")
+            item.target = self; item.representedObject = lbl.rawValue; item.state = s.filterColorLabel == lbl ? .on : .off; menu.addItem(item)
+        }
         menu.addItem(.separator())
         for (title, action) in [("全选筛选结果", #selector(selectAllPhotos)), ("清除多选", #selector(clearSelection))] {
             let item = NSMenuItem(title: L10n.tr(title), action: action, keyEquivalent: ""); item.target = self; menu.addItem(item)
         }
         filter.menu = menu
-        filter.contentTintColor = s.filterRating > 0 || s.filterPicked ? .rfGold : .secondaryLabelColor
+        filter.contentTintColor = (s.filterRating > 0 || s.filterPicked || s.filterColorLabel != nil || s.hideRejected) ? .rfGold : .secondaryLabelColor
     }
     @objc private func filterRating(_ item: NSMenuItem) { model.state.filterRating = item.tag }
     @objc private func filterPicked() { model.state.filterPicked.toggle() }
+    @objc private func toggleHideRejected() { model.state.hideRejected.toggle() }
+    @objc private func filterColor(_ item: NSMenuItem) {
+        if let raw = item.representedObject as? String, let lbl = ColorLabel(rawValue: raw) {
+            model.state.filterColorLabel = lbl
+        } else {
+            model.state.filterColorLabel = nil
+        }
+    }
+    @objc private func ctxCreateVirtualCopy(_ item: NSMenuItem) {
+        if let id = item.representedObject as? UUID, let idx = model.state.items.firstIndex(where: { $0.id == id }) {
+            model.state.select(idx)
+        }
+        model.state.createVirtualCopy()
+    }
+    @objc private func ctxDeleteVirtualCopy(_ item: NSMenuItem) {
+        if let id = item.representedObject as? UUID, let idx = model.state.items.firstIndex(where: { $0.id == id }) {
+            model.state.select(idx)
+        }
+        model.state.deleteVirtualCopy()
+    }
+    @objc private func ctxSetReference(_ item: NSMenuItem) {
+        if let url = item.representedObject as? URL {
+            model.state.setReferencePhoto(url)
+            model.state.canvasDisplayMode = .reference
+        }
+    }
+    @objc private func ctxExportXMP(_ item: NSMenuItem) {
+        if let id = item.representedObject as? UUID, let idx = model.state.items.firstIndex(where: { $0.id == id }) {
+            model.state.select(idx)
+        }
+        model.state.exportCurrentXMP()
+    }
     @objc private func selectAllPhotos() { model.selection.selectAllVisible() }
     @objc private func clearSelection() { model.state.selectedPhotos = [] }
 }

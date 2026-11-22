@@ -97,6 +97,19 @@ private struct WorkspaceOutputSheet: View {
                                 .disabled(!s.params.masks.contains { $0.kind == .foreground && $0.enabled })
                         }
                     }
+                    WorkspaceFormSection(title:"元数据与 HDR") {
+                        Toggle(L10n.tr("保留 EXIF / IPTC / 相机元数据"), isOn: $settings.preserveMetadata)
+                        Toggle(L10n.tr("移除 GPS 位置隐私信息"), isOn: $settings.stripGPS)
+                            .disabled(!settings.preserveMetadata)
+                        HStack {
+                            Text(L10n.tr("版权署名")).font(.system(size: 11))
+                            TextField(L10n.tr("例：© 2026 Photographer"), text: $settings.copyrightText)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(size: 11))
+                        }
+                        Toggle(L10n.tr("导出 HDR / 广色域（Gain Map / 10-bit PQ）"), isOn: $settings.exportHDR)
+                            .help(L10n.tr("HEIC 输出 10-bit Display P3 PQ；JPEG 附加 HDR Gain Map；TIFF/PNG 输出 16-bit 广色域"))
+                    }
                     WorkspaceFormSection(title:"水印") {
                         Toggle(L10n.tr("添加水印"),isOn:$settings.watermarkEnabled)
                         if settings.watermarkEnabled { WatermarkControls(settings:$settings) }

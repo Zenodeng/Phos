@@ -6,10 +6,12 @@ struct PhotoAICrop: Codable {
     var y: Double // top-left in the CURRENT displayed image, independent of engine coordinates
     var width: Double
     var height: Double
+    var confirmedAspect: Double? = nil
+    private enum CodingKeys: String, CodingKey { case x, y, width, height }
     /// Exact edge percentages need arithmetic, not a language-model estimate.
     static func explicit(_ instruction: String) throws -> Self? {
         let text = instruction.replacingOccurrences(of:"％",with:"%")
-        if text.range(of:"(?:^|[，。；;\\s])(?:不要裁切|不裁切|保留原构图)(?:$|[，。；;\\s])",options:.regularExpression) != nil {
+        if text.range(of:"(?:^|[，。；;\\s])(?:不要裁切|不要再裁切|不裁切|保留原构图)(?:$|[，。；;\\s])",options:.regularExpression) != nil {
             return Self(x:0,y:0,width:1,height:1)
         }
         guard let regex = try? NSRegularExpression(pattern:"裁(?:去|掉)?(?:左右|左、右)(?:两侧|两边)?各\\s*([0-9]+(?:\\.[0-9]+)?)\\s*%"),
@@ -23,8 +25,14 @@ struct PhotoAICrop: Codable {
         return crop
     }
     func applying(to base: EditParams, imageSize: CGSize = CGSize(width:1,height:1)) throws -> EditParams {
+        let fixedAspect = confirmedAspect.map { ratio in
+            imageSize.width > 0 && imageSize.height > 0 && (0.4...2.5).contains(ratio) &&
+            abs(imageSize.width*width/(imageSize.height*height)/ratio-1) < 0.003
+        } ?? false
+        let minimumEdge = fixedAspect ? 0.20 : 0.35
+        let minimumArea = fixedAspect ? 0.20 : 0.40
         guard [x,y,width,height].allSatisfy(\.isFinite), x >= 0, y >= 0,
-              width >= 0.35, height >= 0.35, width*height >= 0.4,
+              width >= minimumEdge, height >= minimumEdge, width*height >= minimumArea,
               x+width <= 1.000001, y+height <= 1.000001 else { throw PhotoAIError(message:"裁切范围无效或过于激进，请重试。") }
         var p = base
         p.cropX = base.cropX + x*base.cropW
@@ -173,6 +181,11 @@ extension PhotoAIPlan {
 }
 
 extension PhotoAIService {
+    static func shouldAttemptCrop(_ instruction: String) -> Bool {
+        PhotoAICropComposition.explicitlyRequestsFraming(instruction) ||
+        (!PhotoAILocalIntent.onlyLocal(instruction) && exclusiveSlider(instruction) == nil)
+    }
+
     /// A concrete repair example for one explicit, common request. It is only
     /// offered after rejection and never resets an existing nonidentity curve.
     static func curveRepairHint(instruction: String, base: EditParams) -> String? {
@@ -200,7 +213,7 @@ extension PhotoAIService {
 
 /// Verify the rendered, selected region, rather than trusting the model's explanation.
 enum PhotoAIDirectionCheck {
-    static func validate(source: CIImage, base: EditParams, proposed: EditParams, regions: [PhotoAIPlan.Region]) throws {
+    static func validate(source: CIImage, base: EditParams, proposed: EditParams, regions: [PhotoAIPlan.Region], protectOutside: Bool = false) throws {
         let scale = min(1,512/max(source.extent.width,source.extent.height))
         let small = source.transformed(by:CGAffineTransform(scaleX:scale,y:scale))
         var prefix = proposed; prefix.masks = base.masks
@@ -220,6 +233,24 @@ enum PhotoAIDirectionCheck {
             let b = mean(after.applyingFilter("CIMultiplyCompositing",parameters:[kCIInputBackgroundImageKey:weights]))
             let delta = (0.2126*(b[0]-a[0])+0.7152*(b[1]-a[1])+0.0722*(b[2]-a[2]))/coverage
             guard intent == "brighten" ? delta > 0.00005 : delta < -0.00005 else { throw PhotoAIError(message:"“\(mask.name)”的实际明暗变化与要求不符，已拦截该建议。") }
+            if protectOutside {
+                let unselected = weights.applyingFilter("CIColorMatrix",parameters:[
+                    "inputRVector":CIVector(x:-5,y:0,z:0,w:0),
+                    "inputGVector":CIVector(x:0,y:-5,z:0,w:0),
+                    "inputBVector":CIVector(x:0,y:0,z:-5,w:0),
+                    "inputBiasVector":CIVector(x:1,y:1,z:1,w:0)
+                ]).applyingFilter("CIColorClamp")
+                let outside = mean(unselected)[0]
+                if outside > 0.003 {
+                    let difference = after.applyingFilter("CIDifferenceBlendMode",parameters:[kCIInputBackgroundImageKey:before])
+                    let weighted = difference.applyingFilter("CIMultiplyCompositing",parameters:[kCIInputBackgroundImageKey:unselected])
+                    let rgb = mean(weighted)
+                    let change = max(rgb[0],max(rgb[1],rgb[2]))/outside
+                    guard change <= 0.015 else {
+                        throw PhotoAIError(message:"“\(mask.name)”改动了应保留的选区外区域。请缩小或修正蒙版。")
+                    }
+                }
+            }
         }
     }
     private static func mean(_ image: CIImage) -> [Float] {
@@ -232,6 +263,20 @@ enum PhotoAIDirectionCheck {
 
 extension PhotoAIService {
     static func validateRequested(_ plan: PhotoAIPlan, base: EditParams, instruction: String) throws {
+        try validateIntentScope(plan,base:base,instruction:instruction)
+        if PhotoAILocalIntent.onlyLocal(instruction) {
+            guard plan.adjustments.isEmpty, (plan.curves ?? [:]).isEmpty,
+                  (plan.hsl ?? [:]).isEmpty, (plan.grading ?? [:]).isEmpty else {
+                throw PhotoAIError(message:"本次只做局部调整，请保留全部全局参数、曲线、HSL 和颜色分级。")
+            }
+            if let intent = PhotoAILocalIntent.explicit(instruction),
+               !instruction.contains("不要新增蒙版"), !instruction.contains("不加蒙版") {
+                guard plan.masks.count == 1, let region = plan.masks.first, intent.matches(region),
+                      region.adjustments.values.contains(where:{ $0 != 0 }) else {
+                    throw PhotoAIError(message:"只调整指定区域，并让它朝要求的明暗方向变化。")
+                }
+            }
+        }
         let protected = preservedGlobalKeys(instruction)
         guard Set(plan.adjustments.keys).isDisjoint(with:protected) else {
             throw PhotoAIError(message:"用户要求保留全局参数，请删除对应的全局调整，仅调整指定蒙版。")
@@ -310,13 +355,28 @@ extension PhotoAIService {
             var masks = properties["masks"] as! [String:Any]; masks["maxItems"] = 0; properties["masks"] = masks
         }
         for (key,word) in [("hsl","HSL"),("curves","曲线"),("grading","分级")] where forbid(word) {
-            properties.removeValue(forKey:key); required.removeAll { $0 == key }
+            // scopedSchema preserves named channels/bands without locking unrelated tools.
+            if preservedAdvancedFields(instruction)[key] == nil {properties.removeValue(forKey:key); required.removeAll { $0 == key }}
         }
         if var globals = properties["adjustments"] as? [String:Any], var fields = globals["properties"] as? [String:Any] {
             for key in preservedGlobalKeys(instruction) { fields.removeValue(forKey:key) }
             globals["properties"] = fields; properties["adjustments"] = globals
         }
+        if PhotoAILocalIntent.onlyLocal(instruction), exclusiveSlider(instruction) == nil {
+            if var globals = properties["adjustments"] as? [String:Any] {
+                globals["properties"] = [String:Any]()
+                properties["adjustments"] = globals
+            }
+            for key in ["curves","hsl","grading"] {
+                properties.removeValue(forKey:key)
+                required.removeAll { $0 == key }
+            }
+            if let intent = PhotoAILocalIntent.explicit(instruction),
+               let masks = properties["masks"] as? [String:Any] {
+                properties["masks"] = intent.constraining(masks)
+            }
+        }
         result["properties"] = properties; result["required"] = required
-        return result
+        return scopedSchema(result,instruction:instruction)
     }
 }

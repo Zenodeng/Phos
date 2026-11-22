@@ -38,7 +38,7 @@ Phos is a non-destructive RAW photo editor written in Swift on top of Core Image
 Everything runs on the local machine: no cloud services, no accounts, no subscription, no telemetry.
 Every pixel operation is executed on the GPU. Optional local AI retouching uses a separately installed MLX-VLM environment and model.
 
-**The only external network request** is a version check against its own website at launch. Optional AI retouching sends image previews and editing parameters only to `127.0.0.1:8765` on your Mac.
+**The only external network request** is a version check against its own website at launch. Optional AI retouching sends image previews and editing parameters only to `127.0.0.1` on your Mac (port 8765 when available, otherwise a system-assigned local port).
 It sends nothing about you, your photos or your machine, and it is the sole reason the app is not
 strictly offline. Turn it off with:
 

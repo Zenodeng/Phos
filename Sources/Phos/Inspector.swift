@@ -244,6 +244,14 @@ struct GroupBox<Content: View>: View {
                     AutoToneRow()
                     WorkspacePhotoParameter(id: "exposure")
                     WorkspacePhotoParameter(id: "contrast")
+                    SliderRow(label: "对比中心", value: Binding(
+                        get: { s.params.contrastPivot },
+                        set: { s.set(\.contrastPivot, $0) }
+                    ), range: -1...1, defaultValue: 0, decimals: 2, step: 0.05) { s.endEdit() }
+                    SliderRow(label: "高光滚降", value: Binding(
+                        get: { s.params.highlightRolloff },
+                        set: { s.set(\.highlightRolloff, $0) }
+                    ), range: 0...100, defaultValue: 0) { s.endEdit() }
                     WorkspacePhotoParameter(id: "highlights")
                     WorkspacePhotoParameter(id: "shadows")
                     WorkspacePhotoParameter(id: "whites")
@@ -275,6 +283,8 @@ struct GroupBox<Content: View>: View {
 
                 GroupBox(title: "HSL · 混色") {
                     HSLPane()
+                    Divider().padding(.vertical, 4)
+                    PointColorPane()
                 }
 
                 GroupBox(title: "黑白") {
@@ -296,6 +306,12 @@ struct GroupBox<Content: View>: View {
                     WorkspacePhotoParameter(id: "denoiseColor")
                     WorkspacePhotoParameter(id: "grain")
                     WorkspacePhotoParameter(id: "grainSize")
+                    SliderRow(label: "颗粒粗糙度", value: Binding(
+                        get: { s.params.grainRoughness },
+                        set: { s.set(\.grainRoughness, $0) }
+                    ), range: 0...1, defaultValue: 0.5, decimals: 2, step: 0.05) { s.endEdit() }
+                    Divider().padding(.vertical, 4)
+                    RetouchPane()
                 }
 
                 GroupBox(title: "效果") {
@@ -915,6 +931,13 @@ extension MaskKind {
         case .subject: return "lasso"
         case .person: return "person.crop.square"
         case .foreground: return "scissors"
+        case .sky: return "cloud.sun"
+        case .background: return "rectangle.dashed"
+        case .faceSkin: return "face.smiling"
+        case .eyes: return "eye"
+        case .lips: return "mouth"
+        case .teeth: return "sparkles"
+        case .hair: return "person.crop.circle"
         case .depth: return "square.3.layers.3d"
         }
     }
@@ -964,6 +987,13 @@ struct MaskPane: View {
         case .subject: return "系统视觉模型算显著性主体（本地跑，不联网），第一次算要等一两秒，结果会缓存"
         case .person: return "系统人物分割（本地跑），自动圈出画面里的人；换图或结果不准时点「重算」"
         case .foreground: return "前景实例抠图（本地跑）：软边 float 蒙版，可直接在导出时选「透明背景抠图」；结果不准点「重算」"
+        case .sky: return "AI 天空分割：自动识别天空区域并支持布尔子蒙版加减与 Guided Filter 边缘精修"
+        case .background: return "自动反选非前景主体区域，适合独立压暗背景或虚化/冷暖分离"
+        case .faceSkin: return "人脸皮肤语义分割（本地 Vision 关键点驱动），适合美肤调色而不影响五官"
+        case .eyes: return "眼睛与虹膜定位蒙版，适合局部提亮眼神光与清晰度"
+        case .lips: return "嘴唇语义分割，单独调整唇色饱和度或红润度"
+        case .teeth: return "牙齿语义分割，配合高饱和压低或曝光微提快速自然亮白"
+        case .hair: return "发丝/头顶部语义分割，可开启 Guided Filter 提升发丝过渡精度"
         case .depth: return "散景深度涂绘：在画布上把想虚化的背景涂白、要清晰的主体留黑；配合「焦外散景」强度使用"
         }
     }
@@ -1048,6 +1078,7 @@ struct MaskPane: View {
                             Button(L10n.tr("复位调整")) { var x = m; x.adjust = LocalAdjust(); s.updateMask(x) }
                         }.font(.system(size:10)).buttonStyle(WorkspaceButtonStyle())
                         MaskEditingControls()
+                        MaskAdvancedControls(mask: m)
                         if m.kind.usesVision {
                             HStack(spacing: 6) {
                                 Button(L10n.tr("重算 AI 蒙版")) {
@@ -1138,6 +1169,8 @@ struct MaskPane: View {
                             SliderRow(label: "降噪", value: Binding(
                                 get: { m.adjust.denoise },
                                 set: { var x = m; x.adjust.denoise = $0; s.updateMaskLive(x) }), range: 0...100) { s.endEdit() }
+                            Divider().padding(.vertical, 2)
+                            MaskLocalExtraControls(mask: m)
                         }
                     }
                 }

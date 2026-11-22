@@ -25,6 +25,16 @@ swiftc -O -suppress-warnings -D PHOS_TESTING -sdk "$SDK" \
     Sources/Phos/Performance.swift \
     Sources/Phos/Alignment.swift \
     Sources/Phos/Workflow.swift \
+    Sources/Phos/Localization.swift \
+    Sources/Phos/LocalizationCatalog.swift \
+    Sources/Phos/LensProfiles.swift \
+    Sources/Phos/LensProfileEngine.swift \
+    Sources/Phos/MetadataIO.swift \
+    Sources/Phos/XMPSidecar.swift \
+    Sources/Phos/MetalShaders.swift \
+    Sources/Phos/MetalEngine.swift \
+    Sources/Phos/MaskEngine.swift \
+    Sources/Phos/RetouchEngine.swift \
     Sources/Phos/AutoTone.swift \
     Sources/Phos/SceneClassifier.swift \
     Tools/CLUTTest.swift -o "$BUILD/cluttest"

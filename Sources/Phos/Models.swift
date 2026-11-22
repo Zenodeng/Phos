@@ -173,6 +173,110 @@ struct PrimaryAdj: Codable, Equatable {
     var isNeutral: Bool { hue == 0 && sat == 0 }
 }
 
+// MARK: - 颜色标签与点颜色
+enum ColorLabel: String, Codable, CaseIterable {
+    case none, red, yellow, green, blue, purple
+    var label: String {
+        switch self {
+        case .none: return "无色标"
+        case .red: return "红"
+        case .yellow: return "黄"
+        case .green: return "绿"
+        case .blue: return "蓝"
+        case .purple: return "紫"
+        }
+    }
+}
+
+struct PointColorSwatch: Codable, Equatable, Identifiable {
+    var id: UUID = UUID()
+    var name: String = "色样"
+    var sampleRGB: [Double] = [0.5, 0.5, 0.5]
+    var hueShift: Double = 0         // -180...180
+    var chromaShift: Double = 0      // -100...100
+    var lumaShift: Double = 0        // -100...100
+    var range: Double = 0.4          // 0.05...1.0
+    var hueRange: Double = 0.45      // 0.1...1.0
+    var chromaRange: Double = 0.6    // 0.1...1.0
+    var lumaRange: Double = 0.7      // 0.1...1.0
+    var enabled: Bool = true
+
+    var isNeutral: Bool {
+        !enabled || (abs(hueShift) < 1e-4 && abs(chromaShift) < 1e-4 && abs(lumaShift) < 1e-4)
+    }
+
+    init() {}
+    init(sampleRGB: [Double], name: String = "色样") {
+        self.sampleRGB = sampleRGB
+        self.name = name
+    }
+    enum CodingKeys: String, CodingKey {
+        case id, name, sampleRGB, hueShift, chromaShift, lumaShift
+        case range, hueRange, chromaRange, lumaRange, enabled
+    }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = PointColorSwatch()
+        id          = try c.decodeIfPresent(UUID.self, forKey: .id) ?? d.id
+        name        = try c.decodeIfPresent(String.self, forKey: .name) ?? d.name
+        sampleRGB   = try c.decodeIfPresent([Double].self, forKey: .sampleRGB) ?? d.sampleRGB
+        hueShift    = try c.decodeIfPresent(Double.self, forKey: .hueShift) ?? d.hueShift
+        chromaShift = try c.decodeIfPresent(Double.self, forKey: .chromaShift) ?? d.chromaShift
+        lumaShift   = try c.decodeIfPresent(Double.self, forKey: .lumaShift) ?? d.lumaShift
+        range       = try c.decodeIfPresent(Double.self, forKey: .range) ?? d.range
+        hueRange    = try c.decodeIfPresent(Double.self, forKey: .hueRange) ?? d.hueRange
+        chromaRange = try c.decodeIfPresent(Double.self, forKey: .chromaRange) ?? d.chromaRange
+        lumaRange   = try c.decodeIfPresent(Double.self, forKey: .lumaRange) ?? d.lumaRange
+        enabled     = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? d.enabled
+    }
+}
+
+// MARK: - 污点修复与内容感知消除
+enum RetouchMode: String, Codable, CaseIterable {
+    case heal, clone, remove
+    var label: String {
+        switch self {
+        case .heal: return "污点修复"
+        case .clone: return "仿制克隆"
+        case .remove: return "智能消除"
+        }
+    }
+}
+
+struct RetouchSpot: Codable, Equatable, Identifiable {
+    var id: UUID = UUID()
+    var mode: RetouchMode = .heal
+    /// 归一化坐标 [[x, y], ...]，y 向上。单点为圆形污点，多点为涂抹路径。
+    var points: [[Double]] = []
+    var sourceX: Double? = nil
+    var sourceY: Double? = nil
+    var radius: Double = 0.025
+    var feather: Double = 0.5
+    var opacity: Double = 1.0
+    var enabled: Bool = true
+
+    init() {}
+    init(mode: RetouchMode, pts: [[Double]] = [], radius: Double = 0.025, feather: Double = 0.5) {
+        self.mode = mode; self.points = pts; self.radius = radius; self.feather = feather
+    }
+    enum CodingKeys: String, CodingKey {
+        case id, mode, points, sourceX, sourceY, radius, feather, opacity, enabled
+    }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = RetouchSpot()
+        id      = try c.decodeIfPresent(UUID.self, forKey: .id) ?? d.id
+        mode    = try c.decodeIfPresent(RetouchMode.self, forKey: .mode) ?? d.mode
+        points  = try c.decodeIfPresent([[Double]].self, forKey: .points) ?? d.points
+        sourceX = try c.decodeIfPresent(Double.self, forKey: .sourceX)
+        sourceY = try c.decodeIfPresent(Double.self, forKey: .sourceY)
+        radius  = try c.decodeIfPresent(Double.self, forKey: .radius) ?? d.radius
+        feather = try c.decodeIfPresent(Double.self, forKey: .feather) ?? d.feather
+        opacity = try c.decodeIfPresent(Double.self, forKey: .opacity) ?? d.opacity
+        enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? d.enabled
+    }
+}
+
 // MARK: - 局部调整（蒙版内生效的那组参数）
 struct LocalAdjust: Codable, Equatable {
     var exposure: Double = 0
@@ -189,12 +293,18 @@ struct LocalAdjust: Codable, Equatable {
     var texture: Double = 0
     var dehaze: Double = 0
     var denoise: Double = 0
+    var hueShift: Double = 0
+    var pointColor: PointColorSwatch? = nil
+    var curve: ToneCurve? = nil
+    var clutName: String = ""
+    var clutStrength: Double = 1.0
 
     init() {}
 
     enum CodingKeys: String, CodingKey {
         case exposure, contrast, saturation, temperature, clarity, sharpen
         case highlights, shadows, whites, blacks, tint, texture, dehaze, denoise
+        case hueShift, pointColor, curve, clutName, clutStrength
     }
 
     init(from decoder: Decoder) throws {
@@ -213,18 +323,46 @@ struct LocalAdjust: Codable, Equatable {
         texture = try c.decodeIfPresent(Double.self, forKey: .texture) ?? 0
         dehaze = try c.decodeIfPresent(Double.self, forKey: .dehaze) ?? 0
         denoise = try c.decodeIfPresent(Double.self, forKey: .denoise) ?? 0
+        hueShift = try c.decodeIfPresent(Double.self, forKey: .hueShift) ?? 0
+        pointColor = try c.decodeIfPresent(PointColorSwatch.self, forKey: .pointColor)
+        curve = try c.decodeIfPresent(ToneCurve.self, forKey: .curve)
+        clutName = try c.decodeIfPresent(String.self, forKey: .clutName) ?? ""
+        clutStrength = try c.decodeIfPresent(Double.self, forKey: .clutStrength) ?? 1.0
     }
 
     var isNeutral: Bool {
-        exposure == 0 && contrast == 0 && saturation == 0 && temperature == 0 && clarity == 0 && sharpen == 0
+        let curveNeutral = curve == nil || curve?.isIdentity == true
+        let pcNeutral = pointColor == nil || pointColor?.isNeutral == true
+        let clutNeutral = clutName.isEmpty || clutStrength <= 0
+        return exposure == 0 && contrast == 0 && saturation == 0 && temperature == 0 && clarity == 0 && sharpen == 0
             && highlights == 0 && shadows == 0 && whites == 0 && blacks == 0
             && tint == 0 && texture == 0 && dehaze == 0 && denoise == 0
+            && hueShift == 0 && curveNeutral && pcNeutral && clutNeutral
     }
 }
 
-// MARK: - 蒙版
+// MARK: - 蒙版与布尔组合
+enum MaskBoolOp: String, Codable, CaseIterable {
+    case add, subtract, intersect
+    var label: String {
+        switch self {
+        case .add: return "添加"
+        case .subtract: return "减去"
+        case .intersect: return "交叉"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .add: return "plus.square"
+        case .subtract: return "minus.square"
+        case .intersect: return "square.on.square"
+        }
+    }
+}
+
 enum MaskKind: String, Codable, CaseIterable {
     case linear, radial, brush, colorRange, luminanceRange, subject, person, foreground, depth
+    case sky, background, faceSkin, eyes, lips, teeth, hair
     var label: String {
         switch self {
         case .linear: return "线性渐变"
@@ -236,11 +374,102 @@ enum MaskKind: String, Codable, CaseIterable {
         case .person: return "选择人物"
         case .foreground: return "主体抠图"
         case .depth: return "深度涂绘"
+        case .sky: return "选择天空"
+        case .background: return "选择背景"
+        case .faceSkin: return "面部皮肤"
+        case .eyes: return "眼睛"
+        case .lips: return "嘴唇"
+        case .teeth: return "牙齿"
+        case .hair: return "头发"
         }
     }
     /// 是否用到了系统视觉模型（Vision），这类蒙版计算较重，需要缓存
-    var usesVision: Bool { self == .subject || self == .person || self == .foreground }
+    var usesVision: Bool {
+        switch self {
+        case .subject, .person, .foreground, .sky, .background, .faceSkin, .eyes, .lips, .teeth, .hair:
+            return true
+        default:
+            return false
+        }
+    }
     var isSampler: Bool { self == .colorRange || self == .luminanceRange }
+}
+
+struct MaskComponent: Codable, Equatable, Identifiable {
+    var id: UUID = UUID()
+    var op: MaskBoolOp = .add
+    var kind: MaskKind = .linear
+    var enabled: Bool = true
+    var inverted: Bool = false
+    var x0: Double = 0.3, y0: Double = 0.2
+    var x1: Double = 0.7, y1: Double = 0.8
+    var radius: Double = 0.3
+    var gradientVersion: Int? = 1
+    var radiusX: Double? = 0.3
+    var radiusY: Double? = 0.3
+    var radialAngle: Double = 0
+    var feather: Double = 0.6
+    var strokes: [Stroke] = []
+    var sampleRGB: [Double] = [0.5, 0.5, 0.5]
+    var tolerance: Double = 0.25
+    var lumLow: Double = 0.2
+    var lumHigh: Double = 0.8
+    var lumSoft: Double = 0.15
+
+    init() {}
+    init(op: MaskBoolOp, kind: MaskKind) {
+        self.op = op; self.kind = kind
+    }
+
+    func asMask() -> Mask {
+        var m = Mask()
+        m.id = id
+        m.kind = kind
+        m.enabled = enabled
+        m.inverted = inverted
+        m.x0 = x0; m.y0 = y0; m.x1 = x1; m.y1 = y1
+        m.radius = radius
+        m.gradientVersion = gradientVersion
+        m.radiusX = radiusX; m.radiusY = radiusY
+        m.radialAngle = radialAngle
+        m.feather = feather
+        m.strokes = strokes
+        m.sampleRGB = sampleRGB; m.tolerance = tolerance
+        m.lumLow = lumLow; m.lumHigh = lumHigh; m.lumSoft = lumSoft
+        m.refineEdges = false
+        return m
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, op, kind, enabled, inverted, x0, y0, x1, y1, radius
+        case gradientVersion, radiusX, radiusY, radialAngle, feather, strokes
+        case sampleRGB, tolerance, lumLow, lumHigh, lumSoft
+    }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = MaskComponent()
+        id       = try c.decodeIfPresent(UUID.self, forKey: .id) ?? d.id
+        op       = try c.decodeIfPresent(MaskBoolOp.self, forKey: .op) ?? d.op
+        kind     = try c.decodeIfPresent(MaskKind.self, forKey: .kind) ?? d.kind
+        enabled  = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? d.enabled
+        inverted = try c.decodeIfPresent(Bool.self, forKey: .inverted) ?? d.inverted
+        x0       = try c.decodeIfPresent(Double.self, forKey: .x0) ?? d.x0
+        y0       = try c.decodeIfPresent(Double.self, forKey: .y0) ?? d.y0
+        x1       = try c.decodeIfPresent(Double.self, forKey: .x1) ?? d.x1
+        y1       = try c.decodeIfPresent(Double.self, forKey: .y1) ?? d.y1
+        radius   = try c.decodeIfPresent(Double.self, forKey: .radius) ?? d.radius
+        gradientVersion = try c.decodeIfPresent(Int.self, forKey: .gradientVersion) ?? d.gradientVersion
+        radiusX  = try c.decodeIfPresent(Double.self, forKey: .radiusX) ?? d.radiusX
+        radiusY  = try c.decodeIfPresent(Double.self, forKey: .radiusY) ?? d.radiusY
+        radialAngle = try c.decodeIfPresent(Double.self, forKey: .radialAngle) ?? d.radialAngle
+        feather  = try c.decodeIfPresent(Double.self, forKey: .feather) ?? d.feather
+        strokes  = try c.decodeIfPresent([Stroke].self, forKey: .strokes) ?? d.strokes
+        sampleRGB = try c.decodeIfPresent([Double].self, forKey: .sampleRGB) ?? d.sampleRGB
+        tolerance = try c.decodeIfPresent(Double.self, forKey: .tolerance) ?? d.tolerance
+        lumLow   = try c.decodeIfPresent(Double.self, forKey: .lumLow) ?? d.lumLow
+        lumHigh  = try c.decodeIfPresent(Double.self, forKey: .lumHigh) ?? d.lumHigh
+        lumSoft  = try c.decodeIfPresent(Double.self, forKey: .lumSoft) ?? d.lumSoft
+    }
 }
 
 struct Stroke: Codable, Equatable {
@@ -290,12 +519,14 @@ struct Mask: Codable, Equatable, Identifiable {
     var lumLow: Double = 0.2
     var lumHigh: Double = 0.8
     var lumSoft: Double = 0.15
+    var components: [MaskComponent] = []
+    var refineEdges: Bool = true
 
     enum CodingKeys: String, CodingKey {
         case id, kind, enabled, inverted, x0, y0, x1, y1, radius, feather, strokes, adjust, name
         case gradientVersion, radiusX, radiusY, radialAngle
         case sampleRGB, tolerance, lumLow, lumHigh, lumSoft
-        case refinements
+        case refinements, components, refineEdges
     }
 
     // 宽容解码：旧副档缺取样/范围字段时用默认值
@@ -325,6 +556,8 @@ struct Mask: Codable, Equatable, Identifiable {
         lumLow     = try c.decodeIfPresent(Double.self, forKey: .lumLow)   ?? base.lumLow
         lumHigh    = try c.decodeIfPresent(Double.self, forKey: .lumHigh)  ?? base.lumHigh
         lumSoft    = try c.decodeIfPresent(Double.self, forKey: .lumSoft)  ?? base.lumSoft
+        components = try c.decodeIfPresent([MaskComponent].self, forKey: .components) ?? []
+        refineEdges = try c.decodeIfPresent(Bool.self, forKey: .refineEdges) ?? true
     }
 }
 
@@ -336,6 +569,8 @@ struct EditParams: Codable, Equatable {
     var whiteBalanceGains: [Double] = [1, 1, 1]
     var exposure: Double = 0         // EV
     var contrast: Double = 0
+    var contrastPivot: Double = 0    // -50...50，对比度中灰支点偏移
+    var highlightRolloff: Double = 0 // 0...100，AgX 高光柔滑滚降
     var highlights: Double = 0
     var shadows: Double = 0
     var whites: Double = 0
@@ -356,6 +591,7 @@ struct EditParams: Codable, Equatable {
     var curveB = ToneCurve()
     var refineSat: Double = 0        // Refine Sat：曲线改调子不动饱和度
     var hsl = HSLMix()
+    var pointColors: [PointColorSwatch] = [] // OKLCH 点颜色精确色板
 
     // 颜色分级（阴影 / 中间调 / 高光 分别上色）
     var gradeShadow = ColorGrade()
@@ -379,6 +615,8 @@ struct EditParams: Codable, Equatable {
     var denoiseColor: Double = 0
     var grain: Double = 0
     var grainSize: Double = 0.6
+    var grainRoughness: Double = 0.5
+    var retouchSpots: [RetouchSpot] = []
 
     // 效果
     var vignette: Double = 0
@@ -393,6 +631,7 @@ struct EditParams: Codable, Equatable {
 
     // 镜头校正
     var lensCorrection: LensCorrection? = nil
+    var rawEmbeddedLensCorrection: Bool = true
     var caAmount: Double = 0           // 横向色差 -100...100
     var purpleFringe: Double = 0       // 紫边抑制 0...100
 
@@ -435,19 +674,20 @@ struct EditParams: Codable, Equatable {
     static let neutral = EditParams()
 
     enum CodingKeys: String, CodingKey {
-        case temperature, tint, exposure, contrast, highlights, shadows, whites, blacks
+        case temperature, tint, exposure, contrast, contrastPivot, highlightRolloff
+        case highlights, shadows, whites, blacks
         case whiteBalanceGains
         case clarity, vibrance, saturation, texture, dehaze, hdrMode, hdrLimit
-        case curve, hsl
+        case curve, hsl, pointColors
         case lumaCurve, curveR, curveG, curveB, refineSat
         case gradeShadow, gradeMid, gradeHigh, gradeBlend, gradeBalance
         case mono, monoRed, monoGreen, monoBlue
         case sharpen, sharpenRadius, sharpenDetail, sharpenMask
-        case denoise, denoiseColor, grain, grainSize
+        case denoise, denoiseColor, grain, grainSize, grainRoughness, retouchSpots
         case vignette, vignetteStart
         case halation, halationThreshold, halationRadius
         case bokehAmount
-        case lensCorrection
+        case lensCorrection, rawEmbeddedLensCorrection
         case caAmount, purpleFringe
         case primRed, primGreen, primBlue, calibShadowTint
         case clutName, clutStrength
@@ -466,6 +706,8 @@ struct EditParams: Codable, Equatable {
         whiteBalanceGains = try c.decodeIfPresent([Double].self, forKey: .whiteBalanceGains) ?? [1, 1, 1]
         exposure       = try c.decodeIfPresent(Double.self, forKey: .exposure)       ?? base.exposure
         contrast       = try c.decodeIfPresent(Double.self, forKey: .contrast)       ?? base.contrast
+        contrastPivot  = try c.decodeIfPresent(Double.self, forKey: .contrastPivot)  ?? base.contrastPivot
+        highlightRolloff = try c.decodeIfPresent(Double.self, forKey: .highlightRolloff) ?? base.highlightRolloff
         highlights     = try c.decodeIfPresent(Double.self, forKey: .highlights)     ?? base.highlights
         shadows        = try c.decodeIfPresent(Double.self, forKey: .shadows)        ?? base.shadows
         whites         = try c.decodeIfPresent(Double.self, forKey: .whites)         ?? base.whites
@@ -495,6 +737,7 @@ struct EditParams: Codable, Equatable {
         curveG         = try c.decodeIfPresent(ToneCurve.self, forKey: .curveG)      ?? base.curveG
         curveB         = try c.decodeIfPresent(ToneCurve.self, forKey: .curveB)      ?? base.curveB
         hsl            = try c.decodeIfPresent(HSLMix.self, forKey: .hsl)            ?? base.hsl
+        pointColors    = try c.decodeIfPresent([PointColorSwatch].self, forKey: .pointColors) ?? base.pointColors
         mono           = try c.decodeIfPresent(Bool.self, forKey: .mono)             ?? base.mono
         monoRed        = try c.decodeIfPresent(Double.self, forKey: .monoRed)        ?? base.monoRed
         monoGreen      = try c.decodeIfPresent(Double.self, forKey: .monoGreen)      ?? base.monoGreen
@@ -505,6 +748,8 @@ struct EditParams: Codable, Equatable {
         denoiseColor   = try c.decodeIfPresent(Double.self, forKey: .denoiseColor)   ?? base.denoiseColor
         grain          = try c.decodeIfPresent(Double.self, forKey: .grain)          ?? base.grain
         grainSize      = try c.decodeIfPresent(Double.self, forKey: .grainSize)      ?? base.grainSize
+        grainRoughness = try c.decodeIfPresent(Double.self, forKey: .grainRoughness) ?? base.grainRoughness
+        retouchSpots   = try c.decodeIfPresent([RetouchSpot].self, forKey: .retouchSpots) ?? base.retouchSpots
         vignette       = try c.decodeIfPresent(Double.self, forKey: .vignette)       ?? base.vignette
         vignetteStart  = try c.decodeIfPresent(Double.self, forKey: .vignetteStart)  ?? base.vignetteStart
         halation       = try c.decodeIfPresent(Double.self, forKey: .halation)       ?? base.halation
@@ -513,6 +758,7 @@ struct EditParams: Codable, Equatable {
         bokehAmount    = try c.decodeIfPresent(Double.self, forKey: .bokehAmount) ?? base.bokehAmount
         lensCorrection = try c.decodeIfPresent(LensCorrection.self, forKey: .lensCorrection)
         if lensCorrection?.valid == false { lensCorrection = nil }
+        rawEmbeddedLensCorrection = try c.decodeIfPresent(Bool.self, forKey: .rawEmbeddedLensCorrection) ?? base.rawEmbeddedLensCorrection
         caAmount       = try c.decodeIfPresent(Double.self, forKey: .caAmount)       ?? base.caAmount
         purpleFringe   = try c.decodeIfPresent(Double.self, forKey: .purpleFringe)   ?? base.purpleFringe
         perspectiveAuto = try c.decodeIfPresent(Bool.self, forKey: .perspectiveAuto) ?? base.perspectiveAuto
@@ -547,6 +793,10 @@ struct ExportSettings: Codable, Equatable {
     var sharpenForOutput: Bool = false
     var tiffBitDepth: Int = 16
     var colorSpace: ExportColorSpace = .sRGB
+    var preserveMetadata: Bool = true
+    var stripGPS: Bool = false
+    var copyrightText: String = ""
+    var exportHDR: Bool = false
 
     // MARK: 水印（只在出图时叠加，不进预览、不进副档）
     var watermarkEnabled: Bool = false
@@ -559,6 +809,41 @@ struct ExportSettings: Codable, Equatable {
     var watermarkOpacity: Double = 0.55
     var watermarkRotation: Double = 0         // 度，绕水印中心
     var watermarkMargin: Double = 0.03        // 距边缘留白，占短边比例
+
+    init() {}
+
+    enum CodingKeys: String, CodingKey {
+        case format, quality, maxLongEdge, sharpenForOutput, tiffBitDepth, colorSpace
+        case preserveMetadata, stripGPS, copyrightText, exportHDR
+        case watermarkEnabled, watermarkKind, watermarkText, watermarkDarkText
+        case watermarkImagePath, watermarkPosition, watermarkScale
+        case watermarkOpacity, watermarkRotation, watermarkMargin
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = ExportSettings()
+        format            = try c.decodeIfPresent(String.self, forKey: .format) ?? d.format
+        quality           = try c.decodeIfPresent(Double.self, forKey: .quality) ?? d.quality
+        maxLongEdge       = try c.decodeIfPresent(Int.self, forKey: .maxLongEdge) ?? d.maxLongEdge
+        sharpenForOutput  = try c.decodeIfPresent(Bool.self, forKey: .sharpenForOutput) ?? d.sharpenForOutput
+        tiffBitDepth      = try c.decodeIfPresent(Int.self, forKey: .tiffBitDepth) ?? d.tiffBitDepth
+        colorSpace        = try c.decodeIfPresent(ExportColorSpace.self, forKey: .colorSpace) ?? d.colorSpace
+        preserveMetadata  = try c.decodeIfPresent(Bool.self, forKey: .preserveMetadata) ?? d.preserveMetadata
+        stripGPS          = try c.decodeIfPresent(Bool.self, forKey: .stripGPS) ?? d.stripGPS
+        copyrightText     = try c.decodeIfPresent(String.self, forKey: .copyrightText) ?? d.copyrightText
+        exportHDR         = try c.decodeIfPresent(Bool.self, forKey: .exportHDR) ?? d.exportHDR
+        watermarkEnabled  = try c.decodeIfPresent(Bool.self, forKey: .watermarkEnabled) ?? d.watermarkEnabled
+        watermarkKind     = try c.decodeIfPresent(String.self, forKey: .watermarkKind) ?? d.watermarkKind
+        watermarkText     = try c.decodeIfPresent(String.self, forKey: .watermarkText) ?? d.watermarkText
+        watermarkDarkText = try c.decodeIfPresent(Bool.self, forKey: .watermarkDarkText) ?? d.watermarkDarkText
+        watermarkImagePath = try c.decodeIfPresent(String.self, forKey: .watermarkImagePath) ?? d.watermarkImagePath
+        watermarkPosition = try c.decodeIfPresent(String.self, forKey: .watermarkPosition) ?? d.watermarkPosition
+        watermarkScale    = try c.decodeIfPresent(Double.self, forKey: .watermarkScale) ?? d.watermarkScale
+        watermarkOpacity  = try c.decodeIfPresent(Double.self, forKey: .watermarkOpacity) ?? d.watermarkOpacity
+        watermarkRotation = try c.decodeIfPresent(Double.self, forKey: .watermarkRotation) ?? d.watermarkRotation
+        watermarkMargin   = try c.decodeIfPresent(Double.self, forKey: .watermarkMargin) ?? d.watermarkMargin
+    }
 
     /// 九宫格锚点（左上 → 右下），给 UI 用
     static let wmPositions: [String] = [
@@ -622,6 +907,42 @@ enum MergeMode: String, Codable, CaseIterable {
     }
 }
 
+// MARK: - 虚拟副本
+struct VirtualCopy: Codable, Equatable, Identifiable {
+    var id: UUID = UUID()
+    var name: String = "副本 1"
+    var created: Date = Date()
+    var params: EditParams = EditParams()
+    var rating: Int = 0
+    var picked: Bool = false
+    var colorLabel: ColorLabel = .none
+    var rejected: Bool = false
+    var snapshots: [EditSnapshot] = []
+
+    init(id: UUID = UUID(), name: String = "副本 1", created: Date = Date(),
+         params: EditParams = EditParams(), rating: Int = 0, picked: Bool = false,
+         colorLabel: ColorLabel = .none, rejected: Bool = false, snapshots: [EditSnapshot] = []) {
+        self.id = id; self.name = name; self.created = created; self.params = params
+        self.rating = rating; self.picked = picked; self.colorLabel = colorLabel
+        self.rejected = rejected; self.snapshots = snapshots
+    }
+    enum CodingKeys: String, CodingKey {
+        case id, name, created, params, rating, picked, colorLabel, rejected, snapshots
+    }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? "副本"
+        created = try c.decodeIfPresent(Date.self, forKey: .created) ?? Date()
+        params = try c.decodeIfPresent(EditParams.self, forKey: .params) ?? EditParams()
+        rating = try c.decodeIfPresent(Int.self, forKey: .rating) ?? 0
+        picked = try c.decodeIfPresent(Bool.self, forKey: .picked) ?? false
+        colorLabel = try c.decodeIfPresent(ColorLabel.self, forKey: .colorLabel) ?? .none
+        rejected = try c.decodeIfPresent(Bool.self, forKey: .rejected) ?? false
+        snapshots = try c.decodeIfPresent([EditSnapshot].self, forKey: .snapshots) ?? []
+    }
+}
+
 // MARK: - 副档存档（非破坏编辑）
 struct Sidecar: Codable {
     var version: Int = 2
@@ -629,12 +950,22 @@ struct Sidecar: Codable {
     var params: EditParams
     var rating: Int = 0
     var picked: Bool = false
+    var colorLabel: ColorLabel = .none
+    var rejected: Bool = false
+    var keywords: [String] = []
     var snapshots: [EditSnapshot] = []
+    var virtualCopies: [VirtualCopy] = []
 
-    init(params: EditParams, rating: Int = 0, picked: Bool = false, snapshots: [EditSnapshot] = []) {
+    init(params: EditParams, rating: Int = 0, picked: Bool = false, snapshots: [EditSnapshot] = [],
+         colorLabel: ColorLabel = .none, rejected: Bool = false, keywords: [String] = [],
+         virtualCopies: [VirtualCopy] = []) {
         self.params = params; self.rating = rating; self.picked = picked; self.snapshots = snapshots
+        self.colorLabel = colorLabel; self.rejected = rejected; self.keywords = keywords
+        self.virtualCopies = virtualCopies
     }
-    enum CodingKeys: String, CodingKey { case version, app, params, rating, picked, snapshots }
+    enum CodingKeys: String, CodingKey {
+        case version, app, params, rating, picked, colorLabel, rejected, keywords, snapshots, virtualCopies
+    }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 1
@@ -642,7 +973,11 @@ struct Sidecar: Codable {
         params = try c.decode(EditParams.self, forKey: .params)
         rating = try c.decodeIfPresent(Int.self, forKey: .rating) ?? 0
         picked = try c.decodeIfPresent(Bool.self, forKey: .picked) ?? false
+        colorLabel = try c.decodeIfPresent(ColorLabel.self, forKey: .colorLabel) ?? .none
+        rejected = try c.decodeIfPresent(Bool.self, forKey: .rejected) ?? false
+        keywords = try c.decodeIfPresent([String].self, forKey: .keywords) ?? []
         snapshots = try c.decodeIfPresent([EditSnapshot].self, forKey: .snapshots) ?? []
+        virtualCopies = try c.decodeIfPresent([VirtualCopy].self, forKey: .virtualCopies) ?? []
     }
 }
 

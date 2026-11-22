@@ -11,6 +11,11 @@ swiftc -O -D PHOS_TESTING -sdk "$SDK" -target arm64-apple-macosx15.0 \
     -module-cache-path "$OUT/module-cache" \
     Sources/Phos/Models.swift Sources/Phos/Workflow.swift Sources/Phos/Engine.swift \
     Sources/Phos/CLUT.swift Sources/Phos/Performance.swift Sources/Phos/Alignment.swift \
+    Sources/Phos/Localization.swift Sources/Phos/LocalizationCatalog.swift \
+    Sources/Phos/LensProfiles.swift Sources/Phos/LensProfileEngine.swift \
+    Sources/Phos/MetadataIO.swift Sources/Phos/XMPSidecar.swift \
+    Sources/Phos/MetalShaders.swift Sources/Phos/MetalEngine.swift \
+    Sources/Phos/MaskEngine.swift Sources/Phos/RetouchEngine.swift \
     Tools/MaskDragTest.swift -o "$OUT/test"
 
 "$OUT/test"

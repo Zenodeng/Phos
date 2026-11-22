@@ -174,13 +174,14 @@ final class LensProfileStore: ObservableObject {
     func reload() {
         var all:[String:LensProfile]=[:]; cameras=[:]
         let bundled=bundledURL
+        let extended=bundledURL?.deletingLastPathComponent().appendingPathComponent("extended.xml")
         let local=(try? FileManager.default.contentsOfDirectory(at:directory,includingPropertiesForKeys:[.contentModificationDateKey])) ?? []
-        for url in ([bundled].compactMap{$0}+local.filter{$0.pathExtension.lowercased()=="xml"}.sorted {
+        for url in ([bundled, extended].compactMap{$0}+local.filter{$0.pathExtension.lowercased()=="xml"}.sorted {
             let a=(try? $0.resourceValues(forKeys:[.contentModificationDateKey]).contentModificationDate) ?? .distantPast
             let b=(try? $1.resourceValues(forKeys:[.contentModificationDateKey]).contentModificationDate) ?? .distantPast
             return a == b ? $0.lastPathComponent < $1.lastPathComponent : a < b
         }) {
-            guard let data=try? Data(contentsOf:url),let db=try? LensXMLReader.read(data) else { continue }
+            guard FileManager.default.fileExists(atPath:url.path),let data=try? Data(contentsOf:url),let db=try? LensXMLReader.read(data) else { continue }
             for p in db.profiles { all[p.id]=p }; cameras.merge(db.cameras){_,n in n}
         }
         profiles=all.values.sorted{$0.title.localizedStandardCompare($1.title) == .orderedAscending}

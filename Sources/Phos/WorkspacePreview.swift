@@ -22,7 +22,23 @@ struct PreviewFrame: @unchecked Sendable {
     let editedExtent: CGRect
     let proxyScale: CGFloat
     let fullResolution: Bool
+    let metalImage: CIImage?
     var bitmapSize: CGSize { CGSize(width: image.width, height: image.height) }
+
+    init(key: PreviewFrameKey, image: CGImage, mask: CGImage?, maskID: UUID?,
+         histogram: Histogram, renderExtent: CGRect, editedExtent: CGRect,
+         proxyScale: CGFloat, fullResolution: Bool, metalImage: CIImage? = nil) {
+        self.key = key
+        self.image = image
+        self.mask = mask
+        self.maskID = maskID
+        self.histogram = histogram
+        self.renderExtent = renderExtent
+        self.editedExtent = editedExtent
+        self.proxyScale = proxyScale
+        self.fullResolution = fullResolution
+        self.metalImage = metalImage
+    }
     static func fingerprint(_ params: EditParams) -> String {
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
         return SHA256.hash(data: (try? encoder.encode(params)) ?? Data()).map { String(format: "%02x", $0) }.joined()

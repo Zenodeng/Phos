@@ -71,6 +71,10 @@ def install(source, destination, backup_root, report):
             raise
         if previous.exists():
             shutil.rmtree(previous)
+        os.utime(destination, None)
+        lsregister = Path('/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister')
+        if lsregister.exists():
+            subprocess.run([str(lsregister), '-f', str(destination)], check=False, capture_output=True)
         result = dict(status='passed', candidate=str(source), installed=str(destination),
                       rollbackArchive=str(archive) if archive else None,
                       rollbackArchiveSHA256=sha(archive.read_bytes()) if archive else None,

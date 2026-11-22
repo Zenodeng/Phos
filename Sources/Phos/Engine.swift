@@ -10,19 +10,23 @@ import AppKit
 
 enum Engine {
 
-    // 固定的处理上下文。CIContext 一定要复用，别每次新建 —— 这是性能关键。
-    static let ctx: CIContext = {
-        let opts: [CIContextOption: Any] = [.cacheIntermediates: false,
-                                            .allowLowPower: false]
-        return CIContext(options: opts)
-    }()
+    // 固定的处理上下文（基于共享 Metal 队列与 RGBAh 16-bit 浮点扩展线性工作空间）。
+    static var ctx: CIContext { MetalEngine.shared.ciContext }
 
     static let srgb: CGColorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+    static let workingColorSpace: CGColorSpace = CGColorSpace(name: CGColorSpace.extendedLinearSRGB) ?? srgb
+    static let displayColorSpace: CGColorSpace = CGColorSpace(name: CGColorSpace.extendedLinearDisplayP3) ?? workingColorSpace
 
-    /// 「对比」数值 → CIColorControls 对比系数：`1 + 数值 / contrastScale`。
-    /// 数值 ±100 对应 1 ± 100/contrastScale。调大 = 同一数值下画面更柔。
-    /// 2026-10-08 由 200 收到 260（反馈：对比度容易调得太猛）。
-    /// 注意：改这个会让已存旁档的观感变化，渲染回归的 tone 基准需要重烤。
+    /// 分段渲染缓存：几何校正 + 镜头校正 + 污点消除后的中间图，拖动末端滑杆时 0ms 命中。
+    private struct StageCacheEntry: @unchecked Sendable {
+        let source: CIImage
+        let key: String
+        let image: CIImage
+    }
+    private static let stageLock = NSLock()
+    private static var stageCache: [StageCacheEntry] = []
+
+    /// 「对比」数值 → 传统回退对比系数。
     static let contrastScale = 260.0
 
     // MARK: - 解码
@@ -33,11 +37,20 @@ enum Engine {
                                                       "tif", "tiff", "heic", "heif", "hif", "avif"])
 
     static func decode(_ url: URL) -> CIImage? {
+        decode(url, rawEmbeddedLensCorrection: true)
+    }
+
+    static func decode(_ url: URL, rawEmbeddedLensCorrection: Bool) -> CIImage? {
         let ext = url.pathExtension.lowercased()
         if rawSet.contains(ext) {
             if let raw = CIRAWFilter(imageURL: url) {
                 raw.isGamutMappingEnabled = true
                 raw.scaleFactor = 1.0
+                if raw.isLensCorrectionSupported {
+                    raw.isLensCorrectionEnabled = rawEmbeddedLensCorrection
+                }
+                // 保留 >1.0 线性高光动态范围余量，配合 Metal 浮点管线与 EDR 显示
+                raw.extendedDynamicRangeAmount = 1.0
                 if let o = raw.outputImage { return o }
             }
             // RAW 解码失败就退回 ImageIO
@@ -118,11 +131,18 @@ enum Engine {
         }
         if p.cropW < 0.999 || p.cropH < 0.999 || p.cropX > 0.001 || p.cropY > 0.001 {
             let e = img.extent
-            var r = CGRect(x: e.minX + e.width * p.cropX,
-                           y: e.minY + e.height * p.cropY,
-                           width: e.width * p.cropW,
-                           height: e.height * p.cropH)
-            r = r.integral
+            let bounds = CGRect(x: e.minX + e.width * p.cropX,
+                                y: e.minY + e.height * p.cropY,
+                                width: e.width * p.cropW,
+                                height: e.height * p.cropH)
+            // Integral expands outward. Snap only floating-point noise at an
+            // integer edge so an exact pixel crop does not gain an extra pixel.
+            func pixelEdge(_ value: CGFloat) -> CGFloat {
+                let nearest = value.rounded()
+                return abs(value-nearest) < 0.000001 ? nearest : value
+            }
+            let x = pixelEdge(bounds.minX), y = pixelEdge(bounds.minY)
+            let r = CGRect(x:x,y:y,width:pixelEdge(bounds.maxX)-x,height:pixelEdge(bounds.maxY)-y).integral
             if !r.isEmpty { img = img.cropped(to: r) }
         }
 
@@ -131,7 +151,22 @@ enum Engine {
 
     static func render(_ source: CIImage, _ p: EditParams, disparityMask: CIImage? = nil,
                        selectedMask: UUID? = nil, resolvedAuto: ResolvedPerspective? = nil, maskPreview: ((CIImage) -> Void)? = nil) -> CIImage {
-        var img = geometry(source, p, resolvedAuto:resolvedAuto)
+        let baseImg: CIImage
+        if resolvedAuto == nil, let cached = lookupStageCache(source: source, params: p) {
+            baseImg = cached
+        } else {
+            var geo = geometry(source, p, resolvedAuto: resolvedAuto)
+            if !p.retouchSpots.isEmpty {
+                geo = RetouchEngine.apply(geo, spots: p.retouchSpots, workingSpace: workingColorSpace)
+            }
+            if resolvedAuto == nil { storeStageCache(source: source, params: p, image: geo) }
+            baseImg = geo
+        }
+
+        var img = baseImg
+        let refScale = max(0.15, max(img.extent.width, img.extent.height) / 2200.0)
+        let useMetal = MetalEngine.shared.isAvailable
+
         let gains = p.whiteBalanceGains
         if gains.count == 3, gains != [1, 1, 1], gains.allSatisfy({ $0.isFinite && $0 > 0 }) {
             img = img.applyingFilter("CIColorMatrix", parameters: [
@@ -164,39 +199,51 @@ enum Engine {
             ])
         }
 
-        // 4) 曝光 / 对比 / 饱和
+        // 4) 曝光 / 对比(对数中灰 + AgX 滚降) / 饱和
         if p.exposure != 0 {
             img = img.applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: NSNumber(value: p.exposure)])
         }
-        if p.contrast != 0 || p.saturation != 0 || p.vibrance != 0 {
+        if p.vibrance != 0 {
             img = img.applyingFilter("CIVibrance", parameters: ["inputAmount": NSNumber(value: p.vibrance / 100)])
+        }
+        if useMetal {
+            img = MetalContrastAgXKernel.apply(img, contrast: p.contrast, pivot: p.contrastPivot, rolloff: p.highlightRolloff)
+            if p.saturation != 0 {
+                img = img.applyingFilter("CIColorControls", parameters: [
+                    kCIInputContrastKey: NSNumber(value: 1.0),
+                    kCIInputSaturationKey: NSNumber(value: 1 + p.saturation / 200)
+                ])
+            }
+        } else if p.contrast != 0 || p.saturation != 0 {
             img = img.applyingFilter("CIColorControls", parameters: [
                 kCIInputContrastKey: NSNumber(value: 1 + p.contrast / contrastScale),
                 kCIInputSaturationKey: NSNumber(value: 1 + p.saturation / 200)
             ])
         }
 
-        // 4b) 去朦胧：本质是「去掉一层灰雾」—— 提对比 + 压低黑场，用矩阵一次做完
-        //     正值为去雾，负值反向加雾（做空气感）
+        // 4b) 去朦胧：暗通道先验 + Guided Filter（Metal 不可用时回退传统矩阵）
         if p.dehaze != 0 {
-            let a = p.dehaze / 100
-            // 别太狠：实测 +60 用 0.45/-0.085 会压出 27% 死黑，收着点
-            let s = 1 + a * 0.22
-            let bias = -a * 0.018
-            img = img.applyingFilter("CIColorMatrix", parameters: [
-                "inputRVector": CIVector(x: s, y: 0, z: 0, w: 0),
-                "inputGVector": CIVector(x: 0, y: s, z: 0, w: 0),
-                "inputBVector": CIVector(x: 0, y: 0, z: s, w: 0),
-                "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
-                "inputBiasVector": CIVector(x: bias, y: bias, z: bias, w: 0)
-            ])
-            img = img.applyingFilter("CIColorControls", parameters: [
-                kCIInputContrastKey: NSNumber(value: 1 + a * 0.16),
-                kCIInputSaturationKey: NSNumber(value: 1 + max(a, 0) * 0.30)
-            ])
+            if useMetal {
+                img = MetalDehazeKernel.apply(img, amount: p.dehaze, refScale: refScale)
+            } else {
+                let a = p.dehaze / 100
+                let s = 1 + a * 0.22
+                let bias = -a * 0.018
+                img = img.applyingFilter("CIColorMatrix", parameters: [
+                    "inputRVector": CIVector(x: s, y: 0, z: 0, w: 0),
+                    "inputGVector": CIVector(x: 0, y: s, z: 0, w: 0),
+                    "inputBVector": CIVector(x: 0, y: 0, z: s, w: 0),
+                    "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+                    "inputBiasVector": CIVector(x: bias, y: bias, z: bias, w: 0)
+                ])
+                img = img.applyingFilter("CIColorControls", parameters: [
+                    kCIInputContrastKey: NSNumber(value: 1 + a * 0.16),
+                    kCIInputSaturationKey: NSNumber(value: 1 + max(a, 0) * 0.30)
+                ])
+            }
         }
 
-        // 4c) HDR：把高光压回来、暗部抬起来（CI 的高光/阴影恢复），Limit 控制压缩量
+        // 4c) HDR：把高光压回来、暗部抬起来
         if p.hdrMode {
             let amt = p.hdrLimit / 100
             img = img.applyingFilter("CIHighlightShadowAdjust", parameters: [
@@ -205,34 +252,47 @@ enum Engine {
             ])
         }
 
-        // 5) 高光/阴影/白/黑（纯色调滑块；用户曲线改由下面那条 LUT 管线处理）
+        // 5) 高光/阴影/白/黑：Metal Guided Filter 保边局部影调 + 双向黑白场
         if p.blacks != 0 || p.shadows != 0 || p.highlights != 0 || p.whites != 0 {
-            let xs: [CGFloat] = [0.0, 0.25, 0.5, 0.75, 1.0]
-            var ys: [CGFloat] = [0.0, 0.25, 0.5, 0.75, 1.0]
-            ys[0] += CGFloat(p.blacks / 100) * 0.10
-            ys[1] += CGFloat(p.shadows / 100) * 0.10
-            ys[3] += CGFloat(p.highlights / 100) * 0.10
-            ys[4] += CGFloat(p.whites / 100) * 0.10
-            for i in 0..<5 { ys[i] = min(max(ys[i], 0), 1) }
-            img = img.applyingFilter("CIToneCurve", parameters: [
-                "inputPoint0": CIVector(x: xs[0], y: ys[0]),
-                "inputPoint1": CIVector(x: xs[1], y: ys[1]),
-                "inputPoint2": CIVector(x: xs[2], y: ys[2]),
-                "inputPoint3": CIVector(x: xs[3], y: ys[3]),
-                "inputPoint4": CIVector(x: xs[4], y: ys[4])
-            ])
+            if useMetal {
+                img = MetalLocalToneKernel.apply(img, highlights: p.highlights, shadows: p.shadows,
+                                                 whites: p.whites, blacks: p.blacks, refScale: refScale)
+            } else {
+                let xs: [CGFloat] = [0.0, 0.25, 0.5, 0.75, 1.0]
+                var ys: [CGFloat] = [0.0, 0.25, 0.5, 0.75, 1.0]
+                ys[0] += CGFloat(p.blacks / 100) * 0.10
+                ys[1] += CGFloat(p.shadows / 100) * 0.10
+                ys[3] += CGFloat(p.highlights / 100) * 0.10
+                ys[4] += CGFloat(p.whites / 100) * 0.10
+                for i in 0..<5 { ys[i] = min(max(ys[i], 0), 1) }
+                img = img.applyingFilter("CIToneCurve", parameters: [
+                    "inputPoint0": CIVector(x: xs[0], y: ys[0]),
+                    "inputPoint1": CIVector(x: xs[1], y: ys[1]),
+                    "inputPoint2": CIVector(x: xs[2], y: ys[2]),
+                    "inputPoint3": CIVector(x: xs[3], y: ys[3]),
+                    "inputPoint4": CIVector(x: xs[4], y: ys[4])
+                ])
+            }
         }
 
-        // 5b) 色调曲线 + 亮度曲线 + 单独 RGB 通道曲线（一起烘进一张 3D LUT，避免多次采样损失）
-        if let f = CurveCube.filter(p) {
-            f.setValue(img, forKey: kCIInputImageKey)
-            if let o = f.outputImage { img = o }
+        // 5b) 5 通道曲线 + Refine Sat + 颜色分级（Metal GPU 实时浮点，保留 >1.0 高光外推）
+        if CurveCube.needs(p) {
+            if useMetal {
+                img = MetalCurvesGradingKernel.apply(img, params: p)
+            } else if let f = CurveCube.filter(p) {
+                f.setValue(img, forKey: kCIInputImageKey)
+                if let o = f.outputImage { img = o }
+            }
         }
 
-        // 6) HSL
-        if !p.hsl.isNeutral, let f = HSLCube.filter(p.hsl) {
-            f.setValue(img, forKey: kCIInputImageKey)
-            if let o = f.outputImage { img = o }
+        // 6) HSL + 点颜色（OKLCH 感知均匀空间）
+        if !p.hsl.isNeutral || p.pointColors.contains(where: { !$0.isNeutral }) {
+            if useMetal {
+                img = MetalOKLCHColorKernel.apply(img, hsl: p.hsl, pointColors: p.pointColors)
+            } else if !p.hsl.isNeutral, let f = HSLCube.filter(p.hsl) {
+                f.setValue(img, forKey: kCIInputImageKey)
+                if let o = f.outputImage { img = o }
+            }
         }
 
         // 7) 黑白
@@ -249,9 +309,6 @@ enum Engine {
         }
 
         // 8) 胶片 CLUT
-        //    LUT（HALD/.cube）是感知域数据（sRGB/Rec709 编码），而管线里流动的是线性值。
-        //    进 LUT 前先编码到 sRGB 感知域、出来再解回线性（同 CurveCube 的处理），
-        //    否则索引和输出两头都错域：黑场被抬到 ~18% 灰，整段灰阶压扁——观感就是「灰片」。
         if let f = CLUTLibrary.shared.cubeFilter(name: p.clutName, strength: p.clutStrength) {
             f.setValue(img.applyingFilter("CILinearToSRGBToneCurve"), forKey: kCIInputImageKey)
             if let o = f.outputImage {
@@ -259,25 +316,28 @@ enum Engine {
             }
         }
 
-        // 9) 清晰度（大半径中频，做立体感）
-        if p.clarity != 0 {
-            img = img.applyingFilter("CIUnsharpMask", parameters: [
-                kCIInputRadiusKey: NSNumber(value: 22),
-                kCIInputIntensityKey: NSNumber(value: p.clarity / 100)
-            ])
+        // 9) 清晰度 + 纹理（保边多频段分解，半径分辨率无关）
+        if p.clarity != 0 || p.texture != 0 {
+            if useMetal {
+                img = MetalEdgeDetailKernel.apply(img, clarity: p.clarity, texture: p.texture, refScale: refScale)
+            } else {
+                if p.clarity != 0 {
+                    img = img.applyingFilter("CIUnsharpMask", parameters: [
+                        kCIInputRadiusKey: NSNumber(value: max(22.0 * Double(refScale), 2.0)),
+                        kCIInputIntensityKey: NSNumber(value: p.clarity / 100)
+                    ])
+                }
+                if p.texture != 0 {
+                    img = img.applyingFilter("CIUnsharpMask", parameters: [
+                        kCIInputRadiusKey: NSNumber(value: max(3.5 * Double(refScale), 0.8)),
+                        kCIInputIntensityKey: NSNumber(value: p.texture / 100)
+                    ])
+                }
+            }
         }
 
-        // 9b) 纹理（比清晰度更细一档的中频，管皮肤/材质的颗粒感）
-        if p.texture != 0 {
-            img = img.applyingFilter("CIUnsharpMask", parameters: [
-                kCIInputRadiusKey: NSNumber(value: 3.5),
-                kCIInputIntensityKey: NSNumber(value: p.texture / 100)
-            ])
-        }
-
-        // 10) 降噪与锐化
+        // 10) 降噪与锐化（半径均随画幅比例归一化，确保预览与导出 100% 一致）
         if p.denoiseColor > 0 {
-            // 颜色降噪：中值滤波 + 按强度混合，去彩色噪点而基本不动亮度结构
             if let f = CIFilter(name: "CIDissolveTransition") {
                 f.setValue(img, forKey: "inputImage")
                 f.setValue(img.applyingFilter("CIMedianFilter"), forKey: "inputTargetImage")
@@ -291,41 +351,32 @@ enum Engine {
                 "inputSharpness": NSNumber(value: 0.4)
             ])
         }
-        // 锐化：数量 / 半径 / 细节 / 蒙版 四个滑块
-        // 细节 = 粗细两档混合（0 只做粗半径，1 全给细半径）
-        // 蒙版 = 用边缘图限制锐化只落在边上，平区不放噪点
         if p.sharpen > 0 {
+            let sharpenScale = max(1.0, Double(refScale))
             let detail = min(max(p.sharpenDetail, 0), 1)
             var sharp = img
             if detail < 0.999 {
                 sharp = sharp.applyingFilter("CIUnsharpMask", parameters: [
-                    kCIInputRadiusKey: NSNumber(value: max(p.sharpenRadius, 0.3)),
+                    kCIInputRadiusKey: NSNumber(value: max(p.sharpenRadius * sharpenScale, 0.3)),
                     kCIInputIntensityKey: NSNumber(value: p.sharpen * (1 - detail))
                 ])
             }
             if detail > 0.001 {
                 sharp = sharp.applyingFilter("CIUnsharpMask", parameters: [
-                    kCIInputRadiusKey: NSNumber(value: 0.6),
+                    kCIInputRadiusKey: NSNumber(value: max(0.6 * sharpenScale, 0.3)),
                     kCIInputIntensityKey: NSNumber(value: p.sharpen * detail)
                 ])
             }
             if p.sharpenMask > 0 {
-                // 边缘图 → 只让边缘参与锐化；蒙版量越大，参与的区域越窄（只剩强边缘）
-                // 高通掩膜：原图 - 模糊 = 只留细节。比 CIEdges 稳，量级也好控
                 let blurred = img.applyingFilter("CIGaussianBlur", parameters: [
-                    kCIInputRadiusKey: NSNumber(value: 1.6)
+                    kCIInputRadiusKey: NSNumber(value: max(1.6 * sharpenScale, 0.4))
                 ])
                 var edges = img.applyingFilter("CIDifferenceBlendMode", parameters: [
                     kCIInputBackgroundImageKey: blurred
                 ])
-                // CIEdges 出来的边缘很暗（实测均值 5/255）且不写 alpha，直接当掩膜会把
-                // 锐化全挡掉。先 gamma 把边缘拉起来（蒙版量越大 → 指数越大 → 只留强边缘），
-                // 再把强度同时写进 RGB 和 alpha，不管混合模式看哪个通道都生效
-                // 指数越大 → 弱边缘被压得越狠 → 只有强边缘还留下（扫参得来的区间）
                 edges = edges.applyingFilter("CIGammaAdjust", parameters: [
                     "inputPower": NSNumber(value: 0.45 + p.sharpenMask / 100 * 0.15)
                 ])
-                // 高通差分量级很小，必须放大（实测：增益 10 + 指数 0.5 时锐区保留 ~75%、平区几乎不动）
                 let g = 10.0
                 edges = edges.applyingFilter("CIColorMatrix", parameters: [
                     "inputRVector": CIVector(x: 0.2126 * g, y: 0.7152 * g, z: 0.0722 * g, w: 0),
@@ -353,21 +404,25 @@ enum Engine {
             ])
         }
 
-        // 11c) Halation 光晕：高光提取 → 大半径模糊 → 暖色染色 → 屏幕混合
+        // 11c) Halation 光晕
         if p.halation > 0 {
             img = addHalation(img, amount: p.halation,
                               threshold: p.halationThreshold,
                               radiusFactor: p.halationRadius)
         }
 
-        // 11d) 焦外散景：深度蒙版白色区域按半径可变模糊（CIMaskedVariableBlur 实测白=模糊）
+        // 11d) 焦外散景
         if p.bokehAmount > 0 {
             img = applyBokeh(img, p, disparityMask: disparityMask)
         }
 
-        // 12) 颗粒
+        // 12) 物理银盐颗粒（分辨率无关）
         if p.grain > 0 {
-            img = addGrain(img, amount: p.grain, size: p.grainSize)
+            if useMetal {
+                img = MetalFilmGrainKernel.apply(img, amount: p.grain, size: p.grainSize, roughness: p.grainRoughness)
+            } else {
+                img = addGrain(img, amount: p.grain, size: p.grainSize)
+            }
         }
 
         // 13) 蒙版
@@ -375,9 +430,37 @@ enum Engine {
            let image = maskImage(for: mask, extent: img.extent, analyzed: img) {
             maskPreview?(image)
         }
-        img = applyMasks(img, p, selectedMask: selectedMask, maskPreview: maskPreview)
+        img = applyMasks(img, p, selectedMask: selectedMask, maskPreview: maskPreview, refScale: refScale)
 
         return img
+    }
+
+    static func clearStageCache() {
+        stageLock.lock()
+        stageCache.removeAll()
+        stageLock.unlock()
+    }
+
+    private static func stageKey(source: CIImage, params p: EditParams) -> String? {
+        guard let encodedSpots = try? JSONEncoder().encode(p.retouchSpots),
+              let encodedLens = try? JSONEncoder().encode(p.lensCorrection) else { return nil }
+        let spotsB64 = encodedSpots.base64EncodedString()
+        let lensB64 = encodedLens.base64EncodedString()
+        return "\(Int(source.extent.minX))x\(Int(source.extent.minY))x\(Int(source.extent.width))x\(Int(source.extent.height))|\(p.rotation)|\(p.flipped)|\(p.straighten)|\(p.cropX),\(p.cropY),\(p.cropW),\(p.cropH)|\(p.perspectiveAuto)|\(p.perspectiveV)|\(p.perspectiveH)|\(lensB64)|\(spotsB64)|\(CoreMLInpaintingEngine.shared.cacheToken)"
+    }
+
+    private static func lookupStageCache(source: CIImage, params p: EditParams) -> CIImage? {
+        guard let key = stageKey(source: source, params: p) else { return nil }
+        stageLock.lock(); defer { stageLock.unlock() }
+        return stageCache.first(where: { $0.source === source && $0.key == key })?.image
+    }
+
+    private static func storeStageCache(source: CIImage, params p: EditParams, image: CIImage) {
+        guard let key = stageKey(source: source, params: p) else { return }
+        stageLock.lock(); defer { stageLock.unlock() }
+        stageCache.removeAll { $0.source === source && $0.key == key }
+        stageCache.append(StageCacheEntry(source: source, key: key, image: image))
+        if stageCache.count > 4 { stageCache.removeFirst() }
     }
 
     // MARK: - 颗粒
@@ -401,11 +484,13 @@ enum Engine {
 
     // MARK: - 蒙版
     private static func applyMasks(_ base: CIImage, _ p: EditParams,
-                                   selectedMask: UUID?, maskPreview: ((CIImage) -> Void)?) -> CIImage {
+                                   selectedMask: UUID?, maskPreview: ((CIImage) -> Void)?,
+                                   refScale: CGFloat = 1) -> CIImage {
         var out = base
+        let useMetal = MetalEngine.shared.isAvailable
         // depth 蒙版只喂散景，不做局部调整
         for m in p.masks where m.kind != .depth && (m.id == selectedMask || (m.enabled && !m.adjust.isNeutral)) {
-            // Vision 蒙版要拿当前画面去跑模型（缓存按蒙版 id + 画幅尺寸）
+            // Vision/高级蒙版由 MaskEngine 统一求值（缓存按蒙版 id + 画幅尺寸）
             let maskImg = maskImage(for: m, extent: out.extent, analyzed: out)
             guard let maskImg else { continue }
             if m.id == selectedMask { maskPreview?(maskImg) }
@@ -415,7 +500,17 @@ enum Engine {
             if a.exposure != 0 {
                 adj = adj.applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: NSNumber(value: a.exposure)])
             }
-            if a.contrast != 0 || a.saturation != 0 {
+            if useMetal {
+                if a.contrast != 0 {
+                    adj = MetalContrastAgXKernel.apply(adj, contrast: a.contrast, pivot: 0, rolloff: 0)
+                }
+                if a.saturation != 0 {
+                    adj = adj.applyingFilter("CIColorControls", parameters: [
+                        kCIInputContrastKey: NSNumber(value: 1.0),
+                        kCIInputSaturationKey: NSNumber(value: 1 + a.saturation / 200)
+                    ])
+                }
+            } else if a.contrast != 0 || a.saturation != 0 {
                 adj = adj.applyingFilter("CIColorControls", parameters: [
                     kCIInputContrastKey: NSNumber(value: 1 + a.contrast / contrastScale),
                     kCIInputSaturationKey: NSNumber(value: 1 + a.saturation / 200)
@@ -428,48 +523,87 @@ enum Engine {
                 ])
             }
             if a.dehaze != 0 {
-                let amount = a.dehaze / 100
-                let scale = 1 + amount * 0.22
-                let bias = -amount * 0.018
-                adj = adj.applyingFilter("CIColorMatrix", parameters: [
-                    "inputRVector": CIVector(x: scale, y: 0, z: 0, w: 0),
-                    "inputGVector": CIVector(x: 0, y: scale, z: 0, w: 0),
-                    "inputBVector": CIVector(x: 0, y: 0, z: scale, w: 0),
-                    "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
-                    "inputBiasVector": CIVector(x: bias, y: bias, z: bias, w: 0)
-                ])
-                adj = adj.applyingFilter("CIColorControls", parameters: [
-                    kCIInputContrastKey: NSNumber(value: 1 + amount * 0.16),
-                    kCIInputSaturationKey: NSNumber(value: 1 + max(amount, 0) * 0.30)
-                ])
+                if useMetal {
+                    adj = MetalDehazeKernel.apply(adj, amount: a.dehaze, refScale: refScale)
+                } else {
+                    let amount = a.dehaze / 100
+                    let scale = 1 + amount * 0.22
+                    let bias = -amount * 0.018
+                    adj = adj.applyingFilter("CIColorMatrix", parameters: [
+                        "inputRVector": CIVector(x: scale, y: 0, z: 0, w: 0),
+                        "inputGVector": CIVector(x: 0, y: scale, z: 0, w: 0),
+                        "inputBVector": CIVector(x: 0, y: 0, z: scale, w: 0),
+                        "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+                        "inputBiasVector": CIVector(x: bias, y: bias, z: bias, w: 0)
+                    ])
+                    adj = adj.applyingFilter("CIColorControls", parameters: [
+                        kCIInputContrastKey: NSNumber(value: 1 + amount * 0.16),
+                        kCIInputSaturationKey: NSNumber(value: 1 + max(amount, 0) * 0.30)
+                    ])
+                }
             }
             if a.blacks != 0 || a.shadows != 0 || a.highlights != 0 || a.whites != 0 {
-                let xs: [CGFloat] = [0.0, 0.25, 0.5, 0.75, 1.0]
-                var ys: [CGFloat] = [0.0, 0.25, 0.5, 0.75, 1.0]
-                ys[0] += CGFloat(a.blacks / 100) * 0.10
-                ys[1] += CGFloat(a.shadows / 100) * 0.10
-                ys[3] += CGFloat(a.highlights / 100) * 0.10
-                ys[4] += CGFloat(a.whites / 100) * 0.10
-                for i in 0..<5 { ys[i] = min(max(ys[i], 0), 1) }
-                adj = adj.applyingFilter("CIToneCurve", parameters: [
-                    "inputPoint0": CIVector(x: xs[0], y: ys[0]),
-                    "inputPoint1": CIVector(x: xs[1], y: ys[1]),
-                    "inputPoint2": CIVector(x: xs[2], y: ys[2]),
-                    "inputPoint3": CIVector(x: xs[3], y: ys[3]),
-                    "inputPoint4": CIVector(x: xs[4], y: ys[4])
-                ])
+                if useMetal {
+                    adj = MetalLocalToneKernel.apply(adj, highlights: a.highlights, shadows: a.shadows,
+                                                     whites: a.whites, blacks: a.blacks, refScale: refScale)
+                } else {
+                    let xs: [CGFloat] = [0.0, 0.25, 0.5, 0.75, 1.0]
+                    var ys: [CGFloat] = [0.0, 0.25, 0.5, 0.75, 1.0]
+                    ys[0] += CGFloat(a.blacks / 100) * 0.10
+                    ys[1] += CGFloat(a.shadows / 100) * 0.10
+                    ys[3] += CGFloat(a.highlights / 100) * 0.10
+                    ys[4] += CGFloat(a.whites / 100) * 0.10
+                    for i in 0..<5 { ys[i] = min(max(ys[i], 0), 1) }
+                    adj = adj.applyingFilter("CIToneCurve", parameters: [
+                        "inputPoint0": CIVector(x: xs[0], y: ys[0]),
+                        "inputPoint1": CIVector(x: xs[1], y: ys[1]),
+                        "inputPoint2": CIVector(x: xs[2], y: ys[2]),
+                        "inputPoint3": CIVector(x: xs[3], y: ys[3]),
+                        "inputPoint4": CIVector(x: xs[4], y: ys[4])
+                    ])
+                }
             }
-            if a.clarity != 0 {
-                adj = adj.applyingFilter("CIUnsharpMask", parameters: [
-                    kCIInputRadiusKey: NSNumber(value: 22),
-                    kCIInputIntensityKey: NSNumber(value: a.clarity / 100)
-                ])
+            if let localCurve = a.curve, !localCurve.isIdentity {
+                var tmp = EditParams()
+                tmp.curve = localCurve
+                if useMetal {
+                    adj = MetalCurvesGradingKernel.apply(adj, params: tmp)
+                } else if let f = CurveCube.filter(tmp) {
+                    f.setValue(adj, forKey: kCIInputImageKey)
+                    if let o = f.outputImage { adj = o }
+                }
             }
-            if a.texture != 0 {
-                adj = adj.applyingFilter("CIUnsharpMask", parameters: [
-                    kCIInputRadiusKey: NSNumber(value: 3.5),
-                    kCIInputIntensityKey: NSNumber(value: a.texture / 100)
-                ])
+            if abs(a.hueShift) > 0.01 || (a.pointColor != nil && !a.pointColor!.isNeutral) {
+                let pts = a.pointColor.map { [$0] } ?? []
+                if useMetal {
+                    adj = MetalOKLCHColorKernel.apply(adj, hsl: HSLMix(), pointColors: pts, localHueShift: a.hueShift)
+                } else if abs(a.hueShift) > 0.01 {
+                    adj = adj.applyingFilter("CIHueAdjust", parameters: [kCIInputAngleKey: NSNumber(value: a.hueShift * .pi / 180)])
+                }
+            }
+            if !a.clutName.isEmpty, let f = CLUTLibrary.shared.cubeFilter(name: a.clutName, strength: a.clutStrength) {
+                f.setValue(adj.applyingFilter("CILinearToSRGBToneCurve"), forKey: kCIInputImageKey)
+                if let o = f.outputImage {
+                    adj = o.applyingFilter("CISRGBToneCurveToLinear")
+                }
+            }
+            if a.clarity != 0 || a.texture != 0 {
+                if useMetal {
+                    adj = MetalEdgeDetailKernel.apply(adj, clarity: a.clarity, texture: a.texture, refScale: refScale)
+                } else {
+                    if a.clarity != 0 {
+                        adj = adj.applyingFilter("CIUnsharpMask", parameters: [
+                            kCIInputRadiusKey: NSNumber(value: max(22.0 * Double(refScale), 2.0)),
+                            kCIInputIntensityKey: NSNumber(value: a.clarity / 100)
+                        ])
+                    }
+                    if a.texture != 0 {
+                        adj = adj.applyingFilter("CIUnsharpMask", parameters: [
+                            kCIInputRadiusKey: NSNumber(value: max(3.5 * Double(refScale), 0.8)),
+                            kCIInputIntensityKey: NSNumber(value: a.texture / 100)
+                        ])
+                    }
+                }
             }
             if a.denoise > 0 {
                 adj = adj.applyingFilter("CINoiseReduction", parameters: [
@@ -479,7 +613,7 @@ enum Engine {
             }
             if a.sharpen != 0 {
                 adj = adj.applyingFilter("CIUnsharpMask", parameters: [
-                    kCIInputRadiusKey: NSNumber(value: 1.2),
+                    kCIInputRadiusKey: NSNumber(value: max(1.2 * max(1.0, Double(refScale)), 0.3)),
                     kCIInputIntensityKey: NSNumber(value: a.sharpen / 100)
                 ])
             }
@@ -516,6 +650,21 @@ enum Engine {
     }
 
     static func maskImage(for m: Mask, extent: CGRect, analyzed: CIImage? = nil) -> CIImage? {
+        if let analyzed {
+            return MaskEngine.resolve(m, extent: extent, analyzed: analyzed)
+        }
+        let refScale = max(0.15, max(extent.width, extent.height) / 2200.0)
+        guard var img = baseMaskImage(for: m, extent: extent, analyzed: nil, refScale: refScale) else { return nil }
+        if m.inverted {
+            img = img.applyingFilter("CIColorInvert")
+        }
+        if !m.refinements.isEmpty, let paint = refinementImage(m.refinements, extent: extent) {
+            img = paint.composited(over: img).cropped(to: extent)
+        }
+        return img
+    }
+
+    static func baseMaskImage(for m: Mask, extent: CGRect, analyzed: CIImage? = nil, refScale: CGFloat = 1) -> CIImage? {
         let w = extent.width, h = extent.height
         var img: CIImage
         switch m.kind {
@@ -584,7 +733,8 @@ enum Engine {
             img = cubeWeight(RangeCube.colorMask(sample: m.sampleRGB, tolerance: m.tolerance),
                              appliedTo: srcImg, extent: extent)
             // 模糊会把画幅撑大，必须裁回去
-            img = img.applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: NSNumber(value: 1 + m.feather * 6)])
+            let blurR = max(0.5, (1 + m.feather * 6) * Double(refScale))
+            img = img.applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: NSNumber(value: blurR)])
                 .cropped(to: extent)
         case .luminanceRange:
             guard let srcImg = analyzed else { return nil }
@@ -595,17 +745,13 @@ enum Engine {
             guard let srcImg = analyzed,
                   let ai = aiMask(for: m, extent: extent, analyzed: srcImg) else { return nil }
             img = ai
-        }
-        if m.inverted {
-            img = img.applyingFilter("CIColorInvert")
-        }
-        if !m.refinements.isEmpty, let paint = refinementImage(m.refinements, extent: extent) {
-            img = paint.composited(over: img).cropped(to: extent)
+        case .sky, .background, .faceSkin, .eyes, .lips, .teeth, .hair:
+            return nil
         }
         return img
     }
 
-    private static func refinementImage(_ strokes: [Stroke], extent: CGRect) -> CIImage? {
+    static func refinementImage(_ strokes: [Stroke], extent: CGRect) -> CIImage? {
         let side = 1024
         guard let context = CGContext(data: nil, width: side, height: side, bitsPerComponent: 8,
                                       bytesPerRow: side * 4, space: srgb,
@@ -735,6 +881,7 @@ enum Engine {
     /// 手动刷新（换图、改参数后点「重算」时用）
     static func invalidateAIMask(id: UUID) {
         aiCache.removeAll { $0.hasPrefix(id.uuidString) }
+        MaskEngine.invalidateCache(for: id)
     }
 
     static func aiMask(for m: Mask, extent: CGRect, analyzed: CIImage) -> CIImage? {
@@ -1079,7 +1226,7 @@ enum Engine {
     }
 
     // MARK: - 出图
-    static func write(_ img: CIImage, to url: URL, settings: ExportSettings) throws {
+    static func write(_ img: CIImage, to url: URL, settings: ExportSettings, sourceURL: URL? = nil) throws {
         var out = img
         if settings.maxLongEdge > 0 {
             let e = img.extent
@@ -1090,19 +1237,15 @@ enum Engine {
             }
         }
         if settings.sharpenForOutput {
+            let radius = max(0.8, 0.8 * Double(max(out.extent.width, out.extent.height)) / 2200.0)
             out = out.applyingFilter("CIUnsharpMask", parameters: [
-                kCIInputRadiusKey: NSNumber(value: 0.8),
+                kCIInputRadiusKey: NSNumber(value: radius),
                 kCIInputIntensityKey: NSNumber(value: 0.4)
             ])
         }
         // 水印放在最后叠：尺寸按输出图算，锐化也不会把字描出毛边
         if settings.watermarkEnabled {
             out = applyWatermark(out, settings)
-        }
-        let format: CIFormat = settings.format == "tiff" && settings.tiffBitDepth == 16 ? .RGBA16 : .RGBA8
-        guard let cg = ctx.createCGImage(out, from: out.extent, format: format,
-                                        colorSpace: settings.colorSpace.cgColorSpace) else {
-            throw NSError(domain: "Phos", code: 12, userInfo: [NSLocalizedDescriptionKey: "无法生成导出图像"])
         }
         let ut: UTType
         switch settings.format {
@@ -1111,14 +1254,19 @@ enum Engine {
         case "heic": ut = .heic
         default: ut = .jpeg
         }
+        if MetadataIO.writeHDRIfSupported(out, ctx: ctx, to: url, utType: ut, settings: settings, sourceURL: sourceURL) {
+            return
+        }
+        let format: CIFormat = settings.format == "tiff" && settings.tiffBitDepth == 16 ? .RGBA16 : .RGBA8
+        guard let cg = ctx.createCGImage(out, from: out.extent, format: format,
+                                        colorSpace: settings.colorSpace.cgColorSpace) else {
+            throw NSError(domain: "Phos", code: 12, userInfo: [NSLocalizedDescriptionKey: "无法生成导出图像"])
+        }
         guard let dest = CGImageDestinationCreateWithURL(url as CFURL, ut.identifier as CFString, 1, nil) else {
             throw NSError(domain: "Phos", code: 10, userInfo: [NSLocalizedDescriptionKey: "无法创建输出文件"])
         }
-        var opts: [CFString: Any] = [:]
-        if ut == .jpeg || ut == .heic {
-            opts[kCGImageDestinationLossyCompressionQuality] = settings.quality
-        }
-        CGImageDestinationAddImage(dest, cg, opts as CFDictionary)
+        let props = MetadataIO.exportProperties(from: sourceURL, settings: settings, outputSize: out.extent.size, utType: ut)
+        CGImageDestinationAddImage(dest, cg, props as CFDictionary)
         if !CGImageDestinationFinalize(dest) {
             throw NSError(domain: "Phos", code: 11, userInfo: [NSLocalizedDescriptionKey: "写出失败"])
         }

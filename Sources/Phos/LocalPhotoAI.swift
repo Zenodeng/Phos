@@ -4,6 +4,7 @@ import CoreImage
 import ImageIO
 import CryptoKit
 import UniformTypeIdentifiers
+import Darwin
 
 struct PhotoAIError: LocalizedError {
     let message: String
@@ -109,7 +110,34 @@ private final class LocalOnlyRedirects: NSObject, URLSessionTaskDelegate {
     private(set) var lastEditingAttempts = [String]()
     private let delegate = LocalOnlyRedirects()
     lazy var session = URLSession(configuration:.ephemeral,delegate:delegate,delegateQueue:nil)
-    let endpoint = URL(string:"http://127.0.0.1:8765")!
+    private(set) var endpoint = URL(string:"http://127.0.0.1:8765")!
+    /// Keep the legacy port when available; never stop an unrelated local service.
+    static func availableLocalPort(preferred: UInt16 = 8765) throws -> UInt16 {
+        let fd = socket(AF_INET, SOCK_STREAM, 0)
+        guard fd >= 0 else { throw PhotoAIError(message:"无法为本地模型创建连接，请重试。") }
+        defer { close(fd) }
+        var address = sockaddr_in()
+        address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        address.sin_family = sa_family_t(AF_INET)
+        address.sin_addr.s_addr = inet_addr("127.0.0.1")
+        func bindPort(_ port: UInt16) -> Int32 {
+            address.sin_port = port.bigEndian
+            return withUnsafePointer(to:&address) {
+                $0.withMemoryRebound(to:sockaddr.self,capacity:1) {
+                    Darwin.bind(fd,$0,socklen_t(MemoryLayout<sockaddr_in>.size))
+                }
+            }
+        }
+        if bindPort(preferred) != 0 {
+            guard bindPort(0) == 0 else { throw PhotoAIError(message:"无法分配本地模型端口，请重试。") }
+        }
+        var length = socklen_t(MemoryLayout<sockaddr_in>.size)
+        let result = withUnsafeMutablePointer(to:&address) {
+            $0.withMemoryRebound(to:sockaddr.self,capacity:1) { getsockname(fd,$0,&length) }
+        }
+        guard result == 0 else { throw PhotoAIError(message:"无法读取本地模型端口，请重试。") }
+        return UInt16(bigEndian:address.sin_port)
+    }
     var directory: URL {
         URL(fileURLWithPath:UserDefaults.standard.string(forKey:"photoAIEnvironment") ?? NSHomeDirectory()+"/Library/Application Support/Phos/MLX",isDirectory:true)
     }
@@ -124,6 +152,9 @@ private final class LocalOnlyRedirects: NSObject, URLSessionTaskDelegate {
             ?? directory.appendingPathComponent("adapter",isDirectory:true)
         guard FileManager.default.fileExists(atPath:adapter.appendingPathComponent("manifest.json").path) else { return nil }
         let manifest = try JSONSerialization.jsonObject(with:Data(contentsOf:adapter.appendingPathComponent("manifest.json"))) as? [String:Any]
+        guard manifest?["productionEligible"] as? Bool != false else {
+            throw PhotoAIError(message:"该研究权重只输出修图方向，不能作为正式参数适配器加载。")
+        }
         func hash(_ url: URL) throws -> String { SHA256.hash(data:try Data(contentsOf:url)).map { String(format:"%02x",$0) }.joined() }
         guard manifest?["baseRepo"] as? String == "mlx-community/Qwen3-VL-4B-Instruct-4bit",
               manifest?["baseRevision"] as? String == "2fd8dacbdb8f1e54b8c005f081ec5bf79c56376b",
@@ -174,12 +205,14 @@ private final class LocalOnlyRedirects: NSObject, URLSessionTaskDelegate {
         if process?.isRunning != true {
             let python = directory.appendingPathComponent(".venv/bin/python")
             guard FileManager.default.fileExists(atPath:python.path) else { throw PhotoAIError(message:"找不到本地模型环境，请选择 Phos-MLX 文件夹。") }
+            let port = try Self.availableLocalPort()
+            endpoint = URL(string:"http://127.0.0.1:\(port)")!
             let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/Phos-MLX.log")
             try FileManager.default.createDirectory(at:url.deletingLastPathComponent(),withIntermediateDirectories:true)
             FileManager.default.createFile(atPath:url.path,contents:nil); log = try FileHandle(forWritingTo:url)
             let p = Process(); p.executableURL = python
             guard let entry = Bundle.main.resourceURL?.appendingPathComponent("PhotoAIRuntime/photo_ai_server.py"), FileManager.default.fileExists(atPath:entry.path) else { throw PhotoAIError(message:"缺少配套的 AI 协议运行时，请重新安装 Phos。") }
-            p.arguments = [entry.path,"--host","127.0.0.1","--port","8765","--model",directory.appendingPathComponent("model").path,"--max-tokens","1800","--prefill-step-size","512","--vision-cache-size","2"]
+            p.arguments = [entry.path,"--host","127.0.0.1","--port",String(port),"--model",directory.appendingPathComponent("model").path,"--max-tokens","1800","--prefill-step-size","512","--vision-cache-size","2"]
             if let adapter = try adapterDirectory() { p.arguments! += ["--adapter-path",adapter.path] }
             p.currentDirectoryURL = directory
             var environment = ProcessInfo.processInfo.environment
@@ -270,32 +303,37 @@ private final class LocalOnlyRedirects: NSObject, URLSessionTaskDelegate {
         return choice.message.content
     }
     func crop(jpeg: Data, instruction: String) async throws -> PhotoAICrop {
+        try Self.validateCapabilityRequest(instruction)
         if let explicit = try PhotoAICrop.explicit(instruction) { return explicit }
+        let size = try PhotoAICropComposition.previewSize(jpeg)
+        let subject = await Task.detached(priority:.userInitiated) { PhotoAICropComposition.protectedBounds(jpeg) }.value
+        try Task.checkCancellation()
+        if let ratio = PhotoAICropComposition.requestedAspect(instruction) {
+            return try PhotoAICropComposition.compose(PhotoAICropComposition.full,size:size,aspect:ratio,protected:subject)
+        }
         let number = Self.numericSchema(0,1,step:0.01)
         let schema: [String:Any] = ["type":"object","properties":["x":number,"y":number,"width":number,"height":number],"required":["x","y","width","height"],"additionalProperties":false]
         let prompt = Self.cropPrompt(instruction:instruction)
         var feedback = ""
-        var lastError: Error = PhotoAIError(message:"模型裁切建议未通过校验。")
         for _ in 0..<2 {
             try Task.checkCancellation()
             let text = try await request(jpeg:jpeg,prompt:prompt+feedback,schema:schema,tokens:180)
             do {
                 let crop = try JSONDecoder().decode(PhotoAICrop.self,from:Data(text.utf8))
-                _ = try crop.applying(to:EditParams())
-                return crop
+                return try PhotoAICropComposition.compose(crop,size:size,protected:subject)
             } catch {
-                lastError = error
-                feedback = "\nInvalid previous crop: x+width and y+height must be <=1, width,height>=0.35, area>=0.4. Return a corrected box; use the full image if no safe crop is clear."
+                feedback = "\nInvalid previous crop: x+width and y+height must be <=1, width,height>=0.35, area>=0.4. Preserve the entire detected subject; use the full image if a safe crop is unclear."
             }
         }
-        throw lastError
+        return PhotoAICropComposition.full
     }
-    func plan(jpeg: Data, instruction: String, base: EditParams, budget: PhotoAIRequestBudget? = nil) async throws -> PhotoAIPlan {
+    func plan(jpeg: Data, instruction: String, base: EditParams, budget: PhotoAIRequestBudget? = nil, repairHint: String = "") async throws -> PhotoAIPlan {
         lastEditingAttempts = []
+        try Self.validateCapabilityRequest(instruction)
         try Self.validateExplicitNumericRequest(instruction)
         let generationBudget = budget ?? PhotoAIRequestBudget()
         let prompt = try Self.editingPrompt(instruction:instruction,base:base)
-        var feedback = ""
+        var feedback = repairHint
         var lastError: Error = PhotoAIError(message:"模型建议未通过校验。")
         for _ in 0..<2 {
             try Task.checkCancellation()
@@ -342,11 +380,12 @@ private final class LocalOnlyRedirects: NSObject, URLSessionTaskDelegate {
             guard let self else { return }
             defer { if requestID == token { busy = false } }
             do {
+                try PhotoAIService.validateCapabilityRequest(instruction)
                 try PhotoAIService.validateExplicitNumericRequest(instruction)
                 let input = try await Task.detached(priority:.userInitiated) { try Self.preview(source:source,params:original) }.value
                 try Task.checkCancellation(); before = input.0
                 var working = original
-                if autoCrop {
+                if autoCrop && PhotoAIService.shouldAttemptCrop(instruction) {
                     message = "正在分析构图并选择裁切范围…"
                     let crop = try await PhotoAIService.shared.crop(jpeg:input.1,instruction:instruction)
                     working = try crop.applying(to:original,imageSize:CGSize(width:input.0.width,height:input.0.height))
@@ -360,14 +399,16 @@ private final class LocalOnlyRedirects: NSObject, URLSessionTaskDelegate {
                 try Task.checkCancellation()
                 var proposed = try plan.applying(to:working)
                 message = "正在渲染并核验蒙版明暗方向…"
-                do { try await Task.detached(priority:.userInitiated) { try PhotoAIDirectionCheck.validate(source:source,base:working,proposed:proposed,regions:plan.masks) }.value }
+                let protectOutside = PhotoAILocalIntent.onlyLocal(instruction)
+                do { try await Task.detached(priority:.userInitiated) { try PhotoAIDirectionCheck.validate(source:source,base:working,proposed:proposed,regions:plan.masks,protectOutside:protectOutside) }.value }
                 catch {
                     try Task.checkCancellation()
                     guard generationBudget.remaining > 0 else { throw error }
                     message = "局部效果未通过校验，正在修正建议…"
-                    plan = try await PhotoAIService.shared.plan(jpeg:cropped.1,instruction:instruction+"\n上次建议未通过实际渲染校验："+error.localizedDescription+" 请修正选区和局部明暗方向，使用更明确的曝光调整。",base:working,budget:generationBudget)
+                    let hint = "\n上次建议未通过实际渲染校验："+error.localizedDescription+" 请修正选区和局部明暗方向，使用更明确的曝光调整。"
+                    plan = try await PhotoAIService.shared.plan(jpeg:cropped.1,instruction:instruction,base:working,budget:generationBudget,repairHint:hint)
                     proposed = try plan.applying(to:working)
-                    try await Task.detached(priority:.userInitiated) { try PhotoAIDirectionCheck.validate(source:source,base:working,proposed:proposed,regions:plan.masks) }.value
+                    try await Task.detached(priority:.userInitiated) { try PhotoAIDirectionCheck.validate(source:source,base:working,proposed:proposed,regions:plan.masks,protectOutside:protectOutside) }.value
                 }
                 let rendered = try await Task.detached(priority:.userInitiated) { try Self.preview(source:source,params:proposed) }.value
                 try Task.checkCancellation()

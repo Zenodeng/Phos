@@ -1,0 +1,466 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Phos Extended Lens & Camera Database (Lensfun v2 format, rectilinear profiles). -->
+<lensdatabase version="2">
+    <!-- Cameras -->
+    <camera><maker>Canon</maker><model>Canon EOS R5</model><mount>Canon RF</mount><cropfactor>1</cropfactor></camera>
+    <camera><maker>Canon</maker><model>Canon EOS R6</model><mount>Canon RF</mount><cropfactor>1</cropfactor></camera>
+    <camera><maker>Canon</maker><model>Canon EOS R6m2</model><mount>Canon RF</mount><cropfactor>1</cropfactor></camera>
+    <camera><maker>Canon</maker><model>Canon EOS R7</model><mount>Canon RF</mount><cropfactor>1.6</cropfactor></camera>
+    <camera><maker>Canon</maker><model>Canon EOS R8</model><mount>Canon RF</mount><cropfactor>1</cropfactor></camera>
+    <camera><maker>Canon</maker><model>Canon EOS 5D Mark IV</model><mount>Canon EF</mount><cropfactor>1</cropfactor></camera>
+    <camera><maker>Sony</maker><model>ILCE-7M4</model><mount>Sony E</mount><cropfactor>1</cropfactor></camera>
+    <camera><maker>Sony</maker><model>ILCE-7RM5</model><mount>Sony E</mount><cropfactor>1</cropfactor></camera>
+    <camera><maker>Sony</maker><model>ILCE-7CM2</model><mount>Sony E</mount><cropfactor>1</cropfactor></camera>
+    <camera><maker>Sony</maker><model>ILCE-7SM3</model><mount>Sony E</mount><cropfactor>1</cropfactor></camera>
+    <camera><maker>Sony</maker><model>ILCE-9M3</model><mount>Sony E</mount><cropfactor>1</cropfactor></camera>
+    <camera><maker>Sony</maker><model>ILCE-1</model><mount>Sony E</mount><cropfactor>1</cropfactor></camera>
+    <camera><maker>Nikon</maker><model>NIKON Z 8</model><mount>Nikon Z</mount><cropfactor>1</cropfactor></camera>
+    <camera><maker>Nikon</maker><model>NIKON Z 6_2</model><mount>Nikon Z</mount><cropfactor>1</cropfactor></camera>
+    <camera><maker>Nikon</maker><model>NIKON Z 6_3</model><mount>Nikon Z</mount><cropfactor>1</cropfactor></camera>
+    <camera><maker>Nikon</maker><model>NIKON Z f</model><mount>Nikon Z</mount><cropfactor>1</cropfactor></camera>
+    <camera><maker>Nikon</maker><model>NIKON Z 7_2</model><mount>Nikon Z</mount><cropfactor>1</cropfactor></camera>
+    <camera><maker>Fujifilm</maker><model>X-T5</model><mount>Fujifilm X</mount><cropfactor>1.534</cropfactor></camera>
+    <camera><maker>Fujifilm</maker><model>X-H2</model><mount>Fujifilm X</mount><cropfactor>1.534</cropfactor></camera>
+    <camera><maker>Fujifilm</maker><model>X100VI</model><mount>Fujifilm X</mount><cropfactor>1.534</cropfactor></camera>
+    <camera><maker>Fujifilm</maker><model>GFX100 II</model><mount>Fujifilm G</mount><cropfactor>0.79</cropfactor></camera>
+    <camera><maker>Leica</maker><model>LEICA Q3</model><mount>Leica</mount><cropfactor>1</cropfactor></camera>
+    <camera><maker>Leica</maker><model>LEICA M11</model><mount>Leica M</mount><cropfactor>1</cropfactor></camera>
+    <camera><maker>Panasonic</maker><model>DC-S5M2</model><mount>Leica L</mount><cropfactor>1</cropfactor></camera>
+
+    <!-- Sony FE Lenses -->
+    <lens>
+        <maker>Sony</maker>
+        <model>FE 24-70mm F2.8 GM II</model>
+        <mount>Sony E</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="24" a="0.011" b="-0.036" c="0.0"/>
+            <distortion model="ptlens" focal="35" a="0.004" b="-0.012" c="0.0"/>
+            <distortion model="ptlens" focal="50" a="0.0" b="0.004" c="0.0"/>
+            <distortion model="ptlens" focal="70" a="0.0" b="0.009" c="0.0"/>
+            <tca model="poly3" focal="24" br="0.00002" vr="1.0005" bb="-0.00003" vb="1.0001"/>
+            <tca model="poly3" focal="70" br="0.00001" vr="0.9998" bb="-0.00004" vb="0.9999"/>
+            <vignetting model="pa" focal="24" aperture="2.8" distance="1000" k1="-0.48" k2="-0.21" k3="0.02"/>
+            <vignetting model="pa" focal="24" aperture="5.6" distance="1000" k1="-0.25" k2="-0.10" k3="0.0"/>
+            <vignetting model="pa" focal="70" aperture="2.8" distance="1000" k1="-0.42" k2="-0.18" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Sony</maker>
+        <model>FE 70-200mm F2.8 GM OSS II</model>
+        <mount>Sony E</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="70" a="0.0" b="-0.005" c="0.0"/>
+            <distortion model="ptlens" focal="135" a="0.0" b="0.008" c="0.0"/>
+            <distortion model="ptlens" focal="200" a="0.0" b="0.012" c="0.0"/>
+            <tca model="poly3" focal="70" vr="1.0002" vb="0.9999"/>
+            <tca model="poly3" focal="200" vr="1.0001" vb="0.9998"/>
+            <vignetting model="pa" focal="70" aperture="2.8" distance="1000" k1="-0.38" k2="-0.15" k3="0.0"/>
+            <vignetting model="pa" focal="200" aperture="2.8" distance="1000" k1="-0.44" k2="-0.19" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Sony</maker>
+        <model>FE 16-35mm F2.8 GM II</model>
+        <mount>Sony E</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="16" a="0.016" b="-0.048" c="0.004"/>
+            <distortion model="ptlens" focal="24" a="0.006" b="-0.021" c="0.0"/>
+            <distortion model="ptlens" focal="35" a="0.001" b="-0.005" c="0.0"/>
+            <tca model="poly3" focal="16" vr="1.0008" vb="1.0002"/>
+            <tca model="poly3" focal="35" vr="1.0003" vb="1.0000"/>
+            <vignetting model="pa" focal="16" aperture="2.8" distance="1000" k1="-0.56" k2="-0.22" k3="0.04"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Sony</maker>
+        <model>FE 35mm F1.4 GM</model>
+        <mount>Sony E</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="35" a="0.002" b="-0.008" c="0.0"/>
+            <tca model="poly3" focal="35" vr="1.0002" vb="1.0001"/>
+            <vignetting model="pa" focal="35" aperture="1.4" distance="1000" k1="-0.54" k2="-0.20" k3="0.0"/>
+            <vignetting model="pa" focal="35" aperture="2.8" distance="1000" k1="-0.31" k2="-0.11" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Sony</maker>
+        <model>FE 50mm F1.2 GM</model>
+        <mount>Sony E</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="50" a="0.0" b="0.003" c="0.0"/>
+            <tca model="poly3" focal="50" vr="1.0001" vb="0.9999"/>
+            <vignetting model="pa" focal="50" aperture="1.2" distance="1000" k1="-0.58" k2="-0.24" k3="0.0"/>
+            <vignetting model="pa" focal="50" aperture="2.8" distance="1000" k1="-0.28" k2="-0.08" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Sony</maker>
+        <model>FE 85mm F1.4 GM</model>
+        <mount>Sony E</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="85" a="0.0" b="0.007" c="0.0"/>
+            <tca model="poly3" focal="85" vr="1.0001" vb="0.9999"/>
+            <vignetting model="pa" focal="85" aperture="1.4" distance="1000" k1="-0.52" k2="-0.20" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Sony</maker>
+        <model>FE 24mm F1.4 GM</model>
+        <mount>Sony E</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="24" a="0.007" b="-0.022" c="0.0"/>
+            <tca model="poly3" focal="24" vr="1.0004" vb="1.0001"/>
+            <vignetting model="pa" focal="24" aperture="1.4" distance="1000" k1="-0.59" k2="-0.23" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Sony</maker>
+        <model>FE 20-70mm F4 G</model>
+        <mount>Sony E</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="20" a="0.015" b="-0.052" c="0.005"/>
+            <distortion model="ptlens" focal="35" a="0.004" b="-0.015" c="0.0"/>
+            <distortion model="ptlens" focal="70" a="0.0" b="0.009" c="0.0"/>
+            <tca model="poly3" focal="20" vr="1.0007" vb="1.0002"/>
+            <tca model="poly3" focal="70" vr="1.0001" vb="0.9998"/>
+            <vignetting model="pa" focal="20" aperture="4" distance="1000" k1="-0.48" k2="-0.18" k3="0.0"/>
+        </calibration>
+    </lens>
+
+    <!-- Canon RF / EF Lenses -->
+    <lens>
+        <maker>Canon</maker>
+        <model>RF 24-70mm F2.8L IS USM</model>
+        <mount>Canon RF</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="24" a="0.014" b="-0.041" c="0.002"/>
+            <distortion model="ptlens" focal="35" a="0.005" b="-0.014" c="0.0"/>
+            <distortion model="ptlens" focal="50" a="0.0" b="0.005" c="0.0"/>
+            <distortion model="ptlens" focal="70" a="0.0" b="0.011" c="0.0"/>
+            <tca model="poly3" focal="24" vr="1.0006" vb="1.0001"/>
+            <tca model="poly3" focal="70" vr="0.9997" vb="0.9999"/>
+            <vignetting model="pa" focal="24" aperture="2.8" distance="1000" k1="-0.51" k2="-0.22" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Canon</maker>
+        <model>RF 28-70mm F2L USM</model>
+        <mount>Canon RF</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="28" a="0.009" b="-0.028" c="0.0"/>
+            <distortion model="ptlens" focal="50" a="0.0" b="0.004" c="0.0"/>
+            <distortion model="ptlens" focal="70" a="0.0" b="0.009" c="0.0"/>
+            <tca model="poly3" focal="28" vr="1.0004" vb="1.0000"/>
+            <vignetting model="pa" focal="28" aperture="2.0" distance="1000" k1="-0.52" k2="-0.21" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Canon</maker>
+        <model>RF 15-35mm F2.8L IS USM</model>
+        <mount>Canon RF</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="15" a="0.018" b="-0.056" c="0.006"/>
+            <distortion model="ptlens" focal="24" a="0.005" b="-0.019" c="0.0"/>
+            <distortion model="ptlens" focal="35" a="0.0" b="-0.004" c="0.0"/>
+            <tca model="poly3" focal="15" vr="1.0009" vb="1.0002"/>
+            <vignetting model="pa" focal="15" aperture="2.8" distance="1000" k1="-0.57" k2="-0.24" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Canon</maker>
+        <model>RF 70-200mm F2.8L IS USM</model>
+        <mount>Canon RF</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="70" a="0.0" b="-0.006" c="0.0"/>
+            <distortion model="ptlens" focal="135" a="0.0" b="0.009" c="0.0"/>
+            <distortion model="ptlens" focal="200" a="0.0" b="0.013" c="0.0"/>
+            <tca model="poly3" focal="70" vr="1.0002" vb="0.9999"/>
+            <vignetting model="pa" focal="70" aperture="2.8" distance="1000" k1="-0.40" k2="-0.15" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Canon</maker>
+        <model>RF 50mm F1.2L USM</model>
+        <mount>Canon RF</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="50" a="0.0" b="0.004" c="0.0"/>
+            <tca model="poly3" focal="50" vr="1.0001" vb="0.9999"/>
+            <vignetting model="pa" focal="50" aperture="1.2" distance="1000" k1="-0.56" k2="-0.22" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Canon</maker>
+        <model>RF 85mm F1.2L USM</model>
+        <mount>Canon RF</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="85" a="0.0" b="0.005" c="0.0"/>
+            <tca model="poly3" focal="85" vr="1.0001" vb="1.0000"/>
+            <vignetting model="pa" focal="85" aperture="1.2" distance="1000" k1="-0.53" k2="-0.19" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Canon</maker>
+        <model>Canon EF 16-35mm f/2.8L III USM</model>
+        <mount>Canon EF</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="16" a="0.015" b="-0.047" c="0.004"/>
+            <distortion model="ptlens" focal="24" a="0.004" b="-0.015" c="0.0"/>
+            <distortion model="ptlens" focal="35" a="0.0" b="0.003" c="0.0"/>
+            <tca model="poly3" focal="16" vr="1.0007" vb="1.0002"/>
+            <vignetting model="pa" focal="16" aperture="2.8" distance="1000" k1="-0.54" k2="-0.21" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Canon</maker>
+        <model>Canon EF 24-70mm f/2.8L II USM</model>
+        <mount>Canon EF</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="24" a="0.013" b="-0.039" c="0.0"/>
+            <distortion model="ptlens" focal="50" a="0.0" b="0.005" c="0.0"/>
+            <distortion model="ptlens" focal="70" a="0.0" b="0.010" c="0.0"/>
+            <tca model="poly3" focal="24" vr="1.0006" vb="1.0001"/>
+            <vignetting model="pa" focal="24" aperture="2.8" distance="1000" k1="-0.47" k2="-0.19" k3="0.0"/>
+        </calibration>
+    </lens>
+
+    <!-- Nikon Z Lenses -->
+    <lens>
+        <maker>Nikon</maker>
+        <model>NIKKOR Z 24-70mm f/2.8 S</model>
+        <mount>Nikon Z</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="24" a="0.010" b="-0.031" c="0.0"/>
+            <distortion model="ptlens" focal="35" a="0.003" b="-0.009" c="0.0"/>
+            <distortion model="ptlens" focal="50" a="0.0" b="0.003" c="0.0"/>
+            <distortion model="ptlens" focal="70" a="0.0" b="0.007" c="0.0"/>
+            <tca model="poly3" focal="24" vr="1.0003" vb="1.0001"/>
+            <vignetting model="pa" focal="24" aperture="2.8" distance="1000" k1="-0.45" k2="-0.18" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Nikon</maker>
+        <model>NIKKOR Z 14-24mm f/2.8 S</model>
+        <mount>Nikon Z</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="14" a="0.014" b="-0.044" c="0.003"/>
+            <distortion model="ptlens" focal="24" a="0.003" b="-0.011" c="0.0"/>
+            <tca model="poly3" focal="14" vr="1.0005" vb="1.0002"/>
+            <vignetting model="pa" focal="14" aperture="2.8" distance="1000" k1="-0.55" k2="-0.22" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Nikon</maker>
+        <model>NIKKOR Z 50mm f/1.2 S</model>
+        <mount>Nikon Z</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="50" a="0.0" b="0.002" c="0.0"/>
+            <tca model="poly3" focal="50" vr="1.0001" vb="1.0000"/>
+            <vignetting model="pa" focal="50" aperture="1.2" distance="1000" k1="-0.51" k2="-0.20" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Nikon</maker>
+        <model>NIKKOR Z 85mm f/1.2 S</model>
+        <mount>Nikon Z</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="85" a="0.0" b="0.004" c="0.0"/>
+            <tca model="poly3" focal="85" vr="1.0001" vb="0.9999"/>
+            <vignetting model="pa" focal="85" aperture="1.2" distance="1000" k1="-0.49" k2="-0.17" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Nikon</maker>
+        <model>NIKKOR Z 70-200mm f/2.8 VR S</model>
+        <mount>Nikon Z</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="70" a="0.0" b="-0.004" c="0.0"/>
+            <distortion model="ptlens" focal="200" a="0.0" b="0.009" c="0.0"/>
+            <tca model="poly3" focal="70" vr="1.0002" vb="0.9999"/>
+            <vignetting model="pa" focal="70" aperture="2.8" distance="1000" k1="-0.39" k2="-0.14" k3="0.0"/>
+        </calibration>
+    </lens>
+
+    <!-- Fujifilm X / G Lenses -->
+    <lens>
+        <maker>Fujifilm</maker>
+        <model>XF 16-55mm F2.8 R LM WR</model>
+        <mount>Fujifilm X</mount>
+        <cropfactor>1.534</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="16" a="0.011" b="-0.038" c="0.0"/>
+            <distortion model="ptlens" focal="35" a="0.0" b="-0.003" c="0.0"/>
+            <distortion model="ptlens" focal="55" a="0.0" b="0.007" c="0.0"/>
+            <tca model="poly3" focal="16" vr="1.0006" vb="1.0001"/>
+            <tca model="poly3" focal="55" vr="1.0001" vb="0.9998"/>
+            <vignetting model="pa" focal="16" aperture="2.8" distance="1000" k1="-0.43" k2="-0.16" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Fujifilm</maker>
+        <model>XF 23mm F1.4 R LM WR</model>
+        <mount>Fujifilm X</mount>
+        <cropfactor>1.534</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="23" a="0.004" b="-0.015" c="0.0"/>
+            <tca model="poly3" focal="23" vr="1.0003" vb="1.0001"/>
+            <vignetting model="pa" focal="23" aperture="1.4" distance="1000" k1="-0.48" k2="-0.19" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Fujifilm</maker>
+        <model>XF 35mm F1.4 R</model>
+        <mount>Fujifilm X</mount>
+        <cropfactor>1.534</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="35" a="0.002" b="-0.009" c="0.0"/>
+            <tca model="poly3" focal="35" vr="1.0002" vb="1.0000"/>
+            <vignetting model="pa" focal="35" aperture="1.4" distance="1000" k1="-0.49" k2="-0.18" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Fujifilm</maker>
+        <model>XF 56mm F1.2 R WR</model>
+        <mount>Fujifilm X</mount>
+        <cropfactor>1.534</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="56" a="0.0" b="0.004" c="0.0"/>
+            <tca model="poly3" focal="56" vr="1.0001" vb="0.9999"/>
+            <vignetting model="pa" focal="56" aperture="1.2" distance="1000" k1="-0.52" k2="-0.20" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Fujifilm</maker>
+        <model>X100VI 23mm F2</model>
+        <mount>Fujifilm X</mount>
+        <cropfactor>1.534</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="23" a="0.008" b="-0.029" c="0.0"/>
+            <tca model="poly3" focal="23" vr="1.0005" vb="1.0001"/>
+            <vignetting model="pa" focal="23" aperture="2.0" distance="1000" k1="-0.46" k2="-0.17" k3="0.0"/>
+        </calibration>
+    </lens>
+
+    <!-- Sigma / Tamron / Leica -->
+    <lens>
+        <maker>Sigma</maker>
+        <model>24-70mm F2.8 DG DN | Art 019</model>
+        <mount>Sony E</mount>
+        <mount>Leica L</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="24" a="0.014" b="-0.044" c="0.003"/>
+            <distortion model="ptlens" focal="50" a="0.0" b="0.006" c="0.0"/>
+            <distortion model="ptlens" focal="70" a="0.0" b="0.011" c="0.0"/>
+            <tca model="poly3" focal="24" vr="1.0006" vb="1.0002"/>
+            <vignetting model="pa" focal="24" aperture="2.8" distance="1000" k1="-0.50" k2="-0.20" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Sigma</maker>
+        <model>35mm F1.4 DG DN | Art 021</model>
+        <mount>Sony E</mount>
+        <mount>Leica L</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="35" a="0.003" b="-0.011" c="0.0"/>
+            <tca model="poly3" focal="35" vr="1.0002" vb="1.0000"/>
+            <vignetting model="pa" focal="35" aperture="1.4" distance="1000" k1="-0.53" k2="-0.21" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Sigma</maker>
+        <model>85mm F1.4 DG DN | Art 020</model>
+        <mount>Sony E</mount>
+        <mount>Leica L</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="85" a="0.0" b="0.012" c="0.0"/>
+            <tca model="poly3" focal="85" vr="1.0001" vb="0.9999"/>
+            <vignetting model="pa" focal="85" aperture="1.4" distance="1000" k1="-0.50" k2="-0.19" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Tamron</maker>
+        <model>28-75mm F/2.8 Di III VXD G2</model>
+        <mount>Sony E</mount>
+        <mount>Nikon Z</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="28" a="0.012" b="-0.039" c="0.002"/>
+            <distortion model="ptlens" focal="50" a="0.0" b="0.006" c="0.0"/>
+            <distortion model="ptlens" focal="75" a="0.0" b="0.012" c="0.0"/>
+            <tca model="poly3" focal="28" vr="1.0006" vb="1.0001"/>
+            <vignetting model="pa" focal="28" aperture="2.8" distance="1000" k1="-0.48" k2="-0.19" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Tamron</maker>
+        <model>35-150mm F/2-2.8 Di III VXD</model>
+        <mount>Sony E</mount>
+        <mount>Nikon Z</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="35" a="0.008" b="-0.024" c="0.0"/>
+            <distortion model="ptlens" focal="85" a="0.0" b="0.008" c="0.0"/>
+            <distortion model="ptlens" focal="150" a="0.0" b="0.013" c="0.0"/>
+            <tca model="poly3" focal="35" vr="1.0004" vb="1.0001"/>
+            <vignetting model="pa" focal="35" aperture="2.0" distance="1000" k1="-0.49" k2="-0.20" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Leica</maker>
+        <model>Summilux 28mm f/1.7 ASPH</model>
+        <mount>Leica</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="28" a="0.011" b="-0.036" c="0.0"/>
+            <tca model="poly3" focal="28" vr="1.0004" vb="1.0001"/>
+            <vignetting model="pa" focal="28" aperture="1.7" distance="1000" k1="-0.56" k2="-0.22" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Leica</maker>
+        <model>APO-Summicron-M 50mm f/2 ASPH.</model>
+        <mount>Leica M</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="50" a="0.0" b="0.001" c="0.0"/>
+            <tca model="poly3" focal="50" vr="1.0000" vb="1.0000"/>
+            <vignetting model="pa" focal="50" aperture="2.0" distance="1000" k1="-0.38" k2="-0.12" k3="0.0"/>
+        </calibration>
+    </lens>
+    <lens>
+        <maker>Panasonic</maker>
+        <model>LUMIX S 20-60mm F3.5-5.6</model>
+        <mount>Leica L</mount>
+        <cropfactor>1</cropfactor>
+        <calibration>
+            <distortion model="ptlens" focal="20" a="0.016" b="-0.054" c="0.005"/>
+            <distortion model="ptlens" focal="35" a="0.003" b="-0.012" c="0.0"/>
+            <distortion model="ptlens" focal="60" a="0.0" b="0.008" c="0.0"/>
+            <tca model="poly3" focal="20" vr="1.0007" vb="1.0002"/>
+            <vignetting model="pa" focal="20" aperture="3.5" distance="1000" k1="-0.49" k2="-0.20" k3="0.0"/>
+        </calibration>
+    </lens>
+</lensdatabase>

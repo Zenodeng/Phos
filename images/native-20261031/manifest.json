@@ -1,39 +1,24 @@
 {
-  "capturedAt": "2026-10-31",
+  "capturedAt": "2026-10-31 (export.webp updated 2026-11-23)",
   "app": "Phos",
-  "version": "4.3.0",
-  "capture": "CUA native application screenshots; source photo braies.jpg; actual Fuji 400H 2 at 75%, exposure 0.10, highlights -12, shadows 16",
+  "version": "4.7.0",
+  "capture": "Native Phos dark-mode workspace & sanitized v4.7.0 ExportSheet capture",
   "photoSourceManifest": "../photo-edits/manifest.json",
   "files": [
-    {
-      "file": "workspace-b.webp",
-      "bytes": 290756,
-      "sha256": "8b39b0f56bc2f8e423f95662c1deb4bf400842f2450c2abd94ef9bf1801c2bf9"
-    },
-    {
-      "file": "export.jpg",
-      "bytes": 60426,
-      "sha256": "3b7a529ac336021f18e4c5f35fe3d2eff0f317be8ab5c820cd53b7b659bd9146"
-    },
-    {
-      "file": "export.webp",
-      "bytes": 25990,
-      "sha256": "d4d3f511cc9dabc4154c646af270bae72c96b24c4ecafb23b0e0c91b672b2290"
-    },
     {
       "file": "workspace-a.webp",
       "bytes": 288186,
       "sha256": "5f68e971595b9fb6f677607233c510ff93baf145e4a391e2fada0edb20fde9f8"
     },
     {
-      "file": "workspace-b.jpg",
-      "bytes": 443303,
-      "sha256": "b2ff298bd99c99669a5e6f531448eb8f0f7ce457018187eaaadc2b82e9e5b04e"
+      "file": "workspace-b.webp",
+      "bytes": 290756,
+      "sha256": "8b39b0f56bc2f8e423f95662c1deb4bf400842f2450c2abd94ef9bf1801c2bf9"
     },
     {
-      "file": "workspace-a.jpg",
-      "bytes": 446391,
-      "sha256": "a02752816d6453ac64152127ba51c01fcdc9c5dcd0b4aa3397ad7664073a7eac"
+      "file": "export.webp",
+      "bytes": 43566,
+      "sha256": "a4eb3ae5973a5f511d3d009d0027f0028407da98942687edb66ca801bef2201f"
     }
   ]
 }

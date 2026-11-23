@@ -1,8 +1,8 @@
 {
-  "version": "4.5.0",
-  "released": "2026-11-22",
+  "version": "4.6.0",
+  "released": "2026-11-23",
   "page": "https://zenodeng.com/help#download-help",
   "url": "https://zenodeng.com/download/Phos-macOS-apple-silicon.dmg",
   "minOS": "26.0",
-  "notes": "4.5：全链路升级 16-bit 浮点扩展线性 Metal 管线与 EDR 直通预览，新增 AgX 对比/高光滚降、14-stop 保边影调、OKLCH 点颜色、蒙版布尔与 AI 天空/人像分割、污点修复与离线 Core ML Big-LaMa 无痕消除；支持 Gain-Map HDR JPEG / 10-bit PQ HEIC / Adobe XMP 导出，扩充至 39 组镜头配置，并加入虚拟副本、颜色标签与多视图画布，同时修复蒙版侧栏对齐与深浅图标自动切换。"
+  "notes": "4.6：完备化蒙版与分割（新增身体皮肤/眉毛/衣服分割、升级零模型及 Core ML 天空分割、Auto Mask 边缘吸附、数位板压感、子蒙版布尔画布交互及局部曲线/点颜色）；画布修补支持自动推荐与重选源点、拖动源点手柄与 H/Delete 快捷键；安全区适配网格（G）/多图同屏（N）/双图对比（C）/参考视图（⇧R），扩展完整双向 Adobe XMP 与 Lightroom 预设导入（0%–200% 强度）、虚拟副本重命名、关键词搜索与 82 组内置镜头配置。"
 }

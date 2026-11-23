@@ -34,9 +34,9 @@ Older releases may still use the former application and archive names.
 
 ### Overview
 
-Phos is a non-destructive RAW photo editor written in Swift on top of Core Image, Vision and AppKit.
+Phos is a non-destructive RAW photo editor written in Swift on top of **Metal**, Core Image, Vision and AppKit.
 Everything runs on the local machine: no cloud services, no accounts, no subscription, no telemetry.
-Every pixel operation is executed on the GPU. Optional local AI retouching uses a separately installed MLX-VLM environment and model.
+The entire colour and toning pipeline executes on the GPU in a **16-bit floating-point extended linear space (`extendedLinearSRGB` / `.RGBAh`)** with an optional **EDR / HDR Metal preview canvas** (plus automatic `CGImage` fallback). Optional local AI retouching uses a separately installed MLX-VLM environment, and optional offline Core ML models enable Big-LaMa content-aware removal and neural sky segmentation.
 
 **The only external network request** is a version check against its own website at launch. Optional AI retouching sends image previews and editing parameters only to `127.0.0.1` on your Mac (port 8765 when available, otherwise a system-assigned local port).
 It sends nothing about you, your photos or your machine, and it is the sole reason the app is not
@@ -46,9 +46,8 @@ strictly offline. Turn it off with:
 defaults write com.zeno.phos updateCheckDisabled -bool true
 ```
 
-The project deliberately favours a small, complete set of high-frequency editing capabilities over
-breadth of features. All edits are stored in a sidecar file next to the original image, and **the
-original file is never modified**.
+The project deliberately favours depth and colour accuracy across high-frequency photographic workflows over
+feature bloat. All edits are stored in `.rawforge.json` (and optional bidirectional **Adobe XMP sidecars**) next to the original image, and **the original file is never modified**.
 
 ### Requirements
 
@@ -101,8 +100,8 @@ The inspector is organised into five tabs. Everything below is a local operation
 | Panel | Controls |
 | ----- | -------- |
 | White balance | Temperature, tint, a grey-point picker that samples straight from the canvas, and reset |
-| Basic | Exposure, contrast, highlights, shadows, whites, blacks |
-| Texture & saturation | Texture, clarity, dehaze, vibrance, saturation, plus an **HDR** mode (compresses highlights while lifting shadows) with a limit control |
+| Basic | Exposure, **AgX contrast** with **contrast pivot** and **highlight rolloff**, Guided Filter **14-stop edge-aware highlights & shadows**, bidirectional whites & blacks, and **highlight/shadow clipping overlay** (`J`) |
+| Texture & saturation | Texture, clarity, dehaze, vibrance, saturation, plus an **HDR** mode (compresses highlights while lifting shadows) with a limit control and **EDR extended dynamic range display** |
 
 #### Colour — 色彩
 
@@ -110,19 +109,21 @@ The inspector is organised into five tabs. Everything below is a local operation
 | ----- | -------- |
 | Tone curve | Free-form point curves with an arbitrary number of control points, draggable in both axes, across **five independent channels**: composite, luminance, R, G and B. Monotone cubic interpolation (Fritsch–Carlson) guarantees the curve passes through every control point without overshoot. *Refine Sat* pulls saturation back after tonal changes. All five curves are baked into a single 64³ LUT. |
 | Colour grading | Lightroom-style wheels for shadows, midtones and highlights — hue, saturation and luminance per band, plus blend and balance |
-| HSL mixer | Eight hue bands with per-band hue / saturation / luminance, and a clear-all action |
+| HSL mixer | Eight hue bands computed in perceptually uniform **OKLCH** space with per-band hue / saturation / luminance and a clear-all action |
+| Point Color (OKLCH) | Eyedropper sampling on the canvas to isolate targeted colours by hue, chroma and luminance ranges and shift hue / chroma / luma independently per swatch without affecting neighbours |
 | Black & white | One-click conversion with its own channel mix |
 | Calibration | RGB primary adjustment implemented as a row-normalised 3×3 matrix, so the white point stays put |
-| Film CLUT | 303 built-in HALD film-emulation LUTs with search, plus scanning of an external HaldCLUT directory (`~/Documents/RawTherapee/HaldCLUT`) and a refresh action |
+| Film CLUT | 303 built-in HALD film-emulation LUTs with search, plus background asynchronous scanning of an external HaldCLUT directory (`~/Documents/RawTherapee/HaldCLUT`) and a refresh action |
 
 #### Detail — 细节
 
 | Panel | Controls |
 | ----- | -------- |
 | Detail | Sharpening (amount, radius, detail, masking) and dual-channel luminance + colour noise reduction |
-| Effects | Film grain (amount and grain size), vignette, and halation (highlight extraction → wide-radius blur → warm tint → screen blend) |
+| Spot retouch & remove | **Heal** (auto-suggested source sampling + Poisson seamless blending), **Clone**, and **Content-Aware Remove** (4-level PatchMatch fallback plus optional offline Core ML **Big-LaMa `LaMa.mlmodelc`** inpainting via model import or `Scripts/install_lama_model.sh`). Supports direct canvas clicking/dragging on spot centres and yellow source handles, Re-suggest Source, hover brush preview rings, `H` to toggle pins and `Delete` to remove selected spots |
+| Effects | Film grain (amount, size and silver-halide **roughness**), vignette, and halation (highlight extraction → wide-radius blur → warm tint → screen blend) |
 | Bokeh | Depth-driven defocus. The depth source is either the portrait **disparity** auxiliary data in the file, or a **depth-painting mask** you paint yourself |
-| Lens correction | Lateral chromatic aberration (counter-scaled R/B channels) and purple-fringe suppression |
+| Lens correction | **82 built-in lens profiles** (Sony FE, Canon RF, Nikon Z, Fujifilm X, Sigma, Tamron, Leica, Panasonic) plus custom Lensfun XML import, before/after comparison, 8-division grid overlay, lateral chromatic aberration (counter-scaled R/B channels) and purple-fringe suppression |
 
 #### Geometry — 变换
 
@@ -133,24 +134,19 @@ horizontal perspective, and a reset action.
 
 #### Masks — 蒙版
 
-Nine mask types, all computed on-device:
+Full non-destructive compositing mask stack with **boolean sub-components** (**Add / Subtract / Intersect**) and optional **Guided Filter edge refinement**, all computed on-device:
 
 | Mask | How it works |
 | ---- | ------------ |
-| Linear gradient | Drag on the canvas to lay down a three-line gradient. Drag the centre to move it, the endpoints to change its width, and the rotate handle to change direction. |
-| Radial gradient | Drag out an ellipse. Drag the centre to move, the horizontal/vertical edges to scale, and the rotate handle to change the angle; feather controls the inner/outer transition. |
-| Brush | Paint or erase directly on the canvas, one stroke per drag. Brush size and edge softness are adjustable. |
-| Colour range | Sample a colour with the eyedropper; tolerance controls how wide a colour band is included. |
-| Luminance range | Drag on the canvas to sample luminance, or set the upper and lower bounds with sliders. |
-| Subject | Vision saliency-based subject detection, run locally and cached per mask and canvas size. |
-| Person | System person segmentation, run locally. |
-| Foreground cut-out | Foreground-instance matting producing a soft float mask — this is what powers transparent-background export. |
+| Linear / Radial gradient | Drag on the canvas to lay down gradients or ellipses, move centres, resize handles and rotate; works on both base masks and selected boolean sub-components. |
+| Brush | Paint or erase directly on the canvas with **Auto Mask colour edge snapping** and **tablet pen pressure modulation**; brush size, feather and flow vary smoothly per stroke. |
+| Colour / Luminance range | Sample a colour or luminance on the canvas or drag bounds on sliders. |
+| Sky & Background | Upgraded zero-model sky segmentation (Vision horizon tilt + multi-prototype K-means + gradient-blocked BFS) with optional **Core ML `SkySegmentation`** model acceleration, plus foreground-inverted Background masks. |
+| Subject, Person & Foreground cut-out | Vision saliency subject detection, system person matting and soft foreground-instance cut-out (also powers transparent-background export). |
+| Portrait body sub-parts | Semantic segmentation for **Face Skin**, **Body Skin**, **Eyes**, **Eyebrows**, **Lips**, **Teeth**, **Hair** and **Clothes** (excluding skin). |
 | Depth painting | Paint the background white and keep the subject black to drive the Bokeh panel. |
 
-Each mask carries its own adjustment stack — exposure, contrast, saturation, temperature, clarity,
-sharpening, highlights, shadows, texture, dehaze and noise reduction — plus feather. Masks can be
-inverted, duplicated or deleted, and AI masks can be recomputed on demand. Selecting a gradient mask
-automatically switches the tool back to position mode so the guides and handles are immediately visible.
+Each mask carries a complete local stack — exposure, contrast, saturation, temperature, **tint**, highlights, shadows, **whites**, **blacks**, clarity, texture, dehaze, sharpening, denoise, **expandable local Tone Curve editor**, **local Point Color (OKLCH)** and **local Film CLUT** — plus inversion, duplication and AI recomputation.
 
 #### Multi-exposure
 
@@ -162,17 +158,17 @@ full resolution as 16-bit TIFF and can be edited further.
 
 #### Workflow and export
 
-- **Non-destructive sidecars** — `<image>.rawforge.json`, with a 200-step undo stack.
-- **Presets** — save the current adjustments as a named preset and reapply it later.
-- **Named snapshots** — save, rename and restore per-photo snapshots.
+- **Non-destructive sidecars & Adobe XMP** — native `<image>.rawforge.json` (200-step undo stack) plus full bidirectional **Adobe XMP sidecar** support (`xmp:Rating` including `-1` reject, `xmpDM:good` pick flags, `xmp:Label`, `dc:subject` keywords, negative/positive clarity, 8-band HSL, RGB curves, Color Grading, Calibration, Grain, Crop & Angle, XXE protection and persistent auto-write toggle).
+- **Presets & Lightroom `.xmp` import** — save named presets, import Lightroom `.xmp` presets directly, preview presets live on hover and scale intensity smoothly from **0% to 200%**.
+- **Virtual copies & Snapshots** — create, rename and delete non-destructive virtual copies (`⌘'`), and save/restore per-photo named snapshots.
 - **Copy / sync adjustments** — copy adjustments to other photos or sync across a selection; geometry and masks are excluded by default, and every sync target receives a recovery snapshot first.
-- **Browser** — folder scanning with filters (all / selected / flagged), star ratings, colour labels and flags; you can also add individual files from outside the opened folder.
+- **Multi-view culling & Browser** — recursive subfolder scanning toggle, keyword search/tagging, camera & lens filters, star ratings, colour labels, pick/reject (`X`) flags, plus **Grid View (`G`)**, **Synchronised Side-by-Side Compare (`C`)**, **2–4 Up Survey View (`N`)** with pinch-zoom/pan sync and per-card rating/baseline actions, and **Reference View (`⇧R`)** supporting external reference files and horizontal/vertical split.
 - **Preview modes** — a 2200px proxy for speed, a full-pixel mode that runs the whole pipeline at the original resolution, and a 1:1 pixel view for checking sharpness.
-- **Before / after comparison** and an output histogram.
-- **Export** — JPEG / PNG / TIFF / HEIC at 8 or 16 bits in sRGB, Display P3 or Adobe RGB, with long-edge sizing, quality control and output sharpening. A watermark can be text or a logo image with 9-grid placement, size, opacity, rotation, margin and a black-text option; it is applied to exported files only and never enters the preview or the sidecar.
-- **Batch export** — applies each photo's own sidecar, or exports only the flagged photos. Destination can be a fixed folder or chosen per run.
-- **Transparent-background export** — exports a cut-out using the foreground mask (format is forced to PNG or TIFF, which support alpha).
-- **Adaptive light / dark interface** that follows the system appearance.
+- **Before / after comparison** (toggle `⌘B` or split view `⌥⌘B`) and a live EDR-aware output histogram.
+- **Export & Metadata** — JPEG / PNG / TIFF / HEIC (including **Gain-Map HDR JPEG**, **10-bit PQ HEIC** and **16-bit Display P3 TIFF/PNG**), preserves source EXIF / IPTC / GPS with optional GPS privacy stripping and copyright injection, plus watermark overlay applied strictly at export time.
+- **Batch export** — bounded concurrent batch export applying each photo's sidecar (or picked-only / virtual copies).
+- **Transparent-background export** — exports a cut-out using the foreground mask (PNG or TIFF with alpha).
+- **Live Bilingual UI (909 entries)** — adaptive light/dark interface & Dock icon plus instant switching between Simplified Chinese and English without restarting.
 - **Update check** — on launch Phos asks its own website for the latest version number. If a newer
   release exists, a small badge appears next to the app name in the toolbar; clicking it opens the
   download page. Nothing about you or your machine is sent, and the check can be turned off (see
@@ -180,17 +176,22 @@ full resolution as 16-bit TIFF and can be edited further.
 
 ### Keyboard shortcuts
 
-| Action                     | Shortcut |
-| -------------------------- | -------- |
-| Open folder                | ⌘O       |
-| Crop and geometry          | ⌘R       |
-| Export current photo       | ⌘E       |
-| Before / after comparison  | ⌘B       |
-| Multi-exposure compositing | ⇧⌘M      |
-| Copy adjustments           | ⇧⌘C      |
-| Sync adjustments           | ⇧⌘V      |
-| Named snapshots            | ⇧⌘S      |
-| Undo / Redo                | ⌘Z / ⇧⌘Z |
+| Action                         | Shortcut |
+| ------------------------------ | -------- |
+| Open folder                    | ⌘O       |
+| Crop and geometry              | ⌘R       |
+| Export current photo           | ⌘E       |
+| Before / after comparison      | ⌘B       |
+| Split comparison               | ⌥⌘B      |
+| Multi-exposure compositing     | ⇧⌘M      |
+| Copy / Sync adjustments        | ⇧⌘C / ⇧⌘V |
+| Named snapshots                | ⇧⌘S      |
+| Create virtual copy            | ⌘'       |
+| Grid / Compare / Survey / Ref  | G / C / N / ⇧R |
+| Highlight & shadow clipping    | J        |
+| Reject / Colour labels         | X / 6–9  |
+| Retouch pins / Delete spot     | H / Delete (in Retouch) |
+| Undo / Redo                    | ⌘Z / ⇧⌘Z |
 
 ### Building from source
 
@@ -222,9 +223,14 @@ duplicate in Launchpad. Set `KEEP_LOCAL_APP=1` if you want one anyway.
 ### Tests
 
 ```sh
+bash Scripts/test_p012_upgrade.sh    # 16-bit Metal, OKLCH, boolean masks, LaMa, XMP, lens & batch export
 bash Scripts/test_mask_drag.sh        # mask handle geometry, no photo needed, runs in seconds
 bash Scripts/test_update.sh           # version comparison, offline, runs in milliseconds
+bash Scripts/test_autotone.sh         # scene-aware auto tone regression
+bash Scripts/test_clut.sh             # film LUT & HALD consistency
 bash Scripts/test_performance.sh      # rendering, caches, undo/redo, async export
+bash Scripts/test_workspace_r4.sh     # workspace shell, R2/R3/R4 workflows & localization
+python3 Scripts/audit_localization.py # verify direct UI translation literal coverage (909 entries)
 bash Scripts/test_studio.sh <fixture-image> <output-directory> [render-baseline-directory]
 bash Scripts/test_real_photos.sh <output-directory> <soak-seconds> <photo> [more-photos...]
 bash Scripts/test_workflow.sh <photo> <flat-copy> [more-photos...]
@@ -240,20 +246,32 @@ separate real-photo testing.
 
 ### Architecture
 
-| File                               | Responsibility                                                                            |
-| ---------------------------------- | ----------------------------------------------------------------------------------------- |
-| `Sources/Phos/Engine.swift`    | Decoding, the full adjustment pipeline, LUT construction, masking, Vision-backed analysis |
-| `Sources/Phos/Alignment.swift` | Frame registration, quality gating, canvas normalisation for compositing                  |
-| `Sources/Phos/Models.swift`    | Parameter model and tolerant decoding for forward compatibility                           |
-| `Sources/Phos/AppMain.swift`   | Application state, render scheduling, undo stack, export and batch processing             |
-| `Sources/Phos/Performance.swift` | Bounded thread-safe caches and latest-request background scheduling                    |
-| `Sources/Phos/Workflow.swift`    | Batch synchronisation, snapshots, grey-point sampling, sidecar migration, mask geometry |
-| `Sources/Phos/WorkflowViews.swift` | Workflow panels: sync targets, snapshots, bit-depth and colour-space controls        |
-| `Sources/Phos/Views.swift`     | Browser, canvas, mask overlay, crop overlay, toolbars                                     |
-| `Sources/Phos/Inspector.swift` | Adjustment panels, curve editor, colour wheels, mask panels                               |
-| `Sources/Phos/Theme.swift`     | Adaptive colour palette                                                                   |
-| `Sources/Phos/CLUT.swift`      | Film LUT loading and baking                                                               |
-| `Sources/Phos/Update.swift`    | External network call: version check against the project's own website                     |
+| File                                      | Responsibility                                                                               |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `Sources/Phos/Engine.swift`               | Decoding, colour pipeline integration, LUT construction, masking, Vision-backed analysis    |
+| `Sources/Phos/MetalEngine.swift`          | 16-bit `.RGBAh` Metal compute orchestration, AgX / OKLCH / Guided Filter kernel dispatch    |
+| `Sources/Phos/MetalShaders.swift`         | Metal compute kernels (toning, OKLCH HSL & Point Color, boolean masks, halo/grain/halations)|
+| `Sources/Phos/MetalCanvasView.swift`      | HDR/EDR extended dynamic range Metal preview view with `CGImage` fallback                    |
+| `Sources/Phos/MaskEngine.swift`           | Boolean mask compositing, sky segmentation (zero-model + optional Core ML) & portrait parts |
+| `Sources/Phos/MaskAdvancedControls.swift` | Boolean component editor, sky model importer, local CurveEditor & local Point Color UI      |
+| `Sources/Phos/RetouchEngine.swift`        | Heal (Poisson), Clone, 4-level PatchMatch Remove, Core ML `LaMa.mlmodelc` & `suggestSource` |
+| `Sources/Phos/RetouchPane.swift`          | Spot retouch inspector controls, model installation/management & selected spot binding       |
+| `Sources/Phos/PointColorPane.swift`       | Global OKLCH Point Color swatch inspector                                                    |
+| `Sources/Phos/MultiViewCanvas.swift`      | Grid, Side-by-Side / Survey / Before-After compare, Reference view & interactive Retouch overlay |
+| `Sources/Phos/MetadataIO.swift`           | ImageIO EXIF/IPTC/GPS preservation, HDR HEIC & Gain-Map JPEG / 16-bit TIFF export           |
+| `Sources/Phos/XMPSidecar.swift`           | XXE-safe bidirectional Adobe XMP sidecars & Lightroom `.xmp` preset parser                  |
+| `Sources/Phos/LensProfiles.swift`         | Lensfun XML loader & bundled/extended 82-profile lens database                               |
+| `Sources/Phos/Alignment.swift`            | Frame registration, quality gating, canvas normalisation for compositing                     |
+| `Sources/Phos/Models.swift`               | Parameter model, virtual copies, scaled presets & tolerant decoding                          |
+| `Sources/Phos/AppMain.swift`              | Application state, render scheduling, undo stack, XMP sync, export and batch processing      |
+| `Sources/Phos/Performance.swift`          | Bounded thread-safe caches and latest-request background scheduling                          |
+| `Sources/Phos/Workflow.swift`             | Batch synchronisation, snapshots, grey-point sampling, sidecar migration, mask geometry      |
+| `Sources/Phos/WorkflowViews.swift`        | Workflow panels: sync targets, snapshots, mask tool & auto-mask controls                     |
+| `Sources/Phos/Views.swift`                | Browser, canvas, mask overlay, crop overlay, toolbars                                        |
+| `Sources/Phos/Inspector.swift`            | Adjustment panels, curve editor, colour wheels, mask panels                                  |
+| `Sources/Phos/Theme.swift`                | Adaptive colour palette                                                                      |
+| `Sources/Phos/CLUT.swift`                 | Film LUT loading and baking                                                                  |
+| `Sources/Phos/Update.swift`               | External network call: version check against the project's own website                       |
 
 The application is non-destructive by design: all parameters are serialised to a sidecar file, and
 rendering is a pure function of (source image, parameters).
@@ -276,8 +294,8 @@ Released under the [MIT License](LICENSE).
 
 ### 概述
 
-Phos 是一款用 Swift 编写、基于 Core Image、Vision 与 AppKit 的**非破坏性 RAW 修图软件**。
-所有处理都在本机完成：无账号、无订阅、无遥测。全部像素处理在 GPU 上完成，可选本地 AI 修图使用独立的 MLX-VLM 环境。
+Phos 是一款用 Swift 编写、基于 **Metal**、Core Image、Vision 与 AppKit 的**非破坏性 RAW 修图软件**。
+所有处理都在本机完成：无账号、无订阅、无遥测。完整色彩与影调管线均在 GPU 上以 **16-bit 浮点扩展线性色彩空间（`extendedLinearSRGB` / `.RGBAh`）** 执行，并提供 **EDR / HDR Metal 直通预览画布**（保留 `CGImage` 自动回退）；可选本地 AI 修图使用独立的 MLX-VLM 环境，并可选导入离线 Core ML 模型（Big-LaMa 内容感知消除与 `SkySegmentation` 天空分割）。
 
 **Phos 唯一的外网请求**是启动时向自己的官网查一次版本号。本地 AI 修图仅向本机 127.0.0.1 发送照片预览和编辑参数。请求里不带任何关于你、你的照片或
 本机环境的信息 —— 这也是这个应用唯一不是「完全离线」的地方。想关掉：
@@ -286,7 +304,7 @@ Phos 是一款用 Swift 编写、基于 Core Image、Vision 与 AppKit 的**非�
 defaults write com.zeno.phos updateCheckDisabled -bool true
 ```
 
-项目刻意选择「把高频能力做全做透」而非堆砌功能。所有调整写入原图旁边的副档，
+项目刻意选择把高频摄影修图能力做深做透。所有调整写入原图旁边的 `.rawforge.json` 副档（及可选双向 **Adobe XMP 旁档**），
 **原始文件一个字节都不会被修改**。
 
 ### 运行要求
@@ -343,8 +361,8 @@ defaults write com.zeno.phos updateCheckDisabled -bool true
 | 面板 | 控件 |
 | ---- | ---- |
 | 白平衡 | 色温、色调，以及可直接在画布上取色的**灰点吸管**与重置 |
-| 基本 | 曝光、对比、高光、阴影、白色、黑色 |
-| 质感与饱和度 | 纹理、清晰度、去朦胧、鲜艳度、饱和；另有 **HDR** 模式（压高光、拉暗部）与「HDR 极限」 |
+| 基本 | 曝光、**AgX 对比**（含**对比中心**与**高光滚降**）、Guided Filter **14-stop 保边高光与阴影**、双向白色/黑色色阶，以及**高光/暗部溢出警示（`J`）** |
+| 质感与饱和度 | 纹理、清晰度、去朦胧、鲜艳度、饱和；另有 **HDR** 模式（压高光、拉暗部）与「HDR 极限」，支持 **EDR 扩展动态范围显示** |
 
 #### 色彩
 
@@ -352,19 +370,21 @@ defaults write com.zeno.phos updateCheckDisabled -bool true
 | ---- | ---- |
 | 曲线 | 自由控制点曲线，点数任意、横竖均可拖，覆盖**五个独立通道**：合成、亮度、R、G、B。控制点之间采用单调三次插值（Fritsch–Carlson），**严格过点且不过冲**。*Refine Sat* 在改变调子后把饱和度拉回。五条曲线一次烘进 64³ LUT。 |
 | 颜色分级 | Lightroom 式色轮，阴影 / 中间调 / 高光各一组色相、饱和、明亮度，另含混合与平衡 |
-| HSL · 混色 | 8 个色相分区，逐区调整色相 / 饱和 / 明亮度，可一键清空 |
+| HSL · 混色 | 8 个色相分区迁移至感知均匀 **OKLCH** 空间，逐区调整色相 / 饱和 / 明亮度，可一键清空 |
+| 点颜色 (OKLCH) | 画布取色新建独立色样，按色相、彩度与明度范围精确隔离目标色并独立偏移，不连带邻近色彩 |
 | 黑白 | 一键转为黑白，带独立通道混合 |
 | 校准 | RGB 三原色调整，实现为行归一化 3×3 矩阵，**保证白点不变形** |
-| 胶片 CLUT | 内置 303 个 HALD 胶片模拟 LUT，支持搜索；可扫描外置 HaldCLUT 目录（`~/Documents/RawTherapee/HaldCLUT`）并刷新 |
+| 胶片 CLUT | 内置 303 个 HALD 胶片模拟 LUT，支持搜索；可后台异步扫描外置 HaldCLUT 目录（`~/Documents/RawTherapee/HaldCLUT`）并刷新 |
 
 #### 细节
 
 | 面板 | 控件 |
 | ---- | ---- |
 | 细节 | 锐化（数量 / 半径 / 细节 / 蒙版）；亮度与颜色双通道降噪 |
-| 效果 | 胶片颗粒（浓度 / 颗粒粗）、暗角、Halation 光晕（高光提取 → 大半径模糊 → 暖色染色 → 屏幕混合） |
+| 污点修复与消除 | **修复 (Heal)**（自动推荐干净采样源点 + 泊松融合）、**仿制 (Clone)** 与**内容感知消除 (Remove)**（内置 4 层 PatchMatch，支持导入离线 Core ML **Big-LaMa `LaMa.mlmodelc`** 及 `Scripts/install_lama_model.sh` 一键安装）。支持画布点选、直接拖动修补点与黄色采样源点、重选源点、悬停双环画笔光标、`H` 显隐标记与 `Delete` 删除选中 |
+| 效果 | 胶片颗粒（浓度 / 颗粒大小 / **颗粒粗糙度**）、暗角、Halation 光晕（高光提取 → 大半径模糊 → 暖色染色 → 屏幕混合） |
 | 焦外散景 | 按深度虚化。深度来源可选文件里的人像 **disparity** 辅助数据，或自己涂的**深度涂绘蒙版** |
-| 镜头校正 | 横向色差（R/B 通道反向微缩放）、紫边抑制 |
+| 镜头校正 | 内置 **82 组镜头配置**（覆盖 Sony FE / Canon RF / Nikon Z / Fujifilm X / Sigma / Tamron / Leica / Panasonic），支持导入 Lensfun XML、校正前后切换、8 等分网格、横向色差与紫边抑制 |
 
 #### 变换
 
@@ -374,23 +394,19 @@ defaults write com.zeno.phos updateCheckDisabled -bool true
 
 #### 蒙版
 
-九种蒙版，全部在本机计算：
+完整的非破坏复合蒙版系统，支持**子蒙版布尔组合（加 / 减 / 交）**与 **Guided Filter 边缘精修**，全部在本机计算：
 
 | 蒙版 | 用法 |
 | ---- | ---- |
-| 线性渐变 | 在画布上拖出三线渐变。拖中心移动，拖端点改宽度，拖旋转柄改变方向。 |
-| 径向渐变 | 拖出椭圆。拖中心移动，拖横 / 竖边缩放，拖旋转柄改变角度；羽化控制内外过渡。 |
-| 画笔 | 直接在画布上涂抹或擦除，一次拖动算一笔；可调笔刷大小与边缘软硬。 |
-| 颜色范围 | 用吸管取色，「容差」控制收进来的颜色范围。 |
-| 亮度范围 | 在画布上拖动取样亮度，或用上下界滑块手动框定。 |
-| 选择主体 | 系统视觉模型算显著性主体，全部在本机算，结果按「蒙版 + 画幅尺寸」缓存。 |
-| 选择人物 | 系统人物分割，本地跑，自动圈出画面里的人。 |
-| 主体抠图 | 前景实例抠图，输出软边 float 蒙版 —— 导出「透明背景抠图」用的就是它。 |
+| 线性 / 径向渐变 | 在画布拖动三线渐变或椭圆，支持移动中心、缩放端点/半径与旋转；主蒙版与选中的布尔子组件均可在画布直接编辑。 |
+| 画笔 | 直接在画布上涂抹或擦除，支持**自动边缘吸附（Auto Mask）**与**数位板压感**，按笔画调控大小、软边与流量。 |
+| 颜色 / 亮度范围 | 吸管取色或拖动取样亮度，调节容差与上下界/软边控制范围。 |
+| 天空 / 背景 | 升级零模型天空分割（地平线倾角 + 多原型聚类 + 梯度阻断连通域），并支持导入 **Core ML `SkySegmentation`** 加速；支持前景反选生成背景蒙版。 |
+| 选择主体 / 人物 / 抠图 | Vision 显著性主体检测、系统人物分割与前景实例软边缘抠图（同步支持导出透明背景抠图）。 |
+| 人像部位语义分割 | 支持**人脸皮肤、身体皮肤、眼睛、眉毛、嘴唇、牙齿、头发、衣服（扣除皮肤）**精细分割。 |
 | 深度涂绘 | 把想虚化的背景涂白、主体留黑，配合「焦外散景」使用。 |
 
-每个蒙版都有独立的调整栈 —— 曝光、对比、饱和、色温、清晰、锐化、高光、阴影、纹理、去朦胧、降噪
-—— 外加羽化。蒙版可反转、复制、删除，AI 蒙版可随时「重算」。选中渐变蒙版时会自动切回位置调整模式，
-控制点与参考线立即可见。
+每个蒙版拥有完整局部调整栈 —— 曝光、对比、饱和、色温、**色调**、高光、阴影、**白色**、**黑色**、清晰、纹理、去朦胧、锐化、降噪、**可展开局部曲线编辑器**、**局部 OKLCH 点颜色**与**局部 CLUT** —— 并支持反转、复制与 AI 重算。
 
 #### 多重曝光
 
@@ -400,34 +416,37 @@ Vision 配准的帧对齐与质量门（重叠区 NCC 低于 0.7 的帧自动剔
 
 #### 工作流与导出
 
-- **副档非破坏编辑** —— `<原图名>.rawforge.json`，200 步撤销栈。
-- **预设** —— 把当前调整存成命名预设，随时套用。
-- **命名快照** —— 每张照片可保存、重命名、恢复多个快照。
+- **原生副档与 Adobe XMP 双向互通** —— `<原图名>.rawforge.json`（200 步撤销栈）与完整 **Adobe XMP 旁档**（支持 `xmp:Rating=-1` 淘汰、`xmpDM:good` 精选、关键词、负向/正向清晰度、8 色段 HSL、RGB 曲线、颜色分级、校准、颗粒、裁剪与角度、XXE 防护及持久化自动写入开关）。
+- **预设与 Lightroom `.xmp` 预设导入** —— 保存/套用命名预设，支持直接导入 Lightroom `.xmp` 预设、悬停实时预览及 **0%–200% 预设强度滑块**。
+- **虚拟副本与命名快照** —— 创建、重命名与删除非破坏性虚拟副本（`⌘'`），以及多版本命名快照管理。
 - **复制 / 同步调整** —— 复制调整到其他照片，或在选中范围内同步；默认不含裁剪与蒙版，每个同步目标先自动存一份恢复快照。
-- **素材浏览** —— 文件夹扫描，支持「全部 / 已选 / 已标记」筛选、星级评分、颜色标签与标记；也可临时加入文件夹外的单张文件。
+- **多视图选片与浏览器** —— 支持递归子文件夹扫描、关键词添加与搜索、相机/镜头筛选、星级/颜色标签/淘汰（`X`），以及 **网格看片（`G`）**、**双图同步对比（`C`）**、**2–4 张多图同屏选片（`N`，支持双指缩放/拖动同步与逐卡打分/设为基准）**、**参考锁定视图（`⇧R`，支持外部参考文件与左右/上下分屏）**。
 - **预览模式** —— 2200px 代理图（快）、全像素模式（整条管线按原图分辨率渲染）、1:1 像素视图（检查锐度）。
-- **前后对比** 与调整后直方图。
-- **导出** —— JPEG / PNG / TIFF / HEIC，8 或 16 位，sRGB / Display P3 / Adobe RGB，支持长边尺寸、质量与输出锐化。水印可选文字或 logo 图片，九宫格定位 + 大小 / 不透明度 / 旋转 / 边距，另有黑字模式；**水印只叠在导出文件上**，不进预览、不进副档。
-- **批量导出** —— 套用每张照片各自的副档，也可只导出已标记的照片；输出目录可选固定文件夹或每次指定。
-- **透明背景导出** —— 用「主体抠图」蒙版导出抠图（格式自动设为 PNG 或 TIFF，因为需要 alpha）。
-- **浅色 / 深色自适应界面**，跟随系统外观。
+- **前后对比**（`⌘B` / 同几何分割 `⌥⌘B`）与 EDR 感知实时直方图。
+- **元数据保留与 HDR 导出** —— 支持 JPEG / PNG / TIFF / HEIC（含 **Gain-Map HDR JPEG**、**10-bit PQ HEIC** 与 **16-bit Display P3 TIFF/PNG**），保留源图 EXIF / IPTC / GPS，支持移除 GPS 隐私与版权注入；水印仅叠在导出文件上。
+- **批量导出** —— 有界并发批量导出，套用各自旁档与虚拟副本，支持仅导出已标记精选照片。
+- **透明背景导出** —— 用「主体抠图」蒙版导出透明背景抠图（PNG / TIFF）。
+- **中英文实时切换（909 条翻译）** —— 自适应浅/深色界面与 Dock 图标，实时切换简体中文 / English 无需重启。
 - **更新提示** —— 启动时向官网查一次最新版本号；有新版就在工具栏应用名旁边出现一个小徽标，
   点它打开下载页。请求不带任何关于你或本机的信息，也可以关掉（见「概述」）。
   工具栏「更多」菜单里另有手动「检查更新…」。
 
 ### 快捷键
 
-| 操作      | 快捷键      |
-| ------- | -------- |
-| 打开文件夹   | ⌘O       |
-| 裁剪与几何   | ⌘R       |
-| 导出当前照片  | ⌘E       |
-| 前后对比    | ⌘B       |
-| 多重曝光合成  | ⇧⌘M      |
-| 复制调整    | ⇧⌘C      |
-| 同步调整    | ⇧⌘V      |
-| 命名快照    | ⇧⌘S      |
-| 撤销 / 重做 | ⌘Z / ⇧⌘Z |
+| 操作                         | 快捷键      |
+| ---------------------------- | ----------- |
+| 打开文件夹                   | ⌘O          |
+| 裁剪与几何                   | ⌘R          |
+| 导出当前照片                 | ⌘E          |
+| 前后对比 / 同几何分割        | ⌘B / ⌥⌘B    |
+| 多重曝光合成                 | ⇧⌘M         |
+| 复制 / 同步调整              | ⇧⌘C / ⇧⌘V   |
+| 命名快照 / 创建虚拟副本      | ⇧⌘S / ⌘'    |
+| 网格 / 双图 / 多图同屏 / 参考| G / C / N / ⇧R |
+| 高光/暗部溢出警示            | J           |
+| 淘汰 / 颜色标签              | X / 6–9     |
+| 修补标记显隐 / 删除选中点    | H / Delete（修补模式）|
+| 撤销 / 重做                  | ⌘Z / ⇧⌘Z    |
 
 ### 从源码构建
 
@@ -458,9 +477,14 @@ SDK 和核心玻璃 API 探针通过。可用 `RF_SDK` 显式选择 SDK；选择
 ### 测试
 
 ```sh
+bash Scripts/test_p012_upgrade.sh    # 16-bit Metal、OKLCH、蒙版布尔、LaMa、XMP、镜头与批量导出回归
 bash Scripts/test_mask_drag.sh        # 蒙版控制点几何，不需要照片，秒级
 bash Scripts/test_update.sh           # 版本号比较，不联网，毫秒级
+bash Scripts/test_autotone.sh         # 场景感知自动影调回归
+bash Scripts/test_clut.sh             # 胶片 LUT 与 HALD 等价一致性
 bash Scripts/test_performance.sh      # 渲染、缓存、撤销重做、异步导出
+bash Scripts/test_workspace_r4.sh     # 工作区壳、R2/R3/R4 端到端与多语言回归
+python3 Scripts/audit_localization.py # 校验直译 UI 词条覆盖率（909 项）
 bash Scripts/test_studio.sh <fixture-image> <output-directory> [render-baseline-directory]
 bash Scripts/test_real_photos.sh <output-directory> <soak-seconds> <photo> [more-photos...]
 bash Scripts/test_workflow.sh <实拍照片> <实拍纸面照片> [其他照片...]
@@ -474,20 +498,32 @@ bash Scripts/test_workflow.sh <实拍照片> <实拍纸面照片> [其他照片.
 
 ### 架构
 
-| 文件                                 | 职责                       |
-| ---------------------------------- | ------------------------ |
-| `Sources/Phos/Engine.swift`    | 解码、完整调整管线、LUT 构建、蒙版、视觉分析 |
-| `Sources/Phos/Alignment.swift` | 帧配准、质量门、合成画幅归一化          |
-| `Sources/Phos/Models.swift`    | 参数模型与宽容解码（向前兼容旧副档）       |
-| `Sources/Phos/AppMain.swift`   | 应用状态、渲染调度、撤销栈、导出与批处理     |
-| `Sources/Phos/Performance.swift` | 有界线程安全缓存、最新请求后台调度       |
-| `Sources/Phos/Workflow.swift`    | 批量同步、快照、灰点取样、副档迁移、蒙版几何    |
-| `Sources/Phos/WorkflowViews.swift` | 工作流面板：同步目标、快照、位深与色彩空间控件  |
-| `Sources/Phos/Views.swift`     | 浏览器、画布、蒙版叠加层、裁剪叠加层、工具条   |
-| `Sources/Phos/Inspector.swift` | 调整面板、曲线编辑器、色轮、蒙版面板        |
-| `Sources/Phos/Theme.swift`     | 自适应调色板                   |
-| `Sources/Phos/CLUT.swift`      | 胶片 LUT 读取与烘焙             |
-| `Sources/Phos/Update.swift`    | 外网请求：向官网查版本号        |
+| 文件                                       | 职责                                                               |
+| ------------------------------------------ | ------------------------------------------------------------------ |
+| `Sources/Phos/Engine.swift`                | 解码、渲染管线集成、LUT 构建、蒙版、视觉分析                       |
+| `Sources/Phos/MetalEngine.swift`           | 16-bit `.RGBAh` Metal Compute 调度与 AgX / OKLCH / Guided Filter   |
+| `Sources/Phos/MetalShaders.swift`          | Metal 计算核（影调、OKLCH HSL 与点颜色、布尔蒙版、颗粒、光晕）     |
+| `Sources/Phos/MetalCanvasView.swift`       | 支持 HDR / EDR 扩展动态范围直通的 Metal 预览画布（含 CGImage 回退）|
+| `Sources/Phos/MaskEngine.swift`            | 布尔蒙版组合、天空分割（零模型 + 可选 Core ML）与人像部位分割      |
+| `Sources/Phos/MaskAdvancedControls.swift`  | 子蒙版布尔编辑器、天空模型导入、局部曲线编辑器与局部点颜色控件     |
+| `Sources/Phos/RetouchEngine.swift`         | 污点修复（泊松融合）、克隆、PatchMatch、Core ML LaMa 与推荐源点    |
+| `Sources/Phos/RetouchPane.swift`           | 修补检查器面板、模型安装管理和选中斑点参数绑定                     |
+| `Sources/Phos/PointColorPane.swift`        | 全局 OKLCH 点颜色色板检查器                                        |
+| `Sources/Phos/MultiViewCanvas.swift`       | 网格看片、双图/多图同屏对比、参考视图与交互式修补覆盖层            |
+| `Sources/Phos/MetadataIO.swift`            | ImageIO EXIF/IPTC/GPS 保留、Gain-Map JPEG / 10-bit PQ HEIC 导出    |
+| `Sources/Phos/XMPSidecar.swift`            | 防 XXE 的双向 Adobe XMP 旁档与 Lightroom `.xmp` 预设解析           |
+| `Sources/Phos/LensProfiles.swift`          | Lensfun XML 读取与 82 组内置/扩展镜头配置库                        |
+| `Sources/Phos/Alignment.swift`             | 帧配准、质量门、合成画幅归一化                                     |
+| `Sources/Phos/Models.swift`                | 参数模型、虚拟副本、预设强度缩放与宽容解码                         |
+| `Sources/Phos/AppMain.swift`               | 应用状态、渲染调度、撤销栈、XMP 同步、导出与批处理                 |
+| `Sources/Phos/Performance.swift`           | 有界线程安全缓存、最新请求后台调度                                 |
+| `Sources/Phos/Workflow.swift`              | 批量同步、快照、灰点取样、副档迁移、蒙版几何                       |
+| `Sources/Phos/WorkflowViews.swift`         | 工作流面板：同步目标、快照、画笔自动吸附开关                       |
+| `Sources/Phos/Views.swift`                 | 浏览器、画布、蒙版叠加层、裁剪叠加层、工具条                       |
+| `Sources/Phos/Inspector.swift`             | 调整面板、曲线编辑器、色轮、蒙版面板                               |
+| `Sources/Phos/Theme.swift`                 | 自适应调色板                                                       |
+| `Sources/Phos/CLUT.swift`                  | 胶片 LUT 读取与烘焙                                                |
+| `Sources/Phos/Update.swift`                | 外网请求：向官网查版本号                                           |
 
 设计上不可变：所有参数序列化到副档，渲染是关于「源图 + 参数」的纯函数。
 

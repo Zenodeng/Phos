@@ -448,12 +448,22 @@ struct CanvasPane: View {
     @State private var retouchDraft: RetouchSpot?
     @State private var retouchAdjustingSource = false
     @State private var retouchToken: ParameterEditCoordinator.Token?
+    @State private var retouchHandleToken: ParameterEditCoordinator.Token?
+    @State private var retouchHoverLocation: CGPoint?
     @State private var originalViewport = CanvasViewport()
 
     /// 当前可以在画布上直接拖控制点的蒙版：位置调整模式、非裁剪、非对比、非取样或污点修复。
     private var editableMask: Mask? {
         guard !s.cropMode, !s.showBefore, !s.whiteBalancePicker, !s.pointColorPicker, !s.retouchActive, s.maskTool == .position else { return nil }
-        return s.maskDraft ?? s.selectedMask.flatMap { id in s.params.masks.first(where: { $0.id == id }) }
+        if let draft = s.maskDraft { return draft }
+        guard let id = s.selectedMask,
+              let m = s.params.masks.first(where: { $0.id == id }) else { return nil }
+        if let compID = s.selectedMaskComponentID,
+           let comp = m.components.first(where: { $0.id == compID }),
+           comp.kind == .linear || comp.kind == .radial {
+            return comp.asMask()
+        }
+        return m
     }
 
     private var preciseTool: Bool {
@@ -489,123 +499,177 @@ struct CanvasPane: View {
         return frame.key.purpose == purpose ? frame : nil
     }
     var body: some View {
-        Group {
+        GeometryReader { geo in
+            let shell = layout(geo.size)
             switch s.canvasDisplayMode {
             case .grid:
-                GridCanvasView()
+                ZStack(alignment: .topLeading) {
+                    StudioStyle.canvas
+                    GridCanvasView()
+                        .frame(width: max(1, shell.safeCanvas.width), height: max(1, shell.safeCanvas.height))
+                        .offset(x: shell.safeCanvas.minX, y: shell.safeCanvas.minY)
+                }
             case .compare:
-                CompareCanvasView()
+                ZStack(alignment: .topLeading) {
+                    StudioStyle.canvas
+                    CompareCanvasView()
+                        .frame(width: max(1, shell.safeCanvas.width), height: max(1, shell.safeCanvas.height))
+                        .offset(x: shell.safeCanvas.minX, y: shell.safeCanvas.minY)
+                }
             case .reference:
-                ReferenceCanvasView()
+                ZStack(alignment: .topLeading) {
+                    StudioStyle.canvas
+                    ReferenceCanvasView()
+                        .frame(width: max(1, shell.safeCanvas.width), height: max(1, shell.safeCanvas.height))
+                        .offset(x: shell.safeCanvas.minX, y: shell.safeCanvas.minY)
+                }
             case .single:
-                singleCanvas
+                singleCanvas(geo: geo, shell: shell)
             }
         }
     }
 
-    private var singleCanvas: some View {
-        GeometryReader { geo in
-            let shell = layout(geo.size)
-            let displayed = frame
-            let rect = imageRect(displayed, layout: shell)
-            let pixelReady = s.oneToOne && displayed?.fullResolution == true
-            ZStack(alignment: .topLeading) {
-                StudioStyle.canvas
-                if let displayed {
-                    MetalCanvasView(
-                        metalImage: displayed.metalImage,
-                        fallbackCG: displayed.image,
-                        viewportSize: geo.size,
-                        imageRect: rect,
-                        edrEnabled: s.edrEnabled,
-                        clippingWarning: s.showClippingWarning
-                    )
-                    Color.clear
-                        .frame(width: rect.width, height: rect.height)
-                        .overlay { selectionOverlay(width: rect.width, height: rect.height) }
-                        .overlay(alignment: .topLeading) {
-                            if let mask = editableMask, !s.temporaryPan { MaskOverlay(mask: mask, frame: CGRect(origin: .zero, size: rect.size)) }
-                            if s.retouchActive, !s.cropMode, !s.showBefore {
-                                let spots = retouchDraft.map { s.params.retouchSpots + [$0] } ?? s.params.retouchSpots
-                                RetouchOverlay(spots: spots, selectedSpotID: retouchDraft?.id ?? s.selectedRetouchSpotID, frameSize: rect.size)
-                            }
-                            if s.splitComparison, let before = s.geometryBeforeFrame,
-                               before.key.photoID == displayed.key.photoID, before.key.revision == displayed.key.revision {
-                                Image(decorative:before.image,scale:1).resizable().frame(width:rect.width,height:rect.height)
-                                    .mask(alignment:.leading) { Rectangle().frame(width:rect.width*s.splitPosition) }
-                                    .allowsHitTesting(false)
-                                Rectangle().fill(.white.opacity(0.85)).frame(width:1,height:rect.height)
-                                    .position(x:rect.width*s.splitPosition,y:rect.height/2).allowsHitTesting(false)
-                            }
+    @ViewBuilder
+    private func singleCanvas(geo: GeometryProxy, shell: WorkspaceLayout) -> some View {
+        let displayed = frame
+        let rect = imageRect(displayed, layout: shell)
+        let pixelReady = s.oneToOne && displayed?.fullResolution == true
+        ZStack(alignment: .topLeading) {
+            StudioStyle.canvas
+            if let displayed {
+                MetalCanvasView(
+                    metalImage: displayed.metalImage,
+                    fallbackCG: displayed.image,
+                    viewportSize: geo.size,
+                    imageRect: rect,
+                    edrEnabled: s.edrEnabled,
+                    clippingWarning: s.showClippingWarning
+                )
+                Color.clear
+                    .frame(width: rect.width, height: rect.height)
+                    .onContinuousHover { phase in
+                        switch phase {
+                        case .active(let pt): retouchHoverLocation = pt
+                        case .ended: retouchHoverLocation = nil
                         }
-                        .overlay {
-                            if s.lensGrid && !s.cropMode && !s.showBefore {
-                                Canvas { context, size in
-                                    var path = Path()
-                                    for i in 1..<8 {
-                                        let x = size.width * CGFloat(i) / 8, y = size.height * CGFloat(i) / 8
-                                        path.move(to: CGPoint(x:x,y:0)); path.addLine(to:CGPoint(x:x,y:size.height))
-                                        path.move(to: CGPoint(x:0,y:y)); path.addLine(to:CGPoint(x:size.width,y:y))
-                                    }
-                                    context.stroke(path, with:.color(.black.opacity(0.5)),lineWidth:2)
-                                    context.stroke(path, with:.color(.white.opacity(0.7)),lineWidth:0.7)
-                                }.allowsHitTesting(false).accessibilityHidden(true)
-                            }
-                        }
-                        .clipped()
-                        .position(x: rect.midX, y: rect.midY)
-                } else {
-                    VStack(spacing: 12) {
-                        if s.previewing || s.folderLoading { ProgressView().controlSize(.small) }
-                        else { Image(systemName: s.current == nil ? "photo.on.rectangle.angled" : "exclamationmark.triangle").font(.system(size: 32, weight: .light)) }
-                        Text(L10n.tr(s.previewing ? "正在准备照片…" : s.current == nil ? "打开文件夹开始编辑" : s.status)).font(.system(size: 13))
-                        if s.current == nil { Text(L10n.tr("RAW · HEIF · JPEG · PNG · TIFF · AVIF")).font(.system(size: 11)).foregroundStyle(.secondary) }
                     }
-                    .frame(width: shell.safeCanvas.width, height: shell.safeCanvas.height)
-                    .position(x: shell.safeCanvas.midX, y: shell.safeCanvas.midY)
+                    .overlay { selectionOverlay(width: rect.width, height: rect.height) }
+                    .overlay(alignment: .topLeading) {
+                        if let mask = editableMask, !s.temporaryPan { MaskOverlay(mask: mask, frame: CGRect(origin: .zero, size: rect.size)) }
+                        if s.retouchActive, s.showRetouchOverlay, !s.cropMode, !s.showBefore {
+                            let spots = retouchDraft.map { s.params.retouchSpots + [$0] } ?? s.params.retouchSpots
+                            RetouchOverlay(
+                                spots: spots,
+                                selectedSpotID: retouchDraft?.id ?? s.selectedRetouchSpotID,
+                                frameSize: rect.size,
+                                onSelect: { id in
+                                    if retouchDraft == nil { s.selectedRetouchSpotID = id }
+                                },
+                                onBeginDrag: {
+                                    retouchHandleToken = s.parameterEdits.begin()
+                                },
+                                onLiveUpdate: { updated in
+                                    if s.parameterEdits.valid(retouchHandleToken) {
+                                        s.updateRetouchSpotLive(updated)
+                                    }
+                                },
+                                onEndDrag: {
+                                    if s.parameterEdits.complete(retouchHandleToken) { s.endEdit() }
+                                    retouchHandleToken = nil
+                                }
+                            )
+                        }
+                        if s.retouchActive, !s.cropMode, !s.showBefore, retouchDraft == nil,
+                           let hPt = retouchHoverLocation {
+                            let r = max(4, CGFloat(s.retouchRadius) * min(rect.width, rect.height))
+                            let innerR = max(2, r * CGFloat(1 - s.retouchFeather * 0.45))
+                            ZStack {
+                                Circle()
+                                    .stroke(.white.opacity(0.85), lineWidth: 1.1)
+                                    .frame(width: r * 2, height: r * 2)
+                                Circle()
+                                    .stroke(.white.opacity(0.45), style: StrokeStyle(lineWidth: 0.9, dash: [3, 3]))
+                                    .frame(width: innerR * 2, height: innerR * 2)
+                            }
+                            .position(hPt)
+                            .allowsHitTesting(false)
+                        }
+                        if s.splitComparison, let before = s.geometryBeforeFrame,
+                           before.key.photoID == displayed.key.photoID, before.key.revision == displayed.key.revision {
+                            Image(decorative:before.image,scale:1).resizable().frame(width:rect.width,height:rect.height)
+                                .mask(alignment:.leading) { Rectangle().frame(width:rect.width*s.splitPosition) }
+                                .allowsHitTesting(false)
+                            Rectangle().fill(.white.opacity(0.85)).frame(width:1,height:rect.height)
+                                .position(x:rect.width*s.splitPosition,y:rect.height/2).allowsHitTesting(false)
+                        }
+                    }
+                    .overlay {
+                        if s.lensGrid && !s.cropMode && !s.showBefore {
+                            Canvas { context, size in
+                                var path = Path()
+                                for i in 1..<8 {
+                                    let x = size.width * CGFloat(i) / 8, y = size.height * CGFloat(i) / 8
+                                    path.move(to: CGPoint(x:x,y:0)); path.addLine(to:CGPoint(x:x,y:size.height))
+                                    path.move(to: CGPoint(x:0,y:y)); path.addLine(to:CGPoint(x:size.width,y:y))
+                                }
+                                context.stroke(path, with:.color(.black.opacity(0.5)),lineWidth:2)
+                                context.stroke(path, with:.color(.white.opacity(0.7)),lineWidth:0.7)
+                            }.allowsHitTesting(false).accessibilityHidden(true)
+                        }
+                    }
+                    .clipped()
+                    .position(x: rect.midX, y: rect.midY)
+            } else {
+                VStack(spacing: 12) {
+                    if s.previewing || s.folderLoading { ProgressView().controlSize(.small) }
+                    else { Image(systemName: s.current == nil ? "photo.on.rectangle.angled" : "exclamationmark.triangle").font(.system(size: 32, weight: .light)) }
+                    Text(L10n.tr(s.previewing ? "正在准备照片…" : s.current == nil ? "打开文件夹开始编辑" : s.status)).font(.system(size: 13))
+                    if s.current == nil { Text(L10n.tr("RAW · HEIF · JPEG · PNG · TIFF · AVIF")).font(.system(size: 11)).foregroundStyle(.secondary) }
                 }
-                if s.lensCompare, displayed != nil, !s.cropMode {
-                    Text(L10n.tr("镜头校正前 · 其他调整保留")).font(.caption.weight(.medium))
-                        .padding(8).background(.regularMaterial,in:Capsule())
-                        .position(x:shell.safeCanvas.midX,y:shell.safeCanvas.minY+22).allowsHitTesting(false)
-                }
-                if s.cropMode, displayed != nil, !pixelReady {
-                    CropOverlay(frame: rect)
-                    CropBar().frame(width: shell.safeCanvas.width, height: shell.safeCanvas.height)
-                        .offset(x: shell.safeCanvas.minX, y: shell.safeCanvas.minY)
-                }
-                if s.oneToOne && !pixelReady && displayed != nil {
-                    Label(L10n.tr("正在准备完整像素…"), systemImage: "arrow.triangle.2.circlepath")
-                        .font(.system(size: 11)).padding(8).background(.regularMaterial, in: Capsule())
-                        .position(x: shell.safeCanvas.midX, y: shell.safeCanvas.minY + 20)
-                }
+                .frame(width: shell.safeCanvas.width, height: shell.safeCanvas.height)
+                .position(x: shell.safeCanvas.midX, y: shell.safeCanvas.midY)
             }
-            .frame(width: geo.size.width, height: geo.size.height)
-            .contentShape(Rectangle())
-            .gesture(canvasGesture(frame: rect), including: s.cropMode ? .subviews : .all)
-            .overlay {
-                WorkspaceCanvasInput(state:s,safeRect:shell.safeCanvas) { factor,anchor in
-                    guard let displayed, !s.cropMode else { return }
-                    let transform = DisplayTransform(frame:displayed,imageRect:rect,backingScale:session.backingScale)
-                    if s.showBefore { originalViewport.zoom(factor:factor,anchor:anchor,transform:transform,viewport:shell.safeCanvas,backingScale:session.backingScale) }
-                    else { session.viewport.zoom(factor:factor,anchor:anchor,transform:transform,viewport:shell.safeCanvas,backingScale:session.backingScale) }
-                    if s.oneToOne { s.oneToOne = false }
-                }.allowsHitTesting(false)
+            if s.lensCompare, displayed != nil, !s.cropMode {
+                Text(L10n.tr("镜头校正前 · 其他调整保留")).font(.caption.weight(.medium))
+                    .padding(8).background(.regularMaterial,in:Capsule())
+                    .position(x:shell.safeCanvas.midX,y:shell.safeCanvas.minY+22).allowsHitTesting(false)
             }
-            .overlay(alignment:.topLeading) {
-                if s.splitComparison, displayed != nil {
-                    VStack(spacing:0) {
-                        HStack { Text(L10n.tr("同几何 · 调整前")); Spacer(); Text(L10n.tr("调整后")) }.font(.system(size:11,weight:.medium)).padding(8).background(.regularMaterial)
-                        Spacer()
-                        Slider(value:$s.splitPosition,in:0.05...0.95).accessibilityLabel(L10n.tr("分割对比位置")).frame(width:180).padding(8).background(.regularMaterial,in:Capsule())
-                    }.frame(width:shell.safeCanvas.width,height:shell.safeCanvas.height).offset(x:shell.safeCanvas.minX,y:shell.safeCanvas.minY)
-                }
+            if s.cropMode, displayed != nil, !pixelReady {
+                CropOverlay(frame: rect)
+                CropBar().frame(width: shell.safeCanvas.width, height: shell.safeCanvas.height)
+                    .offset(x: shell.safeCanvas.minX, y: shell.safeCanvas.minY)
             }
-            .onAppear { canvasSize = geo.size }
-            .onChange(of: geo.size) { _, size in canvasSize = size }
-            .onChange(of: s.current?.id) { _, _ in session.viewport.editedImageCenter = CGPoint(x: 0.5, y: 0.5); originalViewport = CanvasViewport(); panOrigin = nil }
-            .onChange(of: s.canvasResetID) { _, _ in session.viewport.editedImageCenter = CGPoint(x: 0.5, y: 0.5); gestureScale = nil }
+            if s.oneToOne && !pixelReady && displayed != nil {
+                Label(L10n.tr("正在准备完整像素…"), systemImage: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 11)).padding(8).background(.regularMaterial, in: Capsule())
+                    .position(x: shell.safeCanvas.midX, y: shell.safeCanvas.minY + 20)
+            }
         }
+        .frame(width: geo.size.width, height: geo.size.height)
+        .contentShape(Rectangle())
+        .gesture(canvasGesture(frame: rect), including: s.cropMode ? .subviews : .all)
+        .overlay {
+            WorkspaceCanvasInput(state:s,safeRect:shell.safeCanvas) { factor,anchor in
+                guard let displayed, !s.cropMode else { return }
+                let transform = DisplayTransform(frame:displayed,imageRect:rect,backingScale:session.backingScale)
+                if s.showBefore { originalViewport.zoom(factor:factor,anchor:anchor,transform:transform,viewport:shell.safeCanvas,backingScale:session.backingScale) }
+                else { session.viewport.zoom(factor:factor,anchor:anchor,transform:transform,viewport:shell.safeCanvas,backingScale:session.backingScale) }
+                if s.oneToOne { s.oneToOne = false }
+            }.allowsHitTesting(false)
+        }
+        .overlay(alignment:.topLeading) {
+            if s.splitComparison, displayed != nil {
+                VStack(spacing:0) {
+                    HStack { Text(L10n.tr("同几何 · 调整前")); Spacer(); Text(L10n.tr("调整后")) }.font(.system(size:11,weight:.medium)).padding(8).background(.regularMaterial)
+                    Spacer()
+                    Slider(value:$s.splitPosition,in:0.05...0.95).accessibilityLabel(L10n.tr("分割对比位置")).frame(width:180).padding(8).background(.regularMaterial,in:Capsule())
+                }.frame(width:shell.safeCanvas.width,height:shell.safeCanvas.height).offset(x:shell.safeCanvas.minX,y:shell.safeCanvas.minY)
+            }
+        }
+        .onAppear { canvasSize = geo.size }
+        .onChange(of: geo.size) { _, size in canvasSize = size }
+        .onChange(of: s.current?.id) { _, _ in session.viewport.editedImageCenter = CGPoint(x: 0.5, y: 0.5); originalViewport = CanvasViewport(); panOrigin = nil }
+        .onChange(of: s.canvasResetID) { _, _ in session.viewport.editedImageCenter = CGPoint(x: 0.5, y: 0.5); gestureScale = nil }
     }
 
     @ViewBuilder
@@ -640,6 +704,36 @@ struct CanvasPane: View {
                         paint(v.location, frame: frame, mask: m, refining: true)
                         return
                     }
+                    if let compID = s.selectedMaskComponentID,
+                       let comp = m.components.first(where: { $0.id == compID }) {
+                        switch comp.kind {
+                        case .brush, .depth:
+                            paintComponent(v.location, frame: frame, maskID: m.id, comp: comp)
+                        case .linear, .radial:
+                            if maskGestureStart == nil {
+                                maskToken = s.parameterEdits.begin()
+                                maskGestureStart = v.startLocation
+                                maskOrigin = comp.asMask()
+                                maskOriginSize = CGSize(width: frame.width, height: frame.height)
+                            }
+                            let start = maskGestureStart ?? v.startLocation
+                            let origin = maskOrigin ?? comp.asMask()
+                            let updated = MaskGeometry.dragging(origin, control: .move,
+                                                                from: start, to: v.location,
+                                                                size: maskOriginSize,
+                                                                constrained: NSEvent.modifierFlags.contains(.shift))
+                            if s.parameterEdits.valid(maskToken) {
+                                var nextComp = comp
+                                nextComp.applyGeometry(from: updated)
+                                s.updateMaskComponentLive(maskID: m.id, component: nextComp)
+                            }
+                        case .colorRange, .luminanceRange:
+                            sampleComponent(v.location, frame: frame, maskID: m.id, comp: comp)
+                        default:
+                            break
+                        }
+                        return
+                    }
                     switch m.kind {
                     case .brush, .depth:
                         paint(v.location, frame: frame, mask: m)
@@ -660,7 +754,8 @@ struct CanvasPane: View {
                     case .colorRange, .luminanceRange:
                         // 取样类蒙版：在画布上拖到哪儿就取哪儿的颜色/亮度
                         sample(v.location, frame: frame, mask: m)
-                    case .subject, .person, .foreground, .sky, .background, .faceSkin, .eyes, .lips, .teeth, .hair:
+                    case .subject, .person, .foreground, .sky, .background,
+                         .faceSkin, .bodySkin, .eyes, .eyebrows, .lips, .teeth, .hair, .clothes:
                         break        // AI 蒙版不需要手绘
                     }
                 } else {
@@ -756,6 +851,36 @@ struct CanvasPane: View {
         lastBrush = p
     }
 
+    private func tabletPressureIfAny() -> Double? {
+        guard let ev = NSApp.currentEvent, ev.subtype == .tabletPoint else { return nil }
+        return min(max(Double(ev.pressure), 0.15), 1.0)
+    }
+
+    private func sampleDisplayedRGB(at norm: CGPoint) -> [Double]? {
+        guard let displayed = self.frame, displayed.key.purpose == .edited,
+              displayed.key.photoID == s.current?.id else { return nil }
+        let cg = displayed.image
+        let w = cg.width, h = cg.height
+        guard w > 2, h > 2 else { return nil }
+        let px = min(max(Int((norm.x * CGFloat(w)).rounded()), 0), w - 1)
+        let py = min(max(Int((norm.y * CGFloat(h)).rounded()), 0), h - 1)
+        let rx = max(0, min(px - 2, w - 5))
+        let ry = max(0, min(py - 2, h - 5))
+        let rect = CGRect(x: rx, y: ry, width: min(5, w), height: min(5, h))
+        let cnt = Int(rect.width) * Int(rect.height)
+        guard cnt > 0 else { return nil }
+        var buf = [UInt8](repeating: 0, count: cnt * 4)
+        Engine.ctx.render(CIImage(cgImage: cg), toBitmap: &buf, rowBytes: Int(rect.width) * 4,
+                          bounds: rect, format: .RGBA8, colorSpace: Engine.srgb)
+        var rSum = 0.0, gSum = 0.0, bSum = 0.0
+        for i in 0..<cnt {
+            rSum += Double(buf[i * 4]) / 255.0
+            gSum += Double(buf[i * 4 + 1]) / 255.0
+            bSum += Double(buf[i * 4 + 2]) / 255.0
+        }
+        return [rSum / Double(cnt), gSum / Double(cnt), bSum / Double(cnt)]
+    }
+
     /// 画笔：屏幕点 → 归一化坐标（y 向上，跟引擎里的笔刷位图一致）
     func paint(_ loc: CGPoint, frame: CGRect, mask m: Mask, refining: Bool = false) {
         guard frame.contains(loc) else { lastBrush = nil; return }
@@ -763,12 +888,23 @@ struct CanvasPane: View {
                         y: min(max(1 - (loc.y - frame.minY) / max(frame.height, 1), 0), 1))
         var mm = m
         var strokes = refining ? mm.refinements : mm.strokes
+        let curPressure = tabletPressureIfAny()
         if !painting {
             maskToken = s.parameterEdits.begin()
             painting = true
             let rad = refining ? s.brushRadius : (mm.strokes.last?.radius ?? 0.05)
-            strokes.append(Stroke(pts: [[Double(p.x), Double(p.y)]], radius: rad,
-                                  feather: refining ? s.brushFeather : mm.feather, erasing: refining && s.maskTool == .erase))
+            let useAuto = s.brushAutoMask && m.kind != .depth
+            let autoRGB = useAuto ? sampleDisplayedRGB(at: p) : nil
+            strokes.append(Stroke(
+                pts: [[Double(p.x), Double(p.y)]],
+                radius: rad,
+                feather: refining ? s.brushFeather : mm.feather,
+                erasing: refining && s.maskTool == .erase,
+                autoMask: useAuto && autoRGB != nil,
+                autoMaskTolerance: 0.16,
+                sampleRGB: autoRGB,
+                pressures: curPressure.map { [$0] } ?? []
+            ))
             if refining { mm.refinements = strokes } else { mm.strokes = strokes }
             lastBrush = p
             s.updateMaskLive(mm)
@@ -781,13 +917,84 @@ struct CanvasPane: View {
         let dx = Double(p.x - from.x), dy = Double(p.y - from.y)
         let dist = (dx * dx + dy * dy).squareRoot()
         let n = max(1, Int(dist / step))
+        let lastP = strokes[strokes.count - 1].pressures.last ?? curPressure ?? 1.0
+        let hadPressures = !strokes[strokes.count - 1].pressures.isEmpty || curPressure != nil
         for i in 1...n {
             let t = Double(i) / Double(n)
             strokes[strokes.count - 1].pts.append([Double(from.x) + dx * t, Double(from.y) + dy * t])
+            if hadPressures {
+                let targetP = curPressure ?? lastP
+                strokes[strokes.count - 1].pressures.append(lastP + (targetP - lastP) * t)
+            }
         }
         if refining { mm.refinements = strokes } else { mm.strokes = strokes }
         lastBrush = p
         s.updateMaskLive(mm)
+    }
+
+    private func paintComponent(_ loc: CGPoint, frame: CGRect, maskID: UUID, comp: MaskComponent) {
+        guard frame.contains(loc) else { lastBrush = nil; return }
+        let p = CGPoint(x: min(max((loc.x - frame.minX) / max(frame.width, 1), 0), 1),
+                        y: min(max(1 - (loc.y - frame.minY) / max(frame.height, 1), 0), 1))
+        var next = comp
+        let curPressure = tabletPressureIfAny()
+        if !painting {
+            maskToken = s.parameterEdits.begin()
+            painting = true
+            let rad = next.strokes.last?.radius ?? s.brushRadius
+            let useAuto = s.brushAutoMask && next.kind != .depth
+            let autoRGB = useAuto ? sampleDisplayedRGB(at: p) : nil
+            next.strokes.append(Stroke(
+                pts: [[Double(p.x), Double(p.y)]],
+                radius: rad,
+                feather: next.feather,
+                erasing: false,
+                autoMask: useAuto && autoRGB != nil,
+                autoMaskTolerance: 0.16,
+                sampleRGB: autoRGB,
+                pressures: curPressure.map { [$0] } ?? []
+            ))
+            lastBrush = p
+            s.updateMaskComponentLive(maskID: maskID, component: next)
+            return
+        }
+        guard s.parameterEdits.valid(maskToken), !next.strokes.isEmpty else { return }
+        let from = lastBrush ?? p
+        let step = max(0.003, (next.strokes.last?.radius ?? s.brushRadius) / 4)
+        let dx = Double(p.x - from.x), dy = Double(p.y - from.y)
+        let dist = (dx * dx + dy * dy).squareRoot()
+        let n = max(1, Int(dist / step))
+        let lastP = next.strokes[next.strokes.count - 1].pressures.last ?? curPressure ?? 1.0
+        let hadPressures = !next.strokes[next.strokes.count - 1].pressures.isEmpty || curPressure != nil
+        for i in 1...n {
+            let t = Double(i) / Double(n)
+            next.strokes[next.strokes.count - 1].pts.append([Double(from.x) + dx * t, Double(from.y) + dy * t])
+            if hadPressures {
+                let targetP = curPressure ?? lastP
+                next.strokes[next.strokes.count - 1].pressures.append(lastP + (targetP - lastP) * t)
+            }
+        }
+        lastBrush = p
+        s.updateMaskComponentLive(maskID: maskID, component: next)
+    }
+
+    private func sampleComponent(_ loc: CGPoint, frame: CGRect, maskID: UUID, comp: MaskComponent) {
+        guard frame.contains(loc), let displayed = self.frame, displayed.key.purpose == .edited,
+              displayed.key.photoID == s.current?.id else { return }
+        let nx = min(max((loc.x - frame.minX) / max(frame.width, 1), 0), 1)
+        let ny = min(max(1 - (loc.y - frame.minY) / max(frame.height, 1), 0), 1)
+        guard let rgb = sampleDisplayedRGB(at: CGPoint(x: nx, y: ny)) else { return }
+        var next = comp
+        if comp.kind == .colorRange {
+            next.sampleRGB = rgb
+        } else {
+            let y = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
+            let half = max(next.lumSoft, 0.08) * 0.7
+            next.lumLow = min(max(y - half, 0), 1)
+            next.lumHigh = min(max(y + half, 0), 1)
+        }
+        if !sampled { maskToken = s.parameterEdits.begin(); sampled = true }
+        if s.parameterEdits.valid(maskToken) { s.updateMaskComponentLive(maskID: maskID, component: next) }
     }
 
     /// 颜色范围 / 亮度范围蒙版：在画布上拖到哪儿就取哪儿
@@ -963,7 +1170,15 @@ struct MaskOverlay: View {
         guard let session = drag, s.parameterEdits.valid(dragToken) else { return }
         let updated = session.updated(control, to: end, size: frame.size,
                                       constrained: NSEvent.modifierFlags.contains(.shift))
-        s.updateMaskLive(updated)
+        if let compID = s.selectedMaskComponentID,
+           let maskID = s.selectedMask,
+           compID == updated.id,
+           var comp = s.params.masks.first(where: { $0.id == maskID })?.components.first(where: { $0.id == compID }) {
+            comp.applyGeometry(from: updated)
+            s.updateMaskComponentLive(maskID: maskID, component: comp)
+        } else {
+            s.updateMaskLive(updated)
+        }
     }
 
     private func endDrag() {

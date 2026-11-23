@@ -658,7 +658,7 @@ enum Engine {
         if m.inverted {
             img = img.applyingFilter("CIColorInvert")
         }
-        if !m.refinements.isEmpty, let paint = refinementImage(m.refinements, extent: extent) {
+        if !m.refinements.isEmpty, let paint = refinementImage(m.refinements, extent: extent, analyzed: nil) {
             img = paint.composited(over: img).cropped(to: extent)
         }
         return img
@@ -725,7 +725,7 @@ enum Engine {
             }
         case .brush, .depth:
             // depth 复用笔刷位图：用户涂白的区域 = 散景里被虚化的区域（不进局部调整，只喂给散景）
-            guard let b = brushImage(m, extent: extent) else { return nil }
+            guard let b = brushImage(m, extent: extent, analyzed: m.kind == .brush ? analyzed : nil) else { return nil }
             img = b
         case .colorRange:
             // 范围蒙版必须作用在真实画面上：每个像素按自己的颜色/亮度查权重
@@ -745,64 +745,175 @@ enum Engine {
             guard let srcImg = analyzed,
                   let ai = aiMask(for: m, extent: extent, analyzed: srcImg) else { return nil }
             img = ai
-        case .sky, .background, .faceSkin, .eyes, .lips, .teeth, .hair:
+        case .sky, .background, .faceSkin, .bodySkin, .eyes, .eyebrows, .lips, .teeth, .hair, .clothes:
             return nil
         }
         return img
     }
 
-    static func refinementImage(_ strokes: [Stroke], extent: CGRect) -> CIImage? {
-        let side = 1024
-        guard let context = CGContext(data: nil, width: side, height: side, bitsPerComponent: 8,
-                                      bytesPerRow: side * 4, space: srgb,
-                                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
-        for stroke in strokes {
-            let value: CGFloat = stroke.erasing ? 0 : 1
-            let radius = max(2, stroke.radius * Double(side))
-            let feather = min(max(stroke.feather, 0.01), 1)
-            let colors = [CGColor(colorSpace: srgb, components: [value, value, value, 1])!,
-                          CGColor(colorSpace: srgb, components: [value, value, value, 0])!] as CFArray
-            guard let gradient = CGGradient(colorsSpace: srgb, colors: colors, locations: [0, 1]) else { continue }
-            for point in stroke.points {
-                let center = CGPoint(x: point.x * Double(side), y: point.y * Double(side))
-                context.drawRadialGradient(gradient, startCenter: center, startRadius: radius * (1 - feather),
-                                           endCenter: center, endRadius: radius, options: [.drawsBeforeStartLocation])
-            }
+    /// 供 MaskEngine 与 Auto Mask 复用的颜色吸附权重查询（输出 RGB=w, A=1 的不透明 [0, 1] 蒙版，供 CIMultiplyCompositing 精确相乘）。
+    static func colorSimilarityMask(sampleRGB: [Double], tolerance: Double,
+                                    appliedTo src: CIImage, extent: CGRect, refScale: CGFloat) -> CIImage {
+        let cubeData = RangeCube.colorMask(sample: sampleRGB, tolerance: tolerance)
+        var img: CIImage
+        if let f = CIFilter(name: "CIColorCube") {
+            f.setValue(RangeCube.dim, forKey: "inputCubeDimension")
+            f.setValue(cubeData, forKey: "inputCubeData")
+            f.setValue(src, forKey: kCIInputImageKey)
+            img = (f.outputImage ?? CIImage(color: .black)).cropped(to: extent)
+        } else {
+            img = CIImage(color: .black).cropped(to: extent)
         }
-        guard let image = context.makeImage() else { return nil }
-        return CIImage(cgImage: image).transformed(by:
-            CGAffineTransform(translationX: extent.minX, y: extent.minY)
-                .scaledBy(x: extent.width / Double(side), y: extent.height / Double(side)))
+        let blurR = max(0.5, 1.5 * Double(refScale))
+        img = img.applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: NSNumber(value: blurR)])
+            .cropped(to: extent)
+        return img
     }
 
-    private static func brushImage(_ m: Mask, extent: CGRect) -> CIImage? {
+    private static func strokeWeightCI(_ stroke: Stroke, extent: CGRect, includeFeatherGradient: Bool) -> CIImage? {
         let side = 1024
         let cs = CGColorSpaceCreateDeviceGray()
         guard let cgctx = CGContext(data: nil, width: side, height: side, bitsPerComponent: 8,
                                     bytesPerRow: side, space: cs, bitmapInfo: CGImageAlphaInfo.none.rawValue)
         else { return nil }
-        // 底是黑（不生效），涂到的地方是白（生效）——以前画反了，
-        // 结果「涂哪儿哪儿不生效」，看起来就像画笔不能用。
         cgctx.setFillColor(gray: 0, alpha: 1)
         cgctx.fill(CGRect(x: 0, y: 0, width: side, height: side))
-        cgctx.setFillColor(gray: 1, alpha: 1)
-        for st in m.strokes {
-            let rad = max(2, st.radius * Double(side))
-            for pt in st.points {
-                let x = pt.x * Double(side), y = pt.y * Double(side)
+
+        let feather = min(max(stroke.feather, 0.01), 1)
+        for (i, pt) in stroke.points.enumerated() {
+            let p = stroke.pressures.indices.contains(i) ? min(max(stroke.pressures[i], 0.15), 1.0) : 1.0
+            let rad = max(2, stroke.radius * Double(side) * (stroke.pressures.isEmpty ? 1.0 : (0.4 + 0.6 * p)))
+            let alpha = stroke.pressures.isEmpty ? 1.0 : (0.35 + 0.65 * p)
+            let x = pt.x * Double(side), y = pt.y * Double(side)
+            let center = CGPoint(x: x, y: y)
+            if includeFeatherGradient {
+                let gColors = [CGColor(gray: alpha, alpha: 1), CGColor(gray: 0, alpha: 1)] as CFArray
+                if let grayGrad = CGGradient(colorsSpace: cs, colors: gColors, locations: [0, 1]) {
+                    cgctx.saveGState()
+                    cgctx.setBlendMode(.lighten)
+                    cgctx.drawRadialGradient(grayGrad, startCenter: center, startRadius: rad * (1 - feather),
+                                               endCenter: center, endRadius: rad, options: [.drawsBeforeStartLocation])
+                    cgctx.restoreGState()
+                }
+            } else {
+                cgctx.setFillColor(gray: alpha, alpha: 1)
                 cgctx.addEllipse(in: CGRect(x: x - rad, y: y - rad, width: rad * 2, height: rad * 2))
                 cgctx.fillPath()
             }
         }
         guard let cg = cgctx.makeImage() else { return nil }
-        var img = CIImage(cgImage: cg)
-        if m.feather > 0 {
-            img = img.applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: NSNumber(value: m.feather * 40)])
+        return CIImage(cgImage: cg).transformed(by:
+            CGAffineTransform(translationX: extent.minX, y: extent.minY)
+                .scaledBy(x: extent.width / CGFloat(side), y: extent.height / CGFloat(side)))
+            .cropped(to: extent)
+    }
+
+    static func refinementImage(_ strokes: [Stroke], extent: CGRect, analyzed: CIImage? = nil) -> CIImage? {
+        let side = 1024
+        let hasAutoMask = analyzed != nil && strokes.contains { $0.autoMask && ($0.sampleRGB?.count ?? 0) >= 3 }
+        let hasPressure = strokes.contains { !$0.pressures.isEmpty }
+        if !hasAutoMask && !hasPressure {
+            guard let context = CGContext(data: nil, width: side, height: side, bitsPerComponent: 8,
+                                          bytesPerRow: side * 4, space: srgb,
+                                          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+            for stroke in strokes {
+                let value: CGFloat = stroke.erasing ? 0 : 1
+                let radius = max(2, stroke.radius * Double(side))
+                let feather = min(max(stroke.feather, 0.01), 1)
+                let colors = [CGColor(colorSpace: srgb, components: [value, value, value, 1])!,
+                              CGColor(colorSpace: srgb, components: [value, value, value, 0])!] as CFArray
+                guard let gradient = CGGradient(colorsSpace: srgb, colors: colors, locations: [0, 1]) else { continue }
+                for point in stroke.points {
+                    let center = CGPoint(x: point.x * Double(side), y: point.y * Double(side))
+                    context.drawRadialGradient(gradient, startCenter: center, startRadius: radius * (1 - feather),
+                                               endCenter: center, endRadius: radius, options: [.drawsBeforeStartLocation])
+                }
+            }
+            guard let image = context.makeImage() else { return nil }
+            return CIImage(cgImage: image).transformed(by:
+                CGAffineTransform(translationX: extent.minX, y: extent.minY)
+                    .scaledBy(x: extent.width / Double(side), y: extent.height / Double(side)))
         }
-        // 由 1024 方形拉伸到实际画幅（笔刷坐标是归一化的，允许长宽比拉伸）
-        let sx = extent.width / CGFloat(side), sy = extent.height / CGFloat(side)
-        img = img.transformed(by: CGAffineTransform(translationX: extent.minX, y: extent.minY).scaledBy(x: sx, y: sy))
-        return img.cropped(to: extent.integral)
+
+        // 支持压感与 Auto Mask：逐笔合成（透明背景，画过之处写白或黑并携带精确局部权重 alpha）
+        var accum = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0)).cropped(to: extent)
+        let refScale = max(0.15, max(extent.width, extent.height) / 2200.0)
+        for stroke in strokes {
+            guard var wImg = strokeWeightCI(stroke, extent: extent, includeFeatherGradient: true) else { continue }
+            if stroke.autoMask, let src = analyzed, let rgb = stroke.sampleRGB, rgb.count >= 3 {
+                let sim = colorSimilarityMask(sampleRGB: rgb, tolerance: stroke.autoMaskTolerance,
+                                              appliedTo: src, extent: extent, refScale: refScale)
+                wImg = wImg.applyingFilter("CIMultiplyCompositing", parameters: [kCIInputBackgroundImageKey: sim])
+                    .cropped(to: extent)
+            }
+            let cVal: CGFloat = stroke.erasing ? 0 : 1
+            // 用 wImg 亮度写入前景色的 alpha，从而保留之前未涂到区域的透明性
+            let strokeLayer = wImg.applyingFilter("CIColorMatrix", parameters: [
+                "inputRVector": CIVector(x: 0, y: 0, z: 0, w: 0),
+                "inputGVector": CIVector(x: 0, y: 0, z: 0, w: 0),
+                "inputBVector": CIVector(x: 0, y: 0, z: 0, w: 0),
+                "inputAVector": CIVector(x: 1, y: 0, z: 0, w: 0),
+                "inputBiasVector": CIVector(x: cVal, y: cVal, z: cVal, w: 0)
+            ]).cropped(to: extent)
+            accum = strokeLayer.composited(over: accum).cropped(to: extent)
+        }
+        return accum
+    }
+
+    private static func brushImage(_ m: Mask, extent: CGRect, analyzed: CIImage? = nil) -> CIImage? {
+        let side = 1024
+        let hasAutoMask = analyzed != nil && m.strokes.contains { $0.autoMask && ($0.sampleRGB?.count ?? 0) >= 3 }
+        let hasPressure = m.strokes.contains { !$0.pressures.isEmpty }
+        if !hasAutoMask && !hasPressure {
+            let cs = CGColorSpaceCreateDeviceGray()
+            guard let cgctx = CGContext(data: nil, width: side, height: side, bitsPerComponent: 8,
+                                        bytesPerRow: side, space: cs, bitmapInfo: CGImageAlphaInfo.none.rawValue)
+            else { return nil }
+            cgctx.setFillColor(gray: 0, alpha: 1)
+            cgctx.fill(CGRect(x: 0, y: 0, width: side, height: side))
+            cgctx.setFillColor(gray: 1, alpha: 1)
+            for st in m.strokes {
+                let rad = max(2, st.radius * Double(side))
+                for pt in st.points {
+                    let x = pt.x * Double(side), y = pt.y * Double(side)
+                    cgctx.addEllipse(in: CGRect(x: x - rad, y: y - rad, width: rad * 2, height: rad * 2))
+                    cgctx.fillPath()
+                }
+            }
+            guard let cg = cgctx.makeImage() else { return nil }
+            var img = CIImage(cgImage: cg)
+            if m.feather > 0 {
+                img = img.applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: NSNumber(value: m.feather * 40)])
+            }
+            let sx = extent.width / CGFloat(side), sy = extent.height / CGFloat(side)
+            img = img.transformed(by: CGAffineTransform(translationX: extent.minX, y: extent.minY).scaledBy(x: sx, y: sy))
+            return img.cropped(to: extent.integral)
+        }
+
+        var accum = CIImage(color: .black).cropped(to: extent)
+        let refScale = max(0.15, max(extent.width, extent.height) / 2200.0)
+        for st in m.strokes {
+            guard var wImg = strokeWeightCI(st, extent: extent, includeFeatherGradient: false) else { continue }
+            if m.feather > 0 {
+                let r = m.feather * 40.0 * Double(min(extent.width, extent.height)) / Double(side)
+                if r > 0.2 {
+                    wImg = wImg.applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: NSNumber(value: r)])
+                        .cropped(to: extent)
+                }
+            }
+            if st.autoMask, let src = analyzed, let rgb = st.sampleRGB, rgb.count >= 3 {
+                let sim = colorSimilarityMask(sampleRGB: rgb, tolerance: st.autoMaskTolerance,
+                                              appliedTo: src, extent: extent, refScale: refScale)
+                wImg = wImg.applyingFilter("CIMultiplyCompositing", parameters: [kCIInputBackgroundImageKey: sim])
+                    .cropped(to: extent)
+            }
+            let targetColor = CIImage(color: st.erasing ? .black : .white).cropped(to: extent)
+            accum = targetColor.applyingFilter("CIBlendWithMask", parameters: [
+                kCIInputBackgroundImageKey: accum,
+                kCIInputMaskImageKey: wImg
+            ]).cropped(to: extent)
+        }
+        return accum.cropped(to: extent.integral)
     }
 
     // MARK: - 多重曝光合成

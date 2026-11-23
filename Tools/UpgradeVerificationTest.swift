@@ -396,6 +396,165 @@ struct UpgradeVerificationTest {
             check(batchErr == "已取消", "WorkspaceCancellation aborts queued export task immediately")
         }
 
+        // 13. P2 Completeness Tests (Masks, Auto Mask, Retouch Suggest, Full XMP, Scaling, >=70 Lenses)
+        do {
+            // 13a. Upgraded zero-model skyMask + portrait body sub-parts finite safety
+            // 注意 makeFloatImage 的 row=0 为图像顶部（对应 CIImage y=127），row=127 为底部（y=0）
+            let extent128 = CGRect(x: 0, y: 0, width: 128, height: 128)
+            let horizonScene = makeFloatImage(width: 128, height: 128) { x, row in
+                if row < 56 {
+                    let grad = Float(56 - row) / 56.0
+                    return [0.28 + 0.08 * grad, 0.54 + 0.12 * grad, 0.92]
+                } else {
+                    let tex = Float((x * 7 + row * 13) % 11) * 0.01
+                    return [0.22 + tex, 0.17 + tex, 0.11]
+                }
+            }
+            var skyM = Mask(); skyM.kind = .sky; skyM.refineEdges = false
+            let skyAlpha = Engine.maskImage(for: skyM, extent: extent128, analyzed: horizonScene)
+            if let skyImg = skyAlpha {
+                let topPx = renderPixel(skyImg, at: CGPoint(x: 64, y: 112), working: false)
+                let botPx = renderPixel(skyImg, at: CGPoint(x: 64, y: 18), working: false)
+                check(topPx[0].isFinite && botPx[0].isFinite && topPx[0] > 0.5 && botPx[0] < 0.35,
+                      "Upgraded zero-model skyMask separates sky top (\(topPx[0])) from terrain (\(botPx[0]))")
+            } else {
+                check(false, "Upgraded zero-model skyMask returned non-nil mask")
+            }
+
+            for partKind in [MaskKind.eyebrows, .bodySkin, .clothes] {
+                var pm = Mask(); pm.kind = partKind; pm.refineEdges = false
+                let out = Engine.maskImage(for: pm, extent: extent128, analyzed: horizonScene)
+                if let img = out {
+                    let px = renderPixel(img, at: CGPoint(x: 64, y: 64), working: false)
+                    check(px[0].isFinite && px[0] >= 0 && px[0] <= 1, "\(partKind.rawValue) mask stays finite in [0,1]")
+                } else {
+                    check(true, "\(partKind.rawValue) safely returns nil without person matte")
+                }
+            }
+
+            // 13b. MaskComponent.applyGeometry + .brush autoMask color-edge isolation
+            var srcMask = Mask(); srcMask.kind = .linear
+            srcMask.x0 = 0.15; srcMask.y0 = 0.25; srcMask.x1 = 0.85; srcMask.y1 = 0.75; srcMask.feather = 0.45
+            var comp = MaskComponent(op: .intersect, kind: .linear)
+            comp.applyGeometry(from: srcMask)
+            check(abs(comp.x0 - 0.15) < 1e-9 && abs(comp.x1 - 0.85) < 1e-9 && abs(comp.feather - 0.45) < 1e-9,
+                  "MaskComponent.applyGeometry copies geometry back from editable Mask proxy")
+
+            let splitColor = makeFloatImage(width: 128, height: 128) { x, _ in
+                x < 64 ? [0.85, 0.12, 0.12] : [0.10, 0.20, 0.88]
+            }
+            let sampledRed = renderPixel(splitColor, at: CGPoint(x: 32, y: 64), working: false)
+            var brushM = Mask(); brushM.kind = .brush; brushM.refineEdges = false
+            brushM.strokes = [
+                Stroke(pts: [[0.50, 0.50]], radius: 0.28, feather: 0.2, erasing: false,
+                       autoMask: true, autoMaskTolerance: 0.18,
+                       sampleRGB: [Double(sampledRed[0]), Double(sampledRed[1]), Double(sampledRed[2])], pressures: [1.0])
+            ]
+            if let bAlpha = Engine.maskImage(for: brushM, extent: extent128, analyzed: splitColor) {
+                let redSide = renderPixel(bAlpha, at: CGPoint(x: 54, y: 64), working: false)
+                let blueSide = renderPixel(bAlpha, at: CGPoint(x: 74, y: 64), working: false)
+                check(redSide[0] > 0.70 && blueSide[0] < 0.25,
+                      "Brush Auto Mask isolates red side (\(redSide[0])) vs blue edge (\(blueSide[0]))")
+            } else {
+                check(false, "Brush Auto Mask produced mask image")
+            }
+
+            // 13c. RetouchEngine.suggestSource + avoiding previous source
+            let cleanWall = makeFloatImage(width: 128, height: 128) { x, y in
+                let dx = x - 64, dy = y - 64
+                if dx * dx + dy * dy < 36 { return [0.05, 0.05, 0.05] }
+                return [0.65, 0.62, 0.58]
+            }
+            var spot = RetouchSpot(mode: .heal, pts: [[0.5, 0.5]], radius: 0.05, feather: 0.5)
+            spot.opacity = 1.0
+            let src1 = RetouchEngine.suggestSource(for: spot, in: cleanWall, workingSpace: Engine.workingColorSpace)
+            let src2 = src1.flatMap {
+                RetouchEngine.suggestSource(for: spot, in: cleanWall, workingSpace: Engine.workingColorSpace, avoiding: $0)
+            }
+            if let s1 = src1, let s2 = src2 {
+                let distMoved = hypot(s1.x - s2.x, s1.y - s2.y)
+                check((0...1).contains(s1.x) && (0...1).contains(s1.y) &&
+                      (0...1).contains(s2.x) && (0...1).contains(s2.y) && distMoved > 0.02,
+                      "RetouchEngine.suggestSource picks valid normalized source and displaces when avoiding old source")
+            } else {
+                check(false, "RetouchEngine.suggestSource returned valid candidates")
+            }
+
+            // 13d. Full bidirectional XMPSidecar round-trip & LR preset import
+            var xp = EditParams()
+            xp.clarity = -72
+            xp.hsl.orange = HSLBand(hue: -12, sat: 24, lum: -18)
+            xp.hsl.aqua = HSLBand(hue: 15, sat: -30, lum: 22)
+            xp.curveR = ToneCurve(points: [[0, 0.05], [0.5, 0.62], [1, 0.95]])
+            xp.curveG = ToneCurve(points: [[0, 0.0], [0.5, 0.45], [1, 1.0]])
+            xp.curveB = ToneCurve(points: [[0, 0.02], [0.5, 0.58], [1, 0.98]])
+            xp.gradeShadow = ColorGrade(hue: 215, sat: 42)
+            xp.gradeShadow.lum = -12
+            xp.gradeHigh = ColorGrade(hue: 38, sat: 30)
+            xp.primRed = PrimaryAdj(hue: 18, sat: -20)
+            xp.primBlue = PrimaryAdj(hue: -24, sat: 35)
+            xp.calibShadowTint = 14
+            xp.grain = 35; xp.grainSize = 0.72; xp.grainRoughness = 0.38
+            xp.cropX = 0.1; xp.cropY = 0.15; xp.cropW = 0.75; xp.cropH = 0.7; xp.straighten = 3.5
+
+            let pickedSc = Sidecar(params: xp, rating: 4, picked: true, colorLabel: .green, rejected: false, keywords: ["Portraits", "P2"])
+            let xmpPickedURL = tmp.appendingPathComponent("p2_full_xmp.NEF")
+            try XMPSidecar.write(pickedSc, for: xmpPickedURL)
+            let readPicked = XMPSidecar.read(for: xmpPickedURL)
+            check(readPicked != nil &&
+                  readPicked!.picked && !readPicked!.rejected && readPicked!.rating == 4 &&
+                  abs(readPicked!.params.clarity + 72) < 1 &&
+                  abs(readPicked!.params.hsl.orange.sat - 24) < 1 &&
+                  abs(readPicked!.params.hsl.aqua.lum - 22) < 1 &&
+                  readPicked!.params.curveR.points.count == 3 &&
+                  abs(readPicked!.params.gradeShadow.hue - 215) < 1 &&
+                  abs(readPicked!.params.primRed.hue - 18) < 1 &&
+                  abs(readPicked!.params.calibShadowTint - 14) < 1 &&
+                  abs(readPicked!.params.cropX - 0.1) < 0.02 &&
+                  abs(readPicked!.params.cropW - 0.75) < 0.02 &&
+                  abs(readPicked!.params.straighten - 3.5) < 0.1,
+                  "XMPSidecar round-trips negative clarity, 8-band HSL, RGB curves, ColorGrade, Calibration, and Crop+Angle")
+
+            let rejectedSc = Sidecar(params: EditParams(), rating: 0, picked: false, colorLabel: .none, rejected: true, keywords: [])
+            let xmpRejectURL = tmp.appendingPathComponent("p2_reject_xmp.ARW")
+            try XMPSidecar.write(rejectedSc, for: xmpRejectURL)
+            let readRejected = XMPSidecar.read(for: xmpRejectURL)
+            check(readRejected?.rejected == true && readRejected?.picked == false,
+                  "XMPSidecar persists xmp:Rating=-1 rejected state cleanly")
+
+            let lrPresetXML = """
+            <x:xmpmeta xmlns:x="adobe:ns:meta/">
+             <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+              <rdf:Description crs:PresetName="Portra Warm Test" crs:HasSettings="True" crs:Exposure2012="+0.65" crs:Clarity2012="-40" crs:Saturation="-15"/>
+             </rdf:RDF>
+            </x:xmpmeta>
+            """
+            let parsedPreset = XMPSidecar.parsePreset(data: Data(lrPresetXML.utf8), fallbackName: "Fallback")
+            check(parsedPreset != nil && abs((parsedPreset?.params.exposure ?? 0) - 0.65) < 0.02 &&
+                  abs((parsedPreset?.params.clarity ?? 0) + 40) < 1,
+                  "XMPSidecar.parsePreset parses Lightroom XMP presets directly")
+
+            // 13e. EditParams.scaled(by:)
+            var baseP = EditParams(); baseP.exposure = 1.0; baseP.contrast = 20; baseP.saturation = -30
+            let s0 = baseP.scaled(by: 0.0)
+            let s1 = baseP.scaled(by: 1.0)
+            let s15 = baseP.scaled(by: 1.5)
+            let s20 = baseP.scaled(by: 2.0)
+            check(abs(s0.exposure) < 1e-6 && abs(s0.contrast) < 1e-6 &&
+                  s1 == baseP &&
+                  abs(s15.exposure - 1.5) < 1e-6 && abs(s15.contrast - 30) < 1e-6 &&
+                  abs(s20.exposure - 2.0) < 1e-6 && abs(s20.saturation + 60) < 1e-6,
+                  "EditParams.scaled(by:) scales smoothly across 0%, 100%, 150%, 200%")
+
+            // 13f. Extended LensProfileStore (>= 70 profiles and valid resolved LensCorrection)
+            let bundledURL = URL(fileURLWithPath: "Resources/LensProfiles/bundled.xml")
+            let p2Store = LensProfileStore(directory: tmp.appendingPathComponent("lenslib_p2"), bundledURL: bundledURL)
+            let sampleResolve = p2Store.matches("FE 35mm f/1.4 GM").first?.resolve(focal: 35, aperture: 2.0, distance: 10, cameraCrop: 1.0)
+                ?? p2Store.profiles.first?.resolve(focal: 35, aperture: 4.0, distance: 10, cameraCrop: 1.0)
+            check(p2Store.profiles.count >= 70 && sampleResolve != nil && sampleResolve?.valid == true,
+                  "Extended LensProfileStore loads \(p2Store.profiles.count) (>=70) valid profiles with working LensCorrection")
+        }
+
         print("\n----------------------------------------------")
         if failures == 0 {
             print("全部 P0/P1/P2 升级自检通过 ✓")

@@ -2,6 +2,43 @@
 
 本项目遵循语义化版本。日期为发布日（Asia/Shanghai）。
 
+## [4.6.0] — 2026-11-23
+
+### 蒙版完备化与分割增强
+- 新增人像细分子部位语义分割：`.bodySkin`（身体皮肤）、`.eyebrows`（眉毛）与 `.clothes`（衣服，扣除头脸与皮肤）。
+- 升级零模型天空分割（结合 Vision 地平线倾角、多原型聚类与梯度阻断 BFS），新增线程安全 `CoreMLSkyEngine`（`.cpuAndGPU`）与 `SkySegmentation` 模型导入控制。
+- 画笔新增 **Auto Mask 自动边缘吸附**与**数位板压感调制**，并修复 `Engine.colorSimilarityMask` 复用带透明通道权重图导致非匹配区域衰减泄漏的问题（改为 `alpha = 1` 直接参与 `CIMultiplyCompositing`）。
+- 布尔子蒙版（加/减/交）支持点击选中、运算符切换、参数修改及在画布直接拖动编辑器；局部面板补全 `色调` / `白色` / `黑色`、可展开局部 `CurveEditor` 与局部 OKLCH 点颜色。
+
+### 画布修补与交互完善
+- 新增 `RetouchEngine.suggestSource` 自动干净源点推荐与避让重选；支持在画布点选、直接拖动修补中心及黄色采样源点手柄，并加入双环悬停画笔预览。
+- 细节修补面板接入选中斑点实时属性绑定、`H` 键显隐标记与 `Delete` 删除选中斑点。
+
+### 多视图选片、浏览器与安全区修复
+- 网格视图（`G`）、双图对比（`C`）与参考视图（`⇧R`）对齐到 `shell.safeCanvas`，避免浮动工具栏/侧栏遮挡内容。
+- 新增 `CompareSubMode`（双图选片 / `N` 多图同屏 2–4 张同看 / 修改前后），支持双指捏合与拖动同步、逐卡打分/精选/淘汰/设为基准与 8 帧有界缓存。
+- 参考视图支持选取同目录或外部参考文件及左右/上下分屏切换；网格视图支持筛选栏、缩略图缩放、Cmd/Shift 多选、右键菜单与虚拟副本重命名。
+- 图库浏览器新增递归子文件夹扫描开关、关键词添加与搜索、以及按相机 / 按镜头筛选。
+
+### XMP 生态、预设与镜头数据库扩展
+- 扩展完整双向 Adobe XMP 旁档（含 `xmp:Rating=-1` 淘汰、`xmpDM:good` 精选、`-100...100` 清晰度、8 色段 HSL、RGB 曲线、颜色分级、校准、颗粒、裁剪与角度及 XXE 防护），新增 `autoSyncXMP` 持久化自动同步。
+- 支持直接导入 Lightroom `.xmp` 预设、悬停实时预览及 **0%–200%** `EditParams.scaled(by:)` 预设强度滑块。
+- `Resources/LensProfiles/extended.xml` 新增 42 支现代镜头配置，与未改动的 `bundled.xml`（5 支）合计加载 **82 组镜头配置**。
+- 补齐 909 条中英文 UI 翻译与 260pt/232pt 窄侧栏零溢出验证（仍不包含 Apple 公证）。
+
+### 验证
+- 本地化审查：`909` 条 UI 翻译全部校验通过（`missingDirectLiteralKeys: {}`）。
+- `test_p012_upgrade.sh` 全部 40 项回归 PASS、`LensProfileTests` 45 项 PASS（`bundledSupportedLenses: 5`）、260pt/232pt 窄栏布局 10 项全过、`test_autotone.sh`（36 项）/ `test_clut.sh` / `test_mask_drag.sh`（7 项）/ `test_update.sh`（12 项）/ `test_performance.sh`（16 项渲染）/ `test_workspace_r4.sh`（shell 29 项 + R2 + R3 72 项 + R4 75 项）与 `test_appearance.sh` 全绿通过。
+
+## [4.5.0] — 2026-11-22
+
+### 底层管线与专业调色
+- 全局切换至 16-bit 扩展线性浮点 Metal 计算管线（`extendedLinearSRGB` / `.RGBAh`，16 个 Metal Compute 内核）与 HDR / EDR 直通预览画布，新增高光/暗部溢出警示（`J`）。
+- 新增 AgX 对比中心与高光滚降、Guided Filter 14-stop 保边影调、双向黑白场、OKLCH 空间 HSL 与独立 **点颜色（Point Color）**吸管色板，以及银盐颗粒粗糙度。
+- 新增蒙版布尔组合、`MetalMaskRefineKernel`、AI 天空/前景/人像（人脸皮肤/眼睛/嘴唇/牙齿/头发）语义分割、局部曲线与点颜色模型字段。
+- 新增 Heal（泊松融合）、Clone 与 Remove（4 层 PatchMatch + 可选离线 Core ML `LaMa.mlmodelc` 推理与 `Scripts/install_lama_model.sh` 安装脚本）。
+- 新增 `MetadataIO`（保留 EXIF/IPTC/GPS，支持移除 GPS 与 Gain-Map HDR JPEG / 10-bit PQ HEIC / 16-bit Display P3 TIFF/PNG 导出）、XMP 基础旁档、虚拟副本、有界并发批量导出及深浅图标跟随修复。
+
 ## [4.4.0] — 2026-10-31
 
 ### 镜头校正

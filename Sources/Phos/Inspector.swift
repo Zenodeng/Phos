@@ -934,10 +934,13 @@ extension MaskKind {
         case .sky: return "cloud.sun"
         case .background: return "rectangle.dashed"
         case .faceSkin: return "face.smiling"
+        case .bodySkin: return "figure.arms.open"
         case .eyes: return "eye"
+        case .eyebrows: return "eyebrow"
         case .lips: return "mouth"
         case .teeth: return "sparkles"
         case .hair: return "person.crop.circle"
+        case .clothes: return "tshirt"
         case .depth: return "square.3.layers.3d"
         }
     }
@@ -990,10 +993,13 @@ struct MaskPane: View {
         case .sky: return "AI 天空分割：自动识别天空区域并支持布尔子蒙版加减与 Guided Filter 边缘精修"
         case .background: return "自动反选非前景主体区域，适合独立压暗背景或虚化/冷暖分离"
         case .faceSkin: return "人脸皮肤语义分割（本地 Vision 关键点驱动），适合美肤调色而不影响五官"
+        case .bodySkin: return "身体裸露皮肤分割（结合人物轮廓与肤色识别），适合匀称身体肤色"
         case .eyes: return "眼睛与虹膜定位蒙版，适合局部提亮眼神光与清晰度"
+        case .eyebrows: return "眉毛轮廓语义分割，适合局部加深立体感与自然修整"
         case .lips: return "嘴唇语义分割，单独调整唇色饱和度或红润度"
         case .teeth: return "牙齿语义分割，配合高饱和压低或曝光微提快速自然亮白"
         case .hair: return "发丝/头顶部语义分割，可开启 Guided Filter 提升发丝过渡精度"
+        case .clothes: return "人物服装分割（扣除头脸与裸露皮肤），独立调整衣物颜色与质感"
         case .depth: return "散景深度涂绘：在画布上把想虚化的背景涂白、要清晰的主体留黑；配合「焦外散景」强度使用"
         }
     }
@@ -1148,6 +1154,9 @@ struct MaskPane: View {
                             SliderRow(label: "色温", value: Binding(
                                 get: { m.adjust.temperature },
                                 set: { var x = m; x.adjust.temperature = $0; s.updateMaskLive(x) })) { s.endEdit() }
+                            SliderRow(label: "色调", value: Binding(
+                                get: { m.adjust.tint },
+                                set: { var x = m; x.adjust.tint = $0; s.updateMaskLive(x) })) { s.endEdit() }
                             SliderRow(label: "清晰", value: Binding(
                                 get: { m.adjust.clarity },
                                 set: { var x = m; x.adjust.clarity = $0; s.updateMaskLive(x) }), range: 0...100) { s.endEdit() }
@@ -1160,6 +1169,12 @@ struct MaskPane: View {
                             SliderRow(label: "阴影", value: Binding(
                                 get: { m.adjust.shadows },
                                 set: { var x = m; x.adjust.shadows = $0; s.updateMaskLive(x) })) { s.endEdit() }
+                            SliderRow(label: "白色", value: Binding(
+                                get: { m.adjust.whites },
+                                set: { var x = m; x.adjust.whites = $0; s.updateMaskLive(x) })) { s.endEdit() }
+                            SliderRow(label: "黑色", value: Binding(
+                                get: { m.adjust.blacks },
+                                set: { var x = m; x.adjust.blacks = $0; s.updateMaskLive(x) })) { s.endEdit() }
                             SliderRow(label: "纹理", value: Binding(
                                 get: { m.adjust.texture },
                                 set: { var x = m; x.adjust.texture = $0; s.updateMaskLive(x) }), range: -100...100) { s.endEdit() }

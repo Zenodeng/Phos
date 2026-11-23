@@ -1,6 +1,7 @@
 import SwiftUI
 import ImageIO
 import CoreImage
+import UniformTypeIdentifiers
 
 struct WorkspaceInspector: View {
     @ObservedObject private var interfaceLanguage = AppLanguage.shared
@@ -99,17 +100,28 @@ struct WorkspacePresetBrowser: View {
     @State private var query = ""
     @State private var name = ""
     @State private var catalogError: String?
+    @State private var importNote: String?
     @State private var collection: PresetCollection = .all
     @State private var presets: [Preset] = []
     @State private var selection: UUID?
+    @State private var hoveredID: UUID?
+    @State private var amount: Double = 1.0
     private var selected: Preset? { presets.first { $0.id == selection } }
+    private var activePreviewTarget: Preset? { presets.first { $0.id == (hoveredID ?? selection) } }
     private var shown: [Preset] { WorkspacePresetPolicy.filtered(presets,query:query,collection:collection) }
     var body: some View {
         VStack(alignment:.leading,spacing:12) {
-            HStack { Text(L10n.tr("预设")).font(.system(size:16,weight:.semibold)); Spacer(); Button(L10n.tr("完成")) { dismiss() }.keyboardShortcut(.cancelAction) }
+            HStack {
+                Text(L10n.tr("预设")).font(.system(size:16,weight:.semibold))
+                Spacer()
+                Button(L10n.tr("导入 LR .xmp…")) { importLRPresets() }
+                    .controlSize(.small)
+                Button(L10n.tr("完成")) { dismiss() }.keyboardShortcut(.cancelAction)
+            }
             Picker(L10n.tr("集合"),selection:$collection) { ForEach(PresetCollection.allCases,id:\.self) { Text(L10n.tr($0.rawValue)).tag($0) } }.pickerStyle(.segmented)
             TextField(L10n.tr("搜索预设"),text:$query).textFieldStyle(.roundedBorder)
             if let catalogError { Label(L10n.tr(catalogError),systemImage:"exclamationmark.triangle").font(.caption).foregroundStyle(WorkspaceTokens.error).fixedSize(horizontal:false,vertical:true) }
+            if let importNote { Text(importNote).font(.caption).foregroundStyle(WorkspaceTokens.secondaryText) }
             HStack(alignment:.top,spacing:12) {
                 ScrollView {
                     LazyVStack(spacing:3) {
@@ -121,8 +133,17 @@ struct WorkspacePresetBrowser: View {
                                     if selection == preset.id { Image(systemName:"checkmark").font(.caption) }
                                 }.font(.system(size:12)).padding(8).contentShape(Rectangle())
                             }.buttonStyle(.plain)
-                                .background(selection == preset.id ? WorkspaceTokens.accent.opacity(0.12) : .clear,in:RoundedRectangle(cornerRadius:6))
+                                .background((selection == preset.id || hoveredID == preset.id) ? WorkspaceTokens.accent.opacity(selection == preset.id ? 0.14 : 0.06) : .clear,in:RoundedRectangle(cornerRadius:6))
                                 .accessibilityAddTraits(selection == preset.id ? .isSelected : [])
+                                .onHover { inside in
+                                    if inside {
+                                        hoveredID = preset.id
+                                        refreshPreview()
+                                    } else if hoveredID == preset.id {
+                                        hoveredID = nil
+                                        refreshPreview()
+                                    }
+                                }
                         }
                         if shown.isEmpty { Text(L10n.tr("没有匹配的预设")).font(.caption).foregroundStyle(WorkspaceTokens.secondaryText).padding(.vertical,30) }
                     }
@@ -134,8 +155,19 @@ struct WorkspacePresetBrowser: View {
                         else if preview.busy { ProgressView() }
                         else { Text(L10n.tr(preview.failed ? "无法生成预览" : "选择预设以预览")).font(.caption).foregroundStyle(WorkspaceTokens.secondaryText) }
                     }.frame(width:228,height:170)
-                    Text(selected?.name ?? "当前照片预览").font(.caption).foregroundStyle(WorkspaceTokens.secondaryText).lineLimit(1)
+                    Text(activePreviewTarget.map { $0.builtin ? L10n.tr($0.name) : $0.name } ?? L10n.tr("当前照片预览"))
+                        .font(.caption).foregroundStyle(WorkspaceTokens.secondaryText).lineLimit(1)
                 }
+            }
+            HStack(spacing: 8) {
+                Text(L10n.tr("预设强度"))
+                    .font(.system(size: 11)).foregroundStyle(WorkspaceTokens.secondaryText)
+                Slider(value: $amount, in: 0...2.0, step: 0.05) { _ in }
+                    .controlSize(.small)
+                    .onChange(of: amount) { _, _ in refreshPreview() }
+                Text("\(Int((amount * 100).rounded()))%")
+                    .font(.system(size: 11, design: .monospaced))
+                    .frame(width: 42, alignment: .trailing)
             }
             HStack {
                 TextField(L10n.tr("保存当前调整为新预设"),text:$name).textFieldStyle(.roundedBorder)
@@ -146,7 +178,12 @@ struct WorkspacePresetBrowser: View {
             }
             HStack { Text(L10n.tr("预览不会改动照片")).font(.caption).foregroundStyle(WorkspaceTokens.secondaryText); Spacer()
                 Button(L10n.tr("取消"),role:.cancel) { dismiss() }
-                Button(L10n.tr("应用预设")) { if let selected { s.commit(selected.params); dismiss() } }
+                Button(L10n.tr("应用预设")) {
+                    if let selected {
+                        s.commit(selected.params.scaled(by: amount))
+                        dismiss()
+                    }
+                }
                     .buttonStyle(WorkspaceButtonStyle(prominent:true)).keyboardShortcut(.defaultAction).disabled(selected == nil || s.source == nil || s.syncRunning)
             }
         }.padding(16).frame(width:438).workspaceGlassPanel()
@@ -157,7 +194,42 @@ struct WorkspacePresetBrowser: View {
         let catalog = WorkspacePresetCatalog.load(s.presetsURL,fallback:s.loadPresets())
         presets = catalog.presets; catalogError = catalog.error
     }
-    private func refreshPreview() { preview.show(selected,source:s.source,photoID:s.current?.id) }
+    private func refreshPreview() {
+        if let target = activePreviewTarget {
+            let scaled = Preset(id: target.id, name: target.name, params: target.params.scaled(by: amount), builtin: target.builtin)
+            preview.show(scaled, source: s.source, photoID: s.current?.id)
+        } else {
+            preview.show(nil, source: s.source, photoID: s.current?.id)
+        }
+    }
+    private func importLRPresets() {
+        let p = NSOpenPanel()
+        p.canChooseFiles = true
+        p.canChooseDirectories = false
+        p.allowsMultipleSelection = true
+        if let xmpType = UTType(filenameExtension: "xmp") {
+            p.allowedContentTypes = [xmpType]
+        }
+        guard p.runModal() == .OK, !p.urls.isEmpty else { return }
+        var imported: [Preset] = []
+        for url in p.urls {
+            if let preset = XMPSidecar.parsePreset(from: url) {
+                imported.append(preset)
+            }
+        }
+        guard !imported.isEmpty else {
+            importNote = L10n.tr("未从所选 XMP 中解析出有效调色预设")
+            return
+        }
+        let next = presets + imported
+        if s.savePresets(next) {
+            presets = next
+            selection = imported.last?.id
+            catalogError = nil
+            importNote = L10n.tr("已导入 \(imported.count) 个 XMP 预设")
+            refreshPreview()
+        }
+    }
 }
 
 struct WorkspacePhotoInformation: View {
@@ -165,6 +237,7 @@ struct WorkspacePhotoInformation: View {
     @EnvironmentObject private var s: AppState
     @Environment(\.dismiss) private var dismiss
     @State private var metadata: [String:String] = [:]
+    @State private var newKeyword: String = ""
     var body: some View {
         VStack(alignment:.leading,spacing:12) {
             HStack { Text(L10n.tr("照片信息")).font(.system(size:16,weight:.semibold)); Spacer(); Button(L10n.tr("完成")) { dismiss() } }
@@ -174,11 +247,49 @@ struct WorkspacePhotoInformation: View {
             information("预览",value:s.displayFrame.map { "\($0.image.width) × \($0.image.height) · \($0.fullResolution ? "完整" : "代理")" } ?? "—")
             ForEach(["相机","镜头","ISO","快门","光圈","拍摄时间"],id:\.self) { key in information(key,value:metadata[key] ?? "—") }
             Divider()
+            VStack(alignment: .leading, spacing: 6) {
+                Text(L10n.tr("关键词")).font(.system(size: 11, weight: .semibold)).foregroundStyle(WorkspaceTokens.secondaryText)
+                if !s.currentKeywords.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 4) {
+                            ForEach(s.currentKeywords, id: \.self) { kw in
+                                HStack(spacing: 3) {
+                                    Text(kw).font(.system(size: 10.5))
+                                    Button {
+                                        s.setKeywords(s.currentKeywords.filter { $0 != kw })
+                                    } label: {
+                                        Image(systemName: "xmark").font(.system(size: 8))
+                                    }.buttonStyle(.plain)
+                                }
+                                .padding(.horizontal, 6).padding(.vertical, 2)
+                                .background(WorkspaceTokens.accent.opacity(0.14), in: Capsule())
+                            }
+                        }
+                    }
+                }
+                HStack(spacing: 6) {
+                    TextField(L10n.tr("添加关键词（回车保存）"), text: $newKeyword)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 11))
+                        .onSubmit { addKeyword() }
+                        .disabled(s.current == nil)
+                    Button(L10n.tr("添加")) { addKeyword() }
+                        .controlSize(.small)
+                        .disabled(s.current == nil || newKeyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            Divider()
             Text(s.current?.url.path ?? "—").font(.system(size:11)).textSelection(.enabled).fixedSize(horizontal:false,vertical:true)
             Button(L10n.tr("在访达中显示")) { if let url = s.current?.url { NSWorkspace.shared.activateFileViewerSelecting([url]) } }.disabled(s.current == nil)
             if let error = s.workflowError { Label(error,systemImage:"exclamationmark.triangle").font(.caption).foregroundStyle(WorkspaceTokens.error).fixedSize(horizontal:false,vertical:true) }
         }.padding(16).frame(width:330).workspaceGlassPanel()
             .task(id:s.current?.url) { metadata = WorkspacePhotoMetadata.read(s.current?.url) }
+    }
+    private func addKeyword() {
+        let trimmed = newKeyword.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        s.setKeywords(s.currentKeywords + [trimmed])
+        newKeyword = ""
     }
     private func information(_ name:String,value:String) -> some View {
         HStack(alignment:.firstTextBaseline) { Text(L10n.tr(name)).foregroundStyle(WorkspaceTokens.secondaryText); Spacer(); Text(value).textSelection(.enabled) }.font(.system(size:12))

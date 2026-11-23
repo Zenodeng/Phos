@@ -4,8 +4,9 @@ import AppKit
 enum WorkspaceCommandID: String, CaseIterable {
     case undo, redo, openFolder, export, batch, merge, crop, beforeOriginal, beforeGeometry
     case copy, sync, snapshots, fit, pixel100, masks, brush, overlay, whiteBalance, autoTone, cancelJob
-    case clipping, reject, gridView, compareView, referenceView, toggleEDR
-    case createVirtualCopy, deleteVirtualCopy, exportXMP, exportFolderXMP, retouchTool, pointColorTool
+    case clipping, reject, gridView, compareView, surveyView, referenceView, toggleEDR
+    case createVirtualCopy, deleteVirtualCopy, exportXMP, importXMP, exportFolderXMP, toggleAutoSyncXMP
+    case retouchTool, pointColorTool
 }
 @MainActor extension WorkspaceWindowModel {
     func enabled(_ command:WorkspaceCommandID) -> Bool {
@@ -20,13 +21,13 @@ enum WorkspaceCommandID: String, CaseIterable {
         case .merge: return ready && !s.mergeRunning && s.cropSession == nil
         case .pixel100,.beforeOriginal,.beforeGeometry,.clipping,.compareView,.referenceView,.retouchTool,.pointColorTool:
             return ready && !s.cropMode
-        case .reject,.createVirtualCopy,.exportXMP:
+        case .reject,.createVirtualCopy,.exportXMP,.importXMP:
             return s.current != nil && !s.syncRunning
         case .deleteVirtualCopy:
             return s.current?.isVirtualCopy == true && !s.syncRunning
-        case .gridView,.exportFolderXMP:
+        case .gridView,.surveyView,.exportFolderXMP:
             return !s.items.isEmpty && !s.syncRunning
-        case .toggleEDR:
+        case .toggleEDR,.toggleAutoSyncXMP:
             return true
         case .whiteBalance: return ready && !s.cropMode && !s.previewing && !s.whiteBalanceRunning
         case .autoTone: return ready && !s.autoRunning && !s.previewing && !s.cropMode
@@ -38,7 +39,7 @@ enum WorkspaceCommandID: String, CaseIterable {
         guard enabled(command) else { return }
         if NSApp.currentEvent?.type == .keyDown,
            window?.firstResponder is NSTextView || window?.firstResponder is NSTextField,
-           [.crop,.brush,.masks,.pixel100,.beforeOriginal,.beforeGeometry,.whiteBalance,.autoTone,.clipping,.reject,.gridView,.compareView,.referenceView,.retouchTool,.pointColorTool].contains(command) { return }
+           [.crop,.brush,.masks,.pixel100,.beforeOriginal,.beforeGeometry,.whiteBalance,.autoTone,.clipping,.reject,.gridView,.compareView,.surveyView,.referenceView,.retouchTool,.pointColorTool].contains(command) { return }
         switch command {
         case .undo: undo()
         case .redo: redo()
@@ -66,17 +67,28 @@ enum WorkspaceCommandID: String, CaseIterable {
         case .reject: finishEditing(); state.toggleReject()
         case .gridView: finishEditing(); state.canvasDisplayMode = state.canvasDisplayMode == .grid ? .single : .grid
         case .compareView: finishEditing(); state.canvasDisplayMode = state.canvasDisplayMode == .compare ? .single : .compare
+        case .surveyView:
+            finishEditing()
+            if state.canvasDisplayMode == .compare && state.compareSubMode == .survey {
+                state.canvasDisplayMode = .single
+            } else {
+                state.compareSubMode = .survey
+                state.canvasDisplayMode = .compare
+            }
         case .referenceView: finishEditing(); state.canvasDisplayMode = state.canvasDisplayMode == .reference ? .single : .reference
         case .toggleEDR: state.edrEnabled.toggle()
         case .createVirtualCopy: finishEditing(); state.createVirtualCopy()
         case .deleteVirtualCopy: finishEditing(); state.deleteVirtualCopy()
         case .exportXMP: finishEditing(); state.exportCurrentXMP()
+        case .importXMP: finishEditing(); state.importXMP()
         case .exportFolderXMP: finishEditing(); state.exportFolderXMP()
+        case .toggleAutoSyncXMP: state.autoSyncXMP.toggle()
         case .retouchTool:
             finishEditing(); session.inspectorVisible = true; state.inspectorUI.category = .detail
             state.retouchActive.toggle()
         case .pointColorTool:
             finishEditing(); session.inspectorVisible = true; state.inspectorUI.category = .color
+            state.localPointColorMaskID = nil
             state.pointColorPicker.toggle()
         }
     }
@@ -121,7 +133,9 @@ struct WorkspaceMenuCommands: Commands {
             Button(L10n.tr("创建虚拟副本")) { run(.createVirtualCopy) }.keyboardShortcut("'", modifiers: [.command]).disabled(!available(.createVirtualCopy))
             Button(L10n.tr("删除虚拟副本")) { run(.deleteVirtualCopy) }.disabled(!available(.deleteVirtualCopy))
             Button(L10n.tr("导出当前 XMP 旁档")) { run(.exportXMP) }.disabled(!available(.exportXMP))
+            Button(L10n.tr("从 XMP 旁档读取")) { run(.importXMP) }.disabled(!available(.importXMP))
             Button(L10n.tr("批量导出 XMP 旁档")) { run(.exportFolderXMP) }.disabled(!available(.exportFolderXMP))
+            Toggle(L10n.tr("自动写入 XMP 旁档"), isOn: $state.autoSyncXMP)
         }
         CommandGroup(after: .toolbar) {
             Button(L10n.tr("A · 沉浸编辑")) { model?.session.mode = .immersive }
@@ -138,6 +152,7 @@ struct WorkspaceMenuCommands: Commands {
             Button(L10n.tr("单张视图")) { model?.state.canvasDisplayMode = .single }.disabled(model == nil)
             Button(L10n.tr("网格看片视图 (G)")) { run(.gridView) }.disabled(!available(.gridView))
             Button(L10n.tr("双图同步对比 (C)")) { run(.compareView) }.disabled(!available(.compareView))
+            Button(L10n.tr("多图同屏选片 (N)")) { run(.surveyView) }.disabled(!available(.surveyView))
             Button(L10n.tr("参考锁定视图 (⇧R)")) { run(.referenceView) }.disabled(!available(.referenceView))
             Button(L10n.tr("高光/暗部溢出警示 (J)")) { run(.clipping) }.disabled(!available(.clipping))
             Button(L10n.tr("切换 EDR 动态范围")) { run(.toggleEDR) }.disabled(!available(.toggleEDR))

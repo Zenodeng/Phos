@@ -362,7 +362,7 @@ enum MaskBoolOp: String, Codable, CaseIterable {
 
 enum MaskKind: String, Codable, CaseIterable {
     case linear, radial, brush, colorRange, luminanceRange, subject, person, foreground, depth
-    case sky, background, faceSkin, eyes, lips, teeth, hair
+    case sky, background, faceSkin, bodySkin, eyes, eyebrows, lips, teeth, hair, clothes
     var label: String {
         switch self {
         case .linear: return "线性渐变"
@@ -377,16 +377,20 @@ enum MaskKind: String, Codable, CaseIterable {
         case .sky: return "选择天空"
         case .background: return "选择背景"
         case .faceSkin: return "面部皮肤"
+        case .bodySkin: return "身体皮肤"
         case .eyes: return "眼睛"
+        case .eyebrows: return "眉毛"
         case .lips: return "嘴唇"
         case .teeth: return "牙齿"
         case .hair: return "头发"
+        case .clothes: return "衣服"
         }
     }
     /// 是否用到了系统视觉模型（Vision），这类蒙版计算较重，需要缓存
     var usesVision: Bool {
         switch self {
-        case .subject, .person, .foreground, .sky, .background, .faceSkin, .eyes, .lips, .teeth, .hair:
+        case .subject, .person, .foreground, .sky, .background,
+             .faceSkin, .bodySkin, .eyes, .eyebrows, .lips, .teeth, .hair, .clothes:
             return true
         default:
             return false
@@ -440,6 +444,18 @@ struct MaskComponent: Codable, Equatable, Identifiable {
         return m
     }
 
+    mutating func applyGeometry(from m: Mask) {
+        x0 = m.x0; y0 = m.y0; x1 = m.x1; y1 = m.y1
+        radius = m.radius
+        gradientVersion = m.gradientVersion
+        radiusX = m.radiusX; radiusY = m.radiusY
+        radialAngle = m.radialAngle
+        feather = m.feather
+        strokes = m.strokes
+        sampleRGB = m.sampleRGB; tolerance = m.tolerance
+        lumLow = m.lumLow; lumHigh = m.lumHigh; lumSoft = m.lumSoft
+    }
+
     enum CodingKeys: String, CodingKey {
         case id, op, kind, enabled, inverted, x0, y0, x1, y1, radius
         case gradientVersion, radiusX, radiusY, radialAngle, feather, strokes
@@ -478,17 +494,31 @@ struct Stroke: Codable, Equatable {
     var radius: Double = 0.05
     var feather: Double = 0.5
     var erasing: Bool = false
+    var autoMask: Bool = false
+    var autoMaskTolerance: Double = 0.16
+    var sampleRGB: [Double]? = nil
+    var pressures: [Double] = []
 
-    init(pts: [[Double]] = [], radius: Double = 0.05, feather: Double = 0.5, erasing: Bool = false) {
+    init(pts: [[Double]] = [], radius: Double = 0.05, feather: Double = 0.5, erasing: Bool = false,
+         autoMask: Bool = false, autoMaskTolerance: Double = 0.16,
+         sampleRGB: [Double]? = nil, pressures: [Double] = []) {
         self.pts = pts; self.radius = radius; self.feather = feather; self.erasing = erasing
+        self.autoMask = autoMask; self.autoMaskTolerance = autoMaskTolerance
+        self.sampleRGB = sampleRGB; self.pressures = pressures
     }
-    enum CodingKeys: String, CodingKey { case pts, radius, feather, erasing }
+    enum CodingKeys: String, CodingKey {
+        case pts, radius, feather, erasing, autoMask, autoMaskTolerance, sampleRGB, pressures
+    }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         pts = try c.decodeIfPresent([[Double]].self, forKey: .pts) ?? []
         radius = try c.decodeIfPresent(Double.self, forKey: .radius) ?? 0.05
         feather = try c.decodeIfPresent(Double.self, forKey: .feather) ?? 0.5
         erasing = try c.decodeIfPresent(Bool.self, forKey: .erasing) ?? false
+        autoMask = try c.decodeIfPresent(Bool.self, forKey: .autoMask) ?? false
+        autoMaskTolerance = try c.decodeIfPresent(Double.self, forKey: .autoMaskTolerance) ?? 0.16
+        sampleRGB = try c.decodeIfPresent([Double].self, forKey: .sampleRGB)
+        pressures = try c.decodeIfPresent([Double].self, forKey: .pressures) ?? []
     }
 }
 
@@ -669,6 +699,116 @@ struct EditParams: Codable, Equatable {
         var c = self
         c.cropX = 0; c.cropY = 0; c.cropW = 1; c.cropH = 1
         return c
+    }
+
+    /// 按预设强度（0.0...2.0，1.0 = 原预设）从中性参数向当前预设做线性缩放，保留几何与离散开关。
+    func scaled(by amount: Double) -> EditParams {
+        let a = min(max(amount, 0.0), 2.0)
+        if abs(a - 1.0) < 1e-6 { return self }
+        let d = EditParams()
+        var out = self
+
+        func s(_ v: Double, _ base: Double, _ range: ClosedRange<Double>) -> Double {
+            let scaled = base + (v - base) * a
+            return min(max(scaled, range.lowerBound), range.upperBound)
+        }
+        func scaleCurve(_ c: ToneCurve) -> ToneCurve {
+            if c.isIdentity { return c }
+            let pts = c.points.map { pt -> [Double] in
+                guard pt.count >= 2 else { return pt }
+                let x = pt[0]
+                let y = min(max(x + (pt[1] - x) * a, 0.0), 1.0)
+                return [x, y]
+            }
+            return ToneCurve(points: pts)
+        }
+        func scaleBand(_ b: HSLBand) -> HSLBand {
+            HSLBand(hue: s(b.hue, 0, -100...100),
+                    sat: s(b.sat, 0, -100...100),
+                    lum: s(b.lum, 0, -100...100))
+        }
+        func scaleGrade(_ g: ColorGrade) -> ColorGrade {
+            var r = g
+            r.sat = s(g.sat, 0, 0...100)
+            r.lum = s(g.lum, 0, -100...100)
+            return r
+        }
+        func scalePrim(_ p: PrimaryAdj) -> PrimaryAdj {
+            PrimaryAdj(hue: s(p.hue, 0, -60...60), sat: s(p.sat, 0, -100...100))
+        }
+
+        out.temperature = s(temperature, d.temperature, -100...100)
+        out.tint = s(tint, d.tint, -100...100)
+        if whiteBalanceGains.count == 3 {
+            out.whiteBalanceGains = zip(whiteBalanceGains, d.whiteBalanceGains).map { s($0, $1, 0.1...4.0) }
+        }
+        out.exposure = s(exposure, d.exposure, -5...5)
+        out.contrast = s(contrast, d.contrast, -100...100)
+        out.contrastPivot = s(contrastPivot, d.contrastPivot, -1...1)
+        out.highlightRolloff = s(highlightRolloff, d.highlightRolloff, 0...100)
+        out.highlights = s(highlights, d.highlights, -100...100)
+        out.shadows = s(shadows, d.shadows, -100...100)
+        out.whites = s(whites, d.whites, -100...100)
+        out.blacks = s(blacks, d.blacks, -100...100)
+        out.texture = s(texture, d.texture, -100...100)
+        out.clarity = s(clarity, d.clarity, 0...100)
+        out.dehaze = s(dehaze, d.dehaze, -100...100)
+        out.vibrance = s(vibrance, d.vibrance, -100...100)
+        out.saturation = s(saturation, d.saturation, -100...100)
+
+        out.curve = scaleCurve(curve)
+        out.lumaCurve = scaleCurve(lumaCurve)
+        out.curveR = scaleCurve(curveR)
+        out.curveG = scaleCurve(curveG)
+        out.curveB = scaleCurve(curveB)
+        out.refineSat = s(refineSat, d.refineSat, 0...100)
+
+        out.hsl.red = scaleBand(hsl.red)
+        out.hsl.orange = scaleBand(hsl.orange)
+        out.hsl.yellow = scaleBand(hsl.yellow)
+        out.hsl.green = scaleBand(hsl.green)
+        out.hsl.aqua = scaleBand(hsl.aqua)
+        out.hsl.blue = scaleBand(hsl.blue)
+        out.hsl.purple = scaleBand(hsl.purple)
+        out.hsl.magenta = scaleBand(hsl.magenta)
+
+        out.pointColors = pointColors.map { sw in
+            var copy = sw
+            copy.hueShift = s(sw.hueShift, 0, -180...180)
+            copy.chromaShift = s(sw.chromaShift, 0, -100...100)
+            copy.lumaShift = s(sw.lumaShift, 0, -100...100)
+            return copy
+        }
+
+        out.gradeShadow = scaleGrade(gradeShadow)
+        out.gradeMid = scaleGrade(gradeMid)
+        out.gradeHigh = scaleGrade(gradeHigh)
+        out.gradeBlend = s(gradeBlend, d.gradeBlend, 0...100)
+        out.gradeBalance = s(gradeBalance, d.gradeBalance, -100...100)
+
+        out.mono = mono && a > 0.001
+        out.monoRed = s(monoRed, d.monoRed, 0...1)
+        out.monoGreen = s(monoGreen, d.monoGreen, 0...1)
+        out.monoBlue = s(monoBlue, d.monoBlue, 0...1)
+
+        out.sharpen = s(sharpen, d.sharpen, 0...2)
+        out.denoise = s(denoise, d.denoise, 0...100)
+        out.denoiseColor = s(denoiseColor, d.denoiseColor, 0...100)
+        out.grain = s(grain, d.grain, 0...100)
+
+        out.vignette = s(vignette, d.vignette, -100...100)
+        out.halation = s(halation, d.halation, 0...100)
+        out.bokehAmount = s(bokehAmount, d.bokehAmount, 0...100)
+        out.caAmount = s(caAmount, d.caAmount, -100...100)
+        out.purpleFringe = s(purpleFringe, d.purpleFringe, 0...100)
+
+        out.primRed = scalePrim(primRed)
+        out.primGreen = scalePrim(primGreen)
+        out.primBlue = scalePrim(primBlue)
+        out.calibShadowTint = s(calibShadowTint, d.calibShadowTint, -100...100)
+        out.clutStrength = s(clutStrength, 0.0, 0...1)
+        if out.clutStrength <= 0.0001 { out.clutName = "" }
+        return out
     }
 
     static let neutral = EditParams()

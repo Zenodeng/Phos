@@ -780,6 +780,91 @@ enum RetouchEngine {
         return current
     }
 
+    /// 为污点修复/仿制克隆自动推荐干净采样源点（归一化图像坐标，y 向上）。
+    static func suggestSource(for spot: RetouchSpot, in image: CIImage,
+                              workingSpace: CGColorSpace, avoiding oldSource: CGPoint? = nil) -> CGPoint? {
+        guard spot.mode != .remove, !spot.points.isEmpty else { return nil }
+        let fullExtent = image.extent
+        guard !fullExtent.isEmpty, !fullExtent.isInfinite, fullExtent.width > 4, fullExtent.height > 4 else { return nil }
+        let shortEdge = min(fullExtent.width, fullExtent.height)
+        let rPx = max(3.0, spot.radius * Double(shortEdge))
+
+        let ptsCI: [CGPoint] = spot.points.compactMap { pair in
+            guard pair.count >= 2, pair[0].isFinite, pair[1].isFinite else { return nil }
+            return CGPoint(
+                x: fullExtent.minX + CGFloat(min(max(pair[0], 0), 1)) * fullExtent.width,
+                y: fullExtent.minY + CGFloat(min(max(pair[1], 0), 1)) * fullExtent.height
+            )
+        }
+        guard !ptsCI.isEmpty else { return nil }
+
+        var minX = ptsCI[0].x, maxX = ptsCI[0].x, minY = ptsCI[0].y, maxY = ptsCI[0].y
+        for p in ptsCI {
+            minX = min(minX, p.x); maxX = max(maxX, p.x)
+            minY = min(minY, p.y); maxY = max(maxY, p.y)
+        }
+        let targetPad = CGFloat(rPx) + 6
+        let contextPad = max(CGFloat(rPx) * 4.2, 48)
+        let roi = CGRect(
+            x: minX - targetPad - contextPad,
+            y: minY - targetPad - contextPad,
+            width: (maxX - minX) + (targetPad + contextPad) * 2,
+            height: (maxY - minY) + (targetPad + contextPad) * 2
+        ).intersection(fullExtent).integral
+        guard roi.width >= 4, roi.height >= 4 else { return nil }
+
+        let maxSide: CGFloat = 320
+        let rawScale = min(1.0, maxSide / max(roi.width, roi.height))
+        let workROI: CIImage
+        let w: Int, h: Int
+        let scaleX: CGFloat, scaleY: CGFloat
+        if rawScale < 0.999 {
+            w = max(4, Int((roi.width * rawScale).rounded()))
+            h = max(4, Int((roi.height * rawScale).rounded()))
+            scaleX = CGFloat(w) / roi.width
+            scaleY = CGFloat(h) / roi.height
+            workROI = image.cropped(to: roi)
+                .transformed(by: CGAffineTransform(translationX: -roi.minX, y: -roi.minY))
+                .transformed(by: CGAffineTransform(scaleX: scaleX, y: scaleY))
+        } else {
+            w = Int(roi.width); h = Int(roi.height)
+            scaleX = 1.0; scaleY = 1.0
+            workROI = image.cropped(to: roi)
+        }
+
+        var buf = [Float](repeating: 0, count: w * h * 4)
+        let renderBounds = rawScale < 0.999 ? CGRect(x: 0, y: 0, width: w, height: h) : roi
+        Engine.ctx.render(workROI, toBitmap: &buf, rowBytes: w * 16, bounds: renderBounds,
+                          format: .RGBAf, colorSpace: workingSpace)
+
+        func toBufPt(_ ci: CGPoint) -> (x: Float, y: Float) {
+            (Float((ci.x - roi.minX) * scaleX), Float((roi.maxY - ci.y) * scaleY))
+        }
+
+        let bufPts = ptsCI.map(toBufPt)
+        let rWork = Float(rPx * Double(min(scaleX, scaleY)))
+        var mask = [Float](repeating: 0, count: w * h)
+        for y in 0..<h {
+            for x in 0..<w {
+                let d = minDistToPolyline(px: Float(x) + 0.5, py: Float(y) + 0.5, pts: bufPts)
+                if d < rWork { mask[y * w + x] = 1.0 }
+            }
+        }
+        let avoidBuf: (x: Float, y: Float)? = oldSource.map { old in
+            let ci = CGPoint(x: fullExtent.minX + CGFloat(min(max(old.x, 0), 1)) * fullExtent.width,
+                             y: fullExtent.minY + CGFloat(min(max(old.y, 0), 1)) * fullExtent.height)
+            return toBufPt(ci)
+        }
+        let best = findBestSourcePatch(buf: buf, mask: mask, w: w, h: h,
+                                       center: bufPts[0], radius: rWork,
+                                       avoid: avoidBuf)
+        let ciX = roi.minX + CGFloat(best.x) / scaleX
+        let ciY = roi.maxY - CGFloat(best.y) / scaleY
+        let nx = min(max(Double((ciX - fullExtent.minX) / fullExtent.width), 0.01), 0.99)
+        let ny = min(max(Double((ciY - fullExtent.minY) / fullExtent.height), 0.01), 0.99)
+        return CGPoint(x: nx, y: ny)
+    }
+
     private static func applySingle(_ image: CIImage, spot: RetouchSpot, fullExtent: CGRect, workingSpace: CGColorSpace) -> CIImage {
         let shortEdge = min(fullExtent.width, fullExtent.height)
         let rPx = max(3.0, spot.radius * Double(shortEdge))
@@ -958,9 +1043,10 @@ enum RetouchEngine {
         return best
     }
 
-    /// 自动在周围 16 方向 × 2 倍率环上搜索边界色差与纹理梯度最匹配的干净源块
+    /// 自动在周围 16 方向 × 多倍率环上搜索边界色差与纹理梯度最匹配的干净源块
     private static func findBestSourcePatch(buf: [Float], mask: [Float], w: Int, h: Int,
-                                            center: (x: Float, y: Float), radius: Float) -> (x: Float, y: Float) {
+                                            center: (x: Float, y: Float), radius: Float,
+                                            avoid: (x: Float, y: Float)? = nil) -> (x: Float, y: Float) {
         let rInt = max(2, Int(radius.rounded()))
         var bestScore = Float.greatestFiniteMagnitude
         var bestPt = (x: min(Float(w - rInt - 2), center.x + radius * 2.5), y: center.y)
@@ -972,13 +1058,15 @@ enum RetouchEngine {
             ringOffsets.append((Int(cos(ang) * Float(rInt + 2)), Int(sin(ang) * Float(rInt + 2))))
         }
 
-        for mult: Float in [2.3, 3.2] {
+        let avoidThresh = max(radius * 1.15, 6.0)
+        for mult: Float in [2.3, 3.2, 1.75, 4.0] {
             let dist = max(radius * mult, Float(rInt + 4))
             for dir in 0..<16 {
                 let ang = Float(dir) * .pi * 2.0 / 16.0
                 let cx = Int((center.x + cos(ang) * dist).rounded())
                 let cy = Int((center.y + sin(ang) * dist).rounded())
                 if cx - rInt - 2 < 0 || cx + rInt + 2 >= w || cy - rInt - 2 < 0 || cy + rInt + 2 >= h { continue }
+                if let avoid, hypot(Float(cx) - avoid.x, Float(cy) - avoid.y) < avoidThresh { continue }
                 // 源区本身不能落在当前待修复遮罩内
                 if mask[cy * w + cx] > 0.1 { continue }
                 var valid = true

@@ -10,6 +10,91 @@ struct RetouchPane: View {
     @State private var modelInstalled = CoreMLInpaintingEngine.shared.isModelInstalled
     @State private var modelSummary = CoreMLInpaintingEngine.shared.modelSummary ?? ""
 
+    private var selectedIndex: Int? {
+        guard let id = s.selectedRetouchSpotID else { return nil }
+        return s.params.retouchSpots.firstIndex(where: { $0.id == id })
+    }
+
+    private var activeModeBinding: Binding<RetouchMode> {
+        Binding(
+            get: {
+                if let idx = selectedIndex { return s.params.retouchSpots[idx].mode }
+                return s.retouchMode
+            },
+            set: { newMode in
+                if let idx = selectedIndex {
+                    var p = s.params
+                    p.retouchSpots[idx].mode = newMode
+                    if newMode != .remove && p.retouchSpots[idx].sourceX == nil, let src = s.source {
+                        let geo = Engine.geometry(src, p)
+                        if let pt = RetouchEngine.suggestSource(for: p.retouchSpots[idx], in: geo,
+                                                                workingSpace: Engine.workingColorSpace) {
+                            p.retouchSpots[idx].sourceX = Double(pt.x)
+                            p.retouchSpots[idx].sourceY = Double(pt.y)
+                        }
+                    }
+                    s.commit(p)
+                } else {
+                    s.retouchMode = newMode
+                }
+            }
+        )
+    }
+
+    private var activeRadiusBinding: Binding<Double> {
+        Binding(
+            get: {
+                if let idx = selectedIndex { return s.params.retouchSpots[idx].radius }
+                return s.retouchRadius
+            },
+            set: { val in
+                if let idx = selectedIndex {
+                    var spot = s.params.retouchSpots[idx]
+                    spot.radius = val
+                    s.updateRetouchSpotLive(spot)
+                } else {
+                    s.retouchRadius = val
+                }
+            }
+        )
+    }
+
+    private var activeFeatherBinding: Binding<Double> {
+        Binding(
+            get: {
+                if let idx = selectedIndex { return s.params.retouchSpots[idx].feather }
+                return s.retouchFeather
+            },
+            set: { val in
+                if let idx = selectedIndex {
+                    var spot = s.params.retouchSpots[idx]
+                    spot.feather = val
+                    s.updateRetouchSpotLive(spot)
+                } else {
+                    s.retouchFeather = val
+                }
+            }
+        )
+    }
+
+    private var activeOpacityBinding: Binding<Double> {
+        Binding(
+            get: {
+                if let idx = selectedIndex { return s.params.retouchSpots[idx].opacity }
+                return s.retouchOpacity
+            },
+            set: { val in
+                if let idx = selectedIndex {
+                    var spot = s.params.retouchSpots[idx]
+                    spot.opacity = val
+                    s.updateRetouchSpotLive(spot)
+                } else {
+                    s.retouchOpacity = val
+                }
+            }
+        )
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
@@ -30,7 +115,36 @@ struct RetouchPane: View {
                 .disabled(s.source == nil || s.cropMode)
             }
 
-            Picker(L10n.tr("修复模式"), selection: $s.retouchMode) {
+            HStack(spacing: 6) {
+                Toggle(L10n.tr("显示修补标记"), isOn: $s.showRetouchOverlay)
+                    .toggleStyle(.checkbox)
+                    .font(.system(size: 10.5))
+                Spacer()
+                if let idx = selectedIndex {
+                    Button(L10n.tr("新建笔刷")) {
+                        s.selectedRetouchSpotID = nil
+                    }
+                    .controlSize(.mini)
+                    .help(L10n.tr("取消选中第 \(idx + 1) 处，回到默认画笔参数"))
+                }
+            }
+
+            if let idx = selectedIndex {
+                HStack(spacing: 4) {
+                    Text(L10n.tr("正在编辑 #\(idx + 1)"))
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(WorkspaceTokens.accent)
+                    Spacer()
+                    if s.params.retouchSpots[idx].mode != .remove {
+                        Button(L10n.tr("重选源点")) {
+                            s.resuggestRetouchSource(s.params.retouchSpots[idx].id)
+                        }
+                        .controlSize(.mini)
+                    }
+                }
+            }
+
+            Picker(L10n.tr("修复模式"), selection: activeModeBinding) {
                 ForEach(RetouchMode.allCases, id: \.self) { m in
                     Text(L10n.tr(m.label)).tag(m)
                 }
@@ -38,14 +152,20 @@ struct RetouchPane: View {
             .pickerStyle(.segmented)
             .controlSize(.small)
 
-            SliderRow(label: "画笔大小", value: $s.retouchRadius, range: 0.005...0.15,
-                      defaultValue: 0.035, decimals: 3, step: 0.005, photoScoped: false)
-            SliderRow(label: "边缘羽化", value: $s.retouchFeather, range: 0.05...1.0,
-                      defaultValue: 0.45, decimals: 2, step: 0.05, photoScoped: false)
-            SliderRow(label: "不透明度", value: $s.retouchOpacity, range: 0.1...1.0,
-                      defaultValue: 1.0, decimals: 2, step: 0.05, photoScoped: false)
+            SliderRow(label: "画笔大小", value: activeRadiusBinding, range: 0.005...0.15,
+                      defaultValue: 0.035, decimals: 3, step: 0.005, photoScoped: selectedIndex != nil) {
+                if selectedIndex != nil { s.endEdit() }
+            }
+            SliderRow(label: "边缘羽化", value: activeFeatherBinding, range: 0.05...1.0,
+                      defaultValue: 0.45, decimals: 2, step: 0.05, photoScoped: selectedIndex != nil) {
+                if selectedIndex != nil { s.endEdit() }
+            }
+            SliderRow(label: "不透明度", value: activeOpacityBinding, range: 0.1...1.0,
+                      defaultValue: 1.0, decimals: 2, step: 0.05, photoScoped: selectedIndex != nil) {
+                if selectedIndex != nil { s.endEdit() }
+            }
 
-            Text(L10n.tr("在画布拖动涂抹可消除瑕疵；按住 Option 点击画面可自定义修复/仿制采样源点。"))
+            Text(L10n.tr("在画布拖动涂抹可消除瑕疵；可直接拖动黄色采样源点或按 H 显隐标记、Delete 删除选中。"))
                 .font(.system(size: 9.5))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -77,6 +197,7 @@ struct RetouchPane: View {
                                     .font(.system(size: 9))
                                 Text("#\(idx + 1) \(L10n.tr(spot.mode.label))")
                                     .font(.system(size: 10.5))
+                                    .lineLimit(1)
                             }
                         }
                         .buttonStyle(.plain)
@@ -159,6 +280,7 @@ struct RetouchPane: View {
                 Text(modelStatusMessage).font(.system(size: 9.5)).foregroundStyle(.secondary)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .onAppear {
             modelInstalled = CoreMLInpaintingEngine.shared.isModelInstalled
             if modelInstalled {

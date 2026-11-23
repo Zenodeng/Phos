@@ -23,6 +23,7 @@ struct PointColorPane: View {
                 Spacer()
                 Button {
                     s.parameterEdits.finishCurrent()
+                    s.localPointColorMaskID = nil
                     s.pointColorPicker.toggle()
                 } label: {
                     Label(L10n.tr(s.pointColorPicker ? "正在画布取色…" : "取色"),

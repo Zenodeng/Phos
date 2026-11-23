@@ -267,13 +267,33 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
             let vcItem = NSMenuItem(title: L10n.tr("创建虚拟副本"), action: #selector(self?.ctxCreateVirtualCopy(_:)), keyEquivalent: "")
             vcItem.target = self; vcItem.representedObject = item.id; m.addItem(vcItem)
             if item.isVirtualCopy {
+                let renVC = NSMenuItem(title: L10n.tr("重命名虚拟副本…"), action: #selector(self?.ctxRenameVirtualCopy(_:)), keyEquivalent: "")
+                renVC.target = self; renVC.representedObject = item.id; m.addItem(renVC)
                 let delVC = NSMenuItem(title: L10n.tr("删除虚拟副本"), action: #selector(self?.ctxDeleteVirtualCopy(_:)), keyEquivalent: "")
                 delVC.target = self; delVC.representedObject = item.id; m.addItem(delVC)
             }
+            m.addItem(.separator())
+            let cmpItem = NSMenuItem(title: L10n.tr("设为双图对比基准"), action: #selector(self?.ctxSetComparePrimary(_:)), keyEquivalent: "")
+            cmpItem.target = self; cmpItem.representedObject = item.id; m.addItem(cmpItem)
             let refItem = NSMenuItem(title: L10n.tr("设为参考图"), action: #selector(self?.ctxSetReference(_:)), keyEquivalent: "")
             refItem.target = self; refItem.representedObject = item.url; m.addItem(refItem)
+
+            let colorSub = NSMenu(title: L10n.tr("颜色标签"))
+            for lbl in ColorLabel.allCases {
+                let ci = NSMenuItem(title: L10n.tr(lbl.label), action: #selector(self?.ctxSetColorLabel(_:)), keyEquivalent: "")
+                ci.target = self
+                ci.representedObject = ["id": item.id, "label": lbl.rawValue] as NSDictionary
+                ci.state = item.colorLabel == lbl ? .on : .off
+                colorSub.addItem(ci)
+            }
+            let colorItem = NSMenuItem(title: L10n.tr("颜色标签"), action: nil, keyEquivalent: "")
+            colorItem.submenu = colorSub; m.addItem(colorItem)
+
+            m.addItem(.separator())
             let xmpItem = NSMenuItem(title: L10n.tr("导出 XMP 旁档"), action: #selector(self?.ctxExportXMP(_:)), keyEquivalent: "")
             xmpItem.target = self; xmpItem.representedObject = item.id; m.addItem(xmpItem)
+            let importXMPItem = NSMenuItem(title: L10n.tr("从 XMP 旁档读取"), action: #selector(self?.ctxImportXMP(_:)), keyEquivalent: "")
+            importXMPItem.target = self; importXMPItem.representedObject = item.id; m.addItem(importXMPItem)
             return m
         }
     }
@@ -378,7 +398,8 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
     @objc private func synchronize() { model.perform(.sync) }
     private func updateFilter() {
         let s = model.state
-        let filterState = AppLanguage.shared.code + "\(s.filterRating)-\(s.filterPicked)-\(s.filterColorLabel?.rawValue ?? "all")-\(s.hideRejected)"
+        let cams = s.availableCameras, lenses = s.availableLenses
+        let filterState = AppLanguage.shared.code + "\(s.filterRating)-\(s.filterPicked)-\(s.filterColorLabel?.rawValue ?? "all")-\(s.hideRejected)-\(s.includeSubfolders)-\(s.filterCamera ?? "")-\(s.filterLens ?? "")-\(cams.count)-\(lenses.count)"
         guard lastFilterState != filterState else { return }
         lastFilterState = filterState
         let menu = NSMenu()
@@ -392,6 +413,7 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
         menu.addItem(.separator())
         let picked = NSMenuItem(title: L10n.tr("仅已标记"), action: #selector(filterPicked), keyEquivalent: ""); picked.target = self; picked.state = s.filterPicked ? .on : .off; menu.addItem(picked)
         let hideRej = NSMenuItem(title: L10n.tr("隐藏已淘汰"), action: #selector(toggleHideRejected), keyEquivalent: ""); hideRej.target = self; hideRej.state = s.hideRejected ? .on : .off; menu.addItem(hideRej)
+        let subFolders = NSMenuItem(title: L10n.tr("包含子文件夹"), action: #selector(toggleIncludeSubfolders), keyEquivalent: ""); subFolders.target = self; subFolders.state = s.includeSubfolders ? .on : .off; menu.addItem(subFolders)
         menu.addItem(.separator())
         let allColor = NSMenuItem(title: L10n.tr("所有颜色标签"), action: #selector(filterColor(_:)), keyEquivalent: "")
         allColor.target = self; allColor.representedObject = nil; allColor.state = s.filterColorLabel == nil ? .on : .off; menu.addItem(allColor)
@@ -399,16 +421,45 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
             let item = NSMenuItem(title: L10n.tr(lbl.label), action: #selector(filterColor(_:)), keyEquivalent: "")
             item.target = self; item.representedObject = lbl.rawValue; item.state = s.filterColorLabel == lbl ? .on : .off; menu.addItem(item)
         }
+        if !cams.isEmpty {
+            let camSub = NSMenu(title: L10n.tr("按相机筛选"))
+            let allCam = NSMenuItem(title: L10n.tr("全部相机"), action: #selector(filterByCamera(_:)), keyEquivalent: "")
+            allCam.target = self; allCam.representedObject = nil; allCam.state = s.filterCamera == nil ? .on : .off
+            camSub.addItem(allCam)
+            for c in cams {
+                let ci = NSMenuItem(title: c, action: #selector(filterByCamera(_:)), keyEquivalent: "")
+                ci.target = self; ci.representedObject = c; ci.state = s.filterCamera == c ? .on : .off
+                camSub.addItem(ci)
+            }
+            let camItem = NSMenuItem(title: L10n.tr("按相机筛选"), action: nil, keyEquivalent: "")
+            camItem.submenu = camSub; menu.addItem(camItem)
+        }
+        if !lenses.isEmpty {
+            let lensSub = NSMenu(title: L10n.tr("按镜头筛选"))
+            let allLens = NSMenuItem(title: L10n.tr("全部镜头"), action: #selector(filterByLens(_:)), keyEquivalent: "")
+            allLens.target = self; allLens.representedObject = nil; allLens.state = s.filterLens == nil ? .on : .off
+            lensSub.addItem(allLens)
+            for l in lenses {
+                let li = NSMenuItem(title: l, action: #selector(filterByLens(_:)), keyEquivalent: "")
+                li.target = self; li.representedObject = l; li.state = s.filterLens == l ? .on : .off
+                lensSub.addItem(li)
+            }
+            let lensItem = NSMenuItem(title: L10n.tr("按镜头筛选"), action: nil, keyEquivalent: "")
+            lensItem.submenu = lensSub; menu.addItem(lensItem)
+        }
         menu.addItem(.separator())
         for (title, action) in [("全选筛选结果", #selector(selectAllPhotos)), ("清除多选", #selector(clearSelection))] {
             let item = NSMenuItem(title: L10n.tr(title), action: action, keyEquivalent: ""); item.target = self; menu.addItem(item)
         }
         filter.menu = menu
-        filter.contentTintColor = (s.filterRating > 0 || s.filterPicked || s.filterColorLabel != nil || s.hideRejected) ? .rfGold : .secondaryLabelColor
+        filter.contentTintColor = (s.filterRating > 0 || s.filterPicked || s.filterColorLabel != nil || s.hideRejected || s.includeSubfolders || s.filterCamera != nil || s.filterLens != nil) ? .rfGold : .secondaryLabelColor
     }
     @objc private func filterRating(_ item: NSMenuItem) { model.state.filterRating = item.tag }
     @objc private func filterPicked() { model.state.filterPicked.toggle() }
     @objc private func toggleHideRejected() { model.state.hideRejected.toggle() }
+    @objc private func toggleIncludeSubfolders() { model.state.includeSubfolders.toggle() }
+    @objc private func filterByCamera(_ item: NSMenuItem) { model.state.filterCamera = item.representedObject as? String }
+    @objc private func filterByLens(_ item: NSMenuItem) { model.state.filterLens = item.representedObject as? String }
     @objc private func filterColor(_ item: NSMenuItem) {
         if let raw = item.representedObject as? String, let lbl = ColorLabel(rawValue: raw) {
             model.state.filterColorLabel = lbl
@@ -422,11 +473,31 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
         }
         model.state.createVirtualCopy()
     }
+    @objc private func ctxRenameVirtualCopy(_ item: NSMenuItem) {
+        guard let id = item.representedObject as? UUID,
+              let target = model.state.items.first(where: { $0.id == id }) else { return }
+        let alert = NSAlert()
+        alert.messageText = L10n.tr("重命名虚拟副本")
+        alert.addButton(withTitle: L10n.tr("保存"))
+        alert.addButton(withTitle: L10n.tr("取消"))
+        let tf = NSTextField(frame: NSRect(x: 0, y: 0, width: 220, height: 22))
+        tf.stringValue = target.virtualCopyName ?? "副本"
+        alert.accessoryView = tf
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        model.state.renameVirtualCopy(id, name: tf.stringValue)
+    }
     @objc private func ctxDeleteVirtualCopy(_ item: NSMenuItem) {
         if let id = item.representedObject as? UUID, let idx = model.state.items.firstIndex(where: { $0.id == id }) {
             model.state.select(idx)
         }
         model.state.deleteVirtualCopy()
+    }
+    @objc private func ctxSetComparePrimary(_ item: NSMenuItem) {
+        if let id = item.representedObject as? UUID {
+            model.state.comparePrimaryID = id
+            model.state.compareSubMode = .sideBySide
+            model.state.canvasDisplayMode = .compare
+        }
     }
     @objc private func ctxSetReference(_ item: NSMenuItem) {
         if let url = item.representedObject as? URL {
@@ -434,11 +505,30 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
             model.state.canvasDisplayMode = .reference
         }
     }
+    @objc private func ctxSetColorLabel(_ item: NSMenuItem) {
+        guard let info = item.representedObject as? NSDictionary,
+              let id = info["id"] as? UUID,
+              let raw = info["label"] as? String,
+              let lbl = ColorLabel(rawValue: raw) else { return }
+        if lbl == .none {
+            if let existing = model.state.items.first(where: { $0.id == id })?.colorLabel, existing != .none {
+                model.state.setColorLabel(existing, for: id)
+            }
+        } else {
+            model.state.setColorLabel(lbl, for: id)
+        }
+    }
     @objc private func ctxExportXMP(_ item: NSMenuItem) {
         if let id = item.representedObject as? UUID, let idx = model.state.items.firstIndex(where: { $0.id == id }) {
             model.state.select(idx)
         }
         model.state.exportCurrentXMP()
+    }
+    @objc private func ctxImportXMP(_ item: NSMenuItem) {
+        if let id = item.representedObject as? UUID, let idx = model.state.items.firstIndex(where: { $0.id == id }) {
+            model.state.select(idx)
+        }
+        model.state.importXMP()
     }
     @objc private func selectAllPhotos() { model.selection.selectAllVisible() }
     @objc private func clearSelection() { model.state.selectedPhotos = [] }

@@ -527,6 +527,11 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
                     if state.pointColorPicker { state.pointColorPicker = false; return nil }
                     if state.retouchActive { state.retouchActive = false; return nil }
                 }
+                if !text, (event.keyCode == 51 || event.keyCode == 117),
+                   !state.syncRunning, state.retouchActive, let selSpotID = state.selectedRetouchSpotID {
+                    state.removeRetouchSpot(selSpotID)
+                    return nil
+                }
                 if !text, event.keyCode == 36, state.cropSession != nil { state.finishCrop(); return nil }
                 if !text, !state.syncRunning {
                     let mods = event.modifierFlags.intersection([.command, .control, .option, .shift])
@@ -537,6 +542,8 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
                         case "x": if self.model.enabled(.reject) { self.model.perform(.reject); return nil }
                         case "g": if self.model.enabled(.gridView) { self.model.perform(.gridView); return nil }
                         case "c": if self.model.enabled(.compareView) { self.model.perform(.compareView); return nil }
+                        case "n": if self.model.enabled(.surveyView) { self.model.perform(.surveyView); return nil }
+                        case "h": if state.retouchActive { state.showRetouchOverlay.toggle(); return nil }
                         case "6": if state.current != nil { state.setColorLabel(.red); return nil }
                         case "7": if state.current != nil { state.setColorLabel(.yellow); return nil }
                         case "8": if state.current != nil { state.setColorLabel(.green); return nil }
@@ -681,7 +688,6 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         WorkspaceWindowChrome.positionStandardButtons(in: self)
     }
     private func configureTools() {
-        let s = model.state
         navigation.add(WorkspaceToolButton("sidebar.left", "显示或隐藏照片浏览器") { [weak self] in self?.model.session.browserVisible.toggle() })
         navigation.add(WorkspaceToolButton("arrow.uturn.backward", "撤销") { [weak self] in self?.model.perform(.undo) })
         navigation.add(WorkspaceToolButton("arrow.uturn.forward", "重做") { [weak self] in self?.model.perform(.redo) })
@@ -770,9 +776,9 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         presets.addItem(.separator())
         item(L10n.tr("保存当前调整为预设…"), in: presets, enabled: ready) { [weak self] in self?.model.savePreset() }
         let presetItem = NSMenuItem(title: L10n.tr("预设"), action: nil, keyEquivalent: ""); presetItem.submenu = presets; menu.addItem(presetItem)
-        for (name, command) in [("命名快照…", WorkspaceCommandID.snapshots), ("同步调整…", .sync), ("批量导出…", .batch), ("多重曝光合成…", .merge), ("同几何分割对比", .beforeGeometry), ("局部画笔", .brush), ("显示或隐藏当前蒙版", .overlay), ("污点修复画笔", .retouchTool), ("点颜色取样", .pointColorTool), ("高光/暗部溢出警示 (J)", .clipping), ("网格看片视图 (G)", .gridView), ("双图同步对比 (C)", .compareView), ("参考锁定视图 (⇧R)", .referenceView), ("创建虚拟副本", .createVirtualCopy), ("删除虚拟副本", .deleteVirtualCopy), ("导出当前 XMP 旁档", .exportXMP), ("取消当前处理", .cancelJob)] {
+        for (name, command) in [("命名快照…", WorkspaceCommandID.snapshots), ("同步调整…", .sync), ("批量导出…", .batch), ("多重曝光合成…", .merge), ("同几何分割对比", .beforeGeometry), ("局部画笔", .brush), ("显示或隐藏当前蒙版", .overlay), ("污点修复画笔", .retouchTool), ("点颜色取样", .pointColorTool), ("高光/暗部溢出警示 (J)", .clipping), ("网格看片视图 (G)", .gridView), ("双图同步对比 (C)", .compareView), ("多图同屏选片 (N)", .surveyView), ("参考锁定视图 (⇧R)", .referenceView), ("创建虚拟副本", .createVirtualCopy), ("删除虚拟副本", .deleteVirtualCopy), ("导出当前 XMP 旁档", .exportXMP), ("从 XMP 旁档读取", .importXMP), ("自动写入 XMP 旁档", .toggleAutoSyncXMP), ("取消当前处理", .cancelJob)] {
             item(L10n.tr(name), in: menu, enabled: model.enabled(command),
-                 checked: (command == .beforeGeometry && s.splitComparison) || (command == .clipping && s.showClippingWarning) || (command == .retouchTool && s.retouchActive) || (command == .pointColorTool && s.pointColorPicker)) { [weak self] in self?.model.perform(command) }
+                 checked: (command == .beforeGeometry && s.splitComparison) || (command == .clipping && s.showClippingWarning) || (command == .retouchTool && s.retouchActive) || (command == .pointColorTool && s.pointColorPicker) || (command == .toggleAutoSyncXMP && s.autoSyncXMP) || (command == .surveyView && s.canvasDisplayMode == .compare && s.compareSubMode == .survey)) { [weak self] in self?.model.perform(command) }
         }
         item(L10n.tr("切换 EDR 动态范围"), in: menu, enabled: true, checked: s.edrEnabled) { s.edrEnabled.toggle() }
         item(L10n.tr("复制调整"), in: menu, enabled: model.enabled(.copy)) { [weak self] in self?.model.perform(.copy) }

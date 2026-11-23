@@ -12,6 +12,9 @@ struct PhotoItem: Identifiable, Equatable {
     var rejected: Bool = false
     var virtualCopyID: UUID? = nil
     var virtualCopyName: String? = nil
+    var keywords: [String] = []
+    var cameraModel: String = ""
+    var lensModel: String = ""
     var thumb: CGImage?
     var isVirtualCopy: Bool { virtualCopyID != nil }
     var displayName: String {
@@ -22,10 +25,13 @@ struct PhotoItem: Identifiable, Equatable {
     }
     init(id: UUID = UUID(), url: URL, rating: Int = 0, picked: Bool = false,
          colorLabel: ColorLabel = .none, rejected: Bool = false,
-         virtualCopyID: UUID? = nil, virtualCopyName: String? = nil, thumb: CGImage? = nil) {
+         virtualCopyID: UUID? = nil, virtualCopyName: String? = nil,
+         keywords: [String] = [], cameraModel: String = "", lensModel: String = "",
+         thumb: CGImage? = nil) {
         self.id = id; self.url = url; self.rating = rating; self.picked = picked
         self.colorLabel = colorLabel; self.rejected = rejected
         self.virtualCopyID = virtualCopyID; self.virtualCopyName = virtualCopyName
+        self.keywords = keywords; self.cameraModel = cameraModel; self.lensModel = lensModel
         self.thumb = thumb
     }
 }
@@ -42,6 +48,17 @@ enum CanvasDisplayMode: String, CaseIterable {
     }
 }
 
+enum CompareSubMode: String, CaseIterable {
+    case sideBySide, survey, beforeAfter
+    var label: String {
+        switch self {
+        case .sideBySide: return "双图选片"
+        case .survey: return "多图同屏"
+        case .beforeAfter: return "修改前后"
+        }
+    }
+}
+
 @MainActor
 final class AppState: ObservableObject {
     // 浏览器
@@ -52,6 +69,15 @@ final class AppState: ObservableObject {
     @Published var filterPicked = false
     @Published var filterColorLabel: ColorLabel? = nil
     @Published var hideRejected = false
+    @Published var filterCamera: String? = nil
+    @Published var filterLens: String? = nil
+    @Published var includeSubfolders = false {
+        didSet {
+            if oldValue != includeSubfolders, let folder {
+                openFolder(folder)
+            }
+        }
+    }
     @Published var searchText = ""
     @Published var folderLoading = false
     @Published var folderFailure: String?
@@ -63,9 +89,15 @@ final class AppState: ObservableObject {
     lazy var parameterEdits = ParameterEditCoordinator(state:self)
     let inspectorUI = WorkspaceInspectorState()
     private var savedSidecarFingerprint: Data?
-    private var currentKeywords: [String] = []
+    @Published var currentKeywords: [String] = []
     private var currentVirtualCopies: [VirtualCopy] = []
     private var lastDecodedRawLensCorrection: Bool?
+    var availableCameras: [String] {
+        Array(Set(items.map(\.cameraModel).filter { !$0.isEmpty })).sorted()
+    }
+    var availableLenses: [String] {
+        Array(Set(items.map(\.lensModel).filter { !$0.isEmpty })).sorted()
+    }
     var visiblePhotoIndices: [Int] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         return items.indices.filter {
@@ -74,8 +106,14 @@ final class AppState: ObservableObject {
                    (!filterPicked || it.picked) &&
                    (filterColorLabel == nil || it.colorLabel == filterColorLabel) &&
                    (!hideRejected || !it.rejected) &&
-                   (query.isEmpty || it.url.lastPathComponent.localizedStandardContains(query) ||
-                    (it.virtualCopyName?.localizedStandardContains(query) ?? false))
+                   (filterCamera == nil || it.cameraModel == filterCamera) &&
+                   (filterLens == nil || it.lensModel == filterLens) &&
+                   (query.isEmpty ||
+                    it.url.lastPathComponent.localizedStandardContains(query) ||
+                    (it.virtualCopyName?.localizedStandardContains(query) ?? false) ||
+                    it.cameraModel.localizedStandardContains(query) ||
+                    it.lensModel.localizedStandardContains(query) ||
+                    it.keywords.contains(where: { $0.localizedStandardContains(query) }))
         }
     }
     var previousVisiblePhotoIndex: Int? {
@@ -103,12 +141,20 @@ final class AppState: ObservableObject {
             if pointColorPicker {
                 whiteBalancePicker = false; retouchActive = false
                 showBefore = false; splitComparison = false; cancelMaskDrawing()
+            } else {
+                localPointColorMaskID = nil
             }
         }
     }
+    @Published var localPointColorMaskID: UUID? = nil
     @Published var edrEnabled = true
     @Published var showClippingWarning = false
     @Published var canvasDisplayMode: CanvasDisplayMode = .single
+    @Published var compareSubMode: CompareSubMode = .sideBySide
+    @Published var comparePrimaryID: UUID? = nil
+    @Published var multiViewFrames: [UUID: PreviewFrame] = [:]
+    private var multiViewLoadingIDs: Set<UUID> = []
+    private var multiViewOrder: [UUID] = []
     @Published var referencePhotoURL: URL? = nil
     @Published var referenceFrame: PreviewFrame? = nil
     @Published var retouchActive = false {
@@ -120,12 +166,15 @@ final class AppState: ObservableObject {
             }
         }
     }
+    @Published var showRetouchOverlay = true
     @Published var retouchMode: RetouchMode = .heal
     @Published var retouchRadius: Double = 0.035
     @Published var retouchFeather: Double = 0.45
     @Published var retouchOpacity: Double = 1.0
     @Published var selectedRetouchSpotID: UUID? = nil
-    @Published var autoSyncXMP = false
+    @Published var autoSyncXMP: Bool = UserDefaults.standard.bool(forKey: "phos.autoSyncXMP") {
+        didSet { UserDefaults.standard.set(autoSyncXMP, forKey: "phos.autoSyncXMP") }
+    }
     // 自动影调：分析一次拿到 solution，强度滑杆按增量在此之上加减
     @Published var showPhotoAI = false
     @Published var autoRunning = false
@@ -139,6 +188,8 @@ final class AppState: ObservableObject {
     @Published var maskTool: MaskTool = .position
     @Published var brushRadius: Double = 0.05
     @Published var brushFeather: Double = 0.5
+    @Published var brushAutoMask: Bool = false
+    @Published var selectedMaskComponentID: UUID? = nil
     var maskPreviewImage: CGImage? { previewFrame?.mask }
     // A gradient is a transient draft until mouse-up: no sidecar writes or undo steps while drawing.
     @Published var maskDrawingKind: MaskKind?
@@ -184,6 +235,7 @@ final class AppState: ObservableObject {
         willSet { if newValue != selectedMask { parameterEdits.finishCurrent() } }
         didSet {
             if oldValue != selectedMask {
+                selectedMaskComponentID = nil
                 cancelMaskDrawing()
                 maskTool = .position
                 previewQueue.invalidate()
@@ -237,9 +289,11 @@ final class AppState: ObservableObject {
     let cluts = CLUTLibrary.shared
 
     private lazy var thumbnails = WorkspaceThumbnailScheduler(metrics: workMetrics) { [weak self] url, image in
-        guard let self, let index = items.firstIndex(where: { $0.url == url }) else { return }
-        if let image { items[index].thumb = image; thumbnailFailures.remove(items[index].id) }
-        else { thumbnailFailures.insert(items[index].id) }
+        guard let self else { return }
+        for idx in items.indices where items[idx].url == url {
+            if let image { items[idx].thumb = image; thumbnailFailures.remove(items[idx].id) }
+            else { thumbnailFailures.insert(items[idx].id) }
+        }
     }
     var thumbnailCacheCount: Int { thumbnails.cachedCount }
     var thumbnailActiveCount: Int { thumbnails.activeCount }
@@ -253,6 +307,10 @@ final class AppState: ObservableObject {
     private let sourceCache = BoundedCache<URL, CachedSource>(capacity: 5)
     private var prefetchTask: Task<Void, Never>?
     private let previewLongEdge: CGFloat = 2200
+    private struct FolderScanRequest {
+        let url: URL
+        let recursive: Bool
+    }
     private struct PhotoLoad {
         let url: URL
         let cached: CIImage?
@@ -269,36 +327,65 @@ final class AppState: ObservableObject {
         let overlayMask: UUID?
         let split: Bool
     }
-    private lazy var folderQueue = LatestWorkQueue<URL, [PhotoItem]?>(
+    nonisolated private static func lightweightCameraLens(_ url: URL) -> (camera: String, lens: String) {
+        guard let src = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
+              let meta = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [String: Any] else { return ("", "") }
+        let exif = meta[kCGImagePropertyExifDictionary as String] as? [String: Any] ?? [:]
+        let tiff = meta[kCGImagePropertyTIFFDictionary as String] as? [String: Any] ?? [:]
+        let cam = (tiff[kCGImagePropertyTIFFModel as String] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let lens = (exif[kCGImagePropertyExifLensModel as String] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return (cam, lens)
+    }
+    private lazy var folderQueue = LatestWorkQueue<FolderScanRequest, [PhotoItem]?>(
         priority: .userInitiated,
-        operation: { url in
-            guard let files = try? FileManager.default.contentsOfDirectory(
-                at: url, includingPropertiesForKeys: nil) else { return nil }
-            let sortedURLs = files.filter { Engine.browseSet.contains($0.pathExtension.lowercased()) }
-                .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+        operation: { req in
+            let url = req.url
+            var collected: [URL] = []
+            if req.recursive {
+                guard let en = FileManager.default.enumerator(
+                    at: url,
+                    includingPropertiesForKeys: [.isRegularFileKey],
+                    options: [.skipsHiddenFiles, .skipsPackageDescendants]
+                ) else { return nil }
+                for case let fileURL as URL in en {
+                    if Engine.browseSet.contains(fileURL.pathExtension.lowercased()) {
+                        collected.append(fileURL)
+                    }
+                }
+            } else {
+                guard let files = try? FileManager.default.contentsOfDirectory(
+                    at: url, includingPropertiesForKeys: nil) else { return nil }
+                collected = files.filter { Engine.browseSet.contains($0.pathExtension.lowercased()) }
+            }
+            let sortedURLs = collected.sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
             var list: [PhotoItem] = []
             for url in sortedURLs {
-                let sidecar = SidecarStore.load(for: url) ?? XMPSidecar.read(for: url)?.toSidecar()
-                var item = PhotoItem(url: url)
-                if let sidecar {
-                    item.rating = sidecar.rating
-                    item.picked = sidecar.picked
-                    item.colorLabel = sidecar.colorLabel
-                    item.rejected = sidecar.rejected
-                }
-                list.append(item)
-                if let copies = sidecar?.virtualCopies {
-                    for vc in copies {
-                        list.append(PhotoItem(id: vc.id, url: url, rating: vc.rating, picked: vc.picked,
-                                              colorLabel: vc.colorLabel, rejected: vc.rejected,
-                                              virtualCopyID: vc.id, virtualCopyName: vc.name))
+                autoreleasepool {
+                    let sidecar = SidecarStore.load(for: url) ?? XMPSidecar.read(for: url)?.toSidecar()
+                    let meta = Self.lightweightCameraLens(url)
+                    let kws = sidecar?.keywords ?? []
+                    var item = PhotoItem(url: url, keywords: kws, cameraModel: meta.camera, lensModel: meta.lens)
+                    if let sidecar {
+                        item.rating = sidecar.rating
+                        item.picked = sidecar.picked
+                        item.colorLabel = sidecar.colorLabel
+                        item.rejected = sidecar.rejected
+                    }
+                    list.append(item)
+                    if let copies = sidecar?.virtualCopies {
+                        for vc in copies {
+                            list.append(PhotoItem(id: vc.id, url: url, rating: vc.rating, picked: vc.picked,
+                                                  colorLabel: vc.colorLabel, rejected: vc.rejected,
+                                                  virtualCopyID: vc.id, virtualCopyName: vc.name,
+                                                  keywords: kws, cameraModel: meta.camera, lensModel: meta.lens))
+                        }
                     }
                 }
             }
             return list
         },
-        completion: { [weak self] url, result in
-            guard let self, self.folder == url else { return }
+        completion: { [weak self] req, result in
+            guard let self, self.folder == req.url else { return }
             self.folderLoading = false
             guard let result else { self.status = "无法读取文件夹"; self.folderFailure = self.status; return }
             self.items = result
@@ -411,13 +498,22 @@ final class AppState: ObservableObject {
         selectedPhotos = []
         snapshots = []
         selectedMask = nil
+        selectedMaskComponentID = nil
+        localPointColorMaskID = nil
         whiteBalancePicker = false
+        pointColorPicker = false
+        filterCamera = nil
+        filterLens = nil
+        comparePrimaryID = nil
+        multiViewFrames.removeAll()
+        multiViewOrder.removeAll()
+        multiViewLoadingIDs.removeAll()
         clearAutoTone()
         sourceCache.removeAll()
         folder = url
         folderLoading = true; folderFailure = nil; thumbnailFailures = []; savedSidecarFingerprint = nil
         status = "正在读取文件夹…"
-        folderQueue.submit(url)
+        folderQueue.submit(FolderScanRequest(url: url, recursive: includeSubfolders))
     }
 
     private func loadThumbnails() {
@@ -479,6 +575,8 @@ final class AppState: ObservableObject {
         hasDisparity = false
         whiteBalancePicker = false
         pointColorPicker = false
+        localPointColorMaskID = nil
+        selectedMaskComponentID = nil
         selectedRetouchSpotID = nil
         clearAutoTone()
         sidecarReadFailed = false
@@ -523,6 +621,7 @@ final class AppState: ObservableObject {
         parameterEdits.invalidate()
         let rawLensChanged = p.rawEmbeddedLensCorrection != lastDecodedRawLensCorrection
         params = p
+        if let cid = current?.id { multiViewFrames.removeValue(forKey: cid) }
         if cropSession != nil { render(); return }
         history.push(p)
         if rawLensChanged, let u = current?.url {
@@ -645,26 +744,77 @@ final class AppState: ObservableObject {
     }
 
     func setRating(_ r: Int) {
-        guard current != nil, !sidecarReadFailed, !syncRunning else { return }
-        items[currentIndex].rating = min(max(r, 0), 5)
-        saveCurrent()
+        guard let id = current?.id, !sidecarReadFailed, !syncRunning else { return }
+        setRating(r, for: id)
     }
     func togglePick() {
-        guard current != nil, !sidecarReadFailed, !syncRunning else { return }
-        items[currentIndex].picked.toggle()
-        if items[currentIndex].picked { items[currentIndex].rejected = false }
-        saveCurrent()
+        guard let id = current?.id, !sidecarReadFailed, !syncRunning else { return }
+        togglePick(for: id)
     }
     func setColorLabel(_ label: ColorLabel) {
-        guard current != nil, !sidecarReadFailed, !syncRunning else { return }
-        items[currentIndex].colorLabel = items[currentIndex].colorLabel == label ? .none : label
-        saveCurrent()
+        guard let id = current?.id, !sidecarReadFailed, !syncRunning else { return }
+        setColorLabel(label, for: id)
     }
     func toggleReject() {
-        guard current != nil, !sidecarReadFailed, !syncRunning else { return }
-        items[currentIndex].rejected.toggle()
-        if items[currentIndex].rejected { items[currentIndex].picked = false }
-        saveCurrent()
+        guard let id = current?.id, !sidecarReadFailed, !syncRunning else { return }
+        toggleReject(for: id)
+    }
+
+    func setRating(_ r: Int, for itemID: UUID) {
+        mutateItemMetadata(itemID: itemID) { it in it.rating = min(max(r, 0), 5) }
+    }
+    func togglePick(for itemID: UUID) {
+        mutateItemMetadata(itemID: itemID) { it in
+            it.picked.toggle()
+            if it.picked { it.rejected = false }
+        }
+    }
+    func setColorLabel(_ label: ColorLabel, for itemID: UUID) {
+        mutateItemMetadata(itemID: itemID) { it in
+            it.colorLabel = it.colorLabel == label ? .none : label
+        }
+    }
+    func toggleReject(for itemID: UUID) {
+        mutateItemMetadata(itemID: itemID) { it in
+            it.rejected.toggle()
+            if it.rejected { it.picked = false }
+        }
+    }
+
+    private func mutateItemMetadata(itemID: UUID, _ body: (inout PhotoItem) -> Void) {
+        guard !syncRunning, let idx = items.firstIndex(where: { $0.id == itemID }) else { return }
+        if idx == currentIndex {
+            guard !sidecarReadFailed else { return }
+            body(&items[idx])
+            saveCurrent()
+            return
+        }
+        var updated = items[idx]
+        body(&updated)
+        items[idx] = updated
+        do {
+            let existing = try SidecarStore.read(for: updated.url)
+            var base = existing ?? Sidecar(params: EditParams())
+            if let vcID = updated.virtualCopyID,
+               let vIdx = base.virtualCopies.firstIndex(where: { $0.id == vcID }) {
+                base.virtualCopies[vIdx].rating = updated.rating
+                base.virtualCopies[vIdx].picked = updated.picked
+                base.virtualCopies[vIdx].colorLabel = updated.colorLabel
+                base.virtualCopies[vIdx].rejected = updated.rejected
+            } else if updated.virtualCopyID == nil {
+                base.rating = updated.rating
+                base.picked = updated.picked
+                base.colorLabel = updated.colorLabel
+                base.rejected = updated.rejected
+            }
+            try SidecarStore.write(base, for: updated.url)
+            if autoSyncXMP && !updated.isVirtualCopy {
+                try? XMPSidecar.write(base, for: updated.url)
+            }
+            workMetrics.increment("sidecarWrite")
+        } catch {
+            workflowError = "元数据保存失败：\(updated.url.lastPathComponent)\n\(error.localizedDescription)"
+        }
     }
 
     // MARK: - 裁剪模式辅助
@@ -955,6 +1105,31 @@ final class AppState: ObservableObject {
         p.masks.removeAll { $0.id == id }
         if selectedMask == id { selectedMask = nil }
         commit(p)
+    }
+
+    func updateMaskComponent(maskID: UUID, component: MaskComponent) {
+        var p = params
+        guard let mIdx = p.masks.firstIndex(where: { $0.id == maskID }),
+              let cIdx = p.masks[mIdx].components.firstIndex(where: { $0.id == component.id }) else { return }
+        p.masks[mIdx].components[cIdx] = component
+        MaskEngine.invalidateCache(for: component.id)
+        commit(p)
+    }
+
+    func updateMaskComponentLive(maskID: UUID, component: MaskComponent) {
+        var p = params
+        guard let mIdx = p.masks.firstIndex(where: { $0.id == maskID }),
+              let cIdx = p.masks[mIdx].components.firstIndex(where: { $0.id == component.id }) else { return }
+        p.masks[mIdx].components[cIdx] = component
+        MaskEngine.invalidateCache(for: component.id)
+        params = p
+        render()
+    }
+
+    func recomputeMaskComponent(maskID: UUID, componentID: UUID) {
+        MaskEngine.invalidateCache(for: componentID)
+        previewQueue.invalidate()
+        render()
     }
 
     // MARK: - 预设
@@ -1303,7 +1478,9 @@ final class AppState: ObservableObject {
             let newItem = PhotoItem(
                 id: copy.id, url: it.url, rating: copy.rating, picked: copy.picked,
                 colorLabel: copy.colorLabel, rejected: copy.rejected,
-                virtualCopyID: copy.id, virtualCopyName: copy.name, thumb: it.thumb
+                virtualCopyID: copy.id, virtualCopyName: copy.name,
+                keywords: currentKeywords, cameraModel: it.cameraModel, lensModel: it.lensModel,
+                thumb: it.thumb
             )
             let insertIndex = items.lastIndex(where: { $0.url == it.url }).map { $0 + 1 } ?? (currentIndex + 1)
             items.insert(newItem, at: insertIndex)
@@ -1311,6 +1488,126 @@ final class AppState: ObservableObject {
             status = "已创建虚拟副本：\(copy.name)"
         } catch {
             workflowError = "创建虚拟副本失败：\(error.localizedDescription)"
+        }
+    }
+
+    func renameVirtualCopy(_ id: UUID, name: String) {
+        let trimmed = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(80))
+        guard !trimmed.isEmpty, !syncRunning,
+              let idx = items.firstIndex(where: { $0.id == id }),
+              let vcID = items[idx].virtualCopyID else { return }
+        let url = items[idx].url
+        do {
+            var base = try SidecarStore.read(for: url) ?? Sidecar(params: EditParams())
+            if let vIdx = base.virtualCopies.firstIndex(where: { $0.id == vcID }) {
+                base.virtualCopies[vIdx].name = trimmed
+            }
+            try SidecarStore.write(base, for: url)
+            workMetrics.increment("sidecarWrite")
+            items[idx].virtualCopyName = trimmed
+            if idx == currentIndex {
+                currentVirtualCopies = base.virtualCopies
+                savedSidecarFingerprint = sidecarFingerprint()
+            }
+            status = "已重命名虚拟副本：\(trimmed)"
+        } catch {
+            workflowError = "重命名虚拟副本失败：\(error.localizedDescription)"
+        }
+    }
+
+    func setKeywords(_ list: [String]) {
+        guard let it = current, !sidecarReadFailed, !syncRunning else { return }
+        let clean = list.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+        var seen = Set<String>()
+        let unique = clean.filter { seen.insert($0).inserted }
+        currentKeywords = unique
+        for i in items.indices where items[i].url == it.url {
+            items[i].keywords = unique
+        }
+        saveCurrent()
+    }
+
+    func importXMP(from url: URL? = nil) {
+        guard let it = current, !sidecarReadFailed, !syncRunning else { return }
+        let meta: XMPSidecar.XMPMetadata?
+        let sourceDesc: String
+        if let url {
+            guard let data = try? Data(contentsOf: url), data.count <= 2 * 1024 * 1024 else {
+                workflowError = "无法读取 XMP 文件：\(url.lastPathComponent)"
+                return
+            }
+            meta = XMPSidecar.parse(data: data)
+            sourceDesc = url.lastPathComponent
+        } else {
+            meta = XMPSidecar.read(for: it.url)
+            sourceDesc = XMPSidecar.url(for: it.url).lastPathComponent
+        }
+        guard let meta else {
+            status = "未找到或无法解析 XMP 旁档：\(sourceDesc)"
+            return
+        }
+        parameterEdits.finishCurrent()
+        items[currentIndex].rating = meta.rating
+        if meta.hasGoodAttr || !meta.rejected {
+            items[currentIndex].picked = meta.hasGoodAttr ? meta.picked : (meta.rating >= 4)
+        }
+        items[currentIndex].rejected = meta.rejected
+        if meta.rejected { items[currentIndex].picked = false }
+        if meta.label != .none { items[currentIndex].colorLabel = meta.label }
+        if !meta.keywords.isEmpty {
+            currentKeywords = meta.keywords
+            for i in items.indices where items[i].url == it.url {
+                items[i].keywords = meta.keywords
+            }
+        }
+        if meta.hasEdits {
+            commit(meta.params)
+        } else {
+            saveCurrent()
+        }
+        status = "已导入 XMP：\(sourceDesc)"
+    }
+
+    func ensureMultiViewFrame(for item: PhotoItem) {
+        if item.id == current?.id { return }
+        if multiViewFrames[item.id] != nil || multiViewLoadingIDs.contains(item.id) { return }
+        multiViewLoadingIDs.insert(item.id)
+        let targetID = item.id
+        let url = item.url
+        let vcID = item.virtualCopyID
+        Task.detached(priority: .userInitiated) {
+            let sidecar = SidecarStore.load(for: url) ?? XMPSidecar.read(for: url)?.toSidecar()
+            let rp: EditParams
+            if let vcID, let vc = sidecar?.virtualCopies.first(where: { $0.id == vcID }) {
+                rp = vc.params
+            } else {
+                rp = sidecar?.params ?? EditParams()
+            }
+            let src = Engine.decode(url, rawEmbeddedLensCorrection: rp.rawEmbeddedLensCorrection)
+            let frame: PreviewFrame?
+            if let src {
+                let key = PreviewFrameKey(photoID: targetID, revision: 0, purpose: .edited,
+                                          paramsFingerprint: PreviewFrame.fingerprint(rp))
+                let req = PreviewRequest(key: key, source: src, params: rp, url: url,
+                                         fullResolution: false, cropMode: false, longEdge: 1400,
+                                         overlayMask: nil, split: false)
+                frame = Self.makePreview(req)?.edited
+            } else {
+                frame = nil
+            }
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.multiViewLoadingIDs.remove(targetID)
+                if let frame {
+                    self.multiViewFrames[targetID] = frame
+                    self.multiViewOrder.removeAll { $0 == targetID }
+                    self.multiViewOrder.append(targetID)
+                    while self.multiViewOrder.count > 8 {
+                        let drop = self.multiViewOrder.removeFirst()
+                        self.multiViewFrames.removeValue(forKey: drop)
+                    }
+                }
+            }
         }
     }
 
@@ -1375,7 +1672,7 @@ final class AppState: ObservableObject {
         for it in masters {
             let sc = SidecarStore.load(for: it.url)
                 ?? Sidecar(params: EditParams(), rating: it.rating, picked: it.picked,
-                           colorLabel: it.colorLabel, rejected: it.rejected)
+                           colorLabel: it.colorLabel, rejected: it.rejected, keywords: it.keywords)
             if (try? XMPSidecar.write(sc, for: it.url)) != nil { written += 1 }
         }
         status = "已导出 \(written) 个 XMP 旁档文件"
@@ -1404,6 +1701,19 @@ final class AppState: ObservableObject {
         }
         let rgb = [rSum / Double(count), gSum / Double(count), bSum / Double(count)]
         var p = params
+        if let maskID = localPointColorMaskID,
+           let mIdx = p.masks.firstIndex(where: { $0.id == maskID }) {
+            var sw = PointColorSwatch(sampleRGB: rgb, name: p.masks[mIdx].name)
+            if let old = p.masks[mIdx].adjust.pointColor {
+                sw.hueShift = old.hueShift; sw.chromaShift = old.chromaShift
+                sw.lumaShift = old.lumaShift; sw.range = old.range
+            }
+            p.masks[mIdx].adjust.pointColor = sw
+            pointColorPicker = false
+            commit(p)
+            status = "已为蒙版采样点颜色，可微调局部色相/彩度/明度"
+            return
+        }
         let sw = PointColorSwatch(sampleRGB: rgb, name: "色样 \(p.pointColors.count + 1)")
         p.pointColors.append(sw)
         pointColorPicker = false
@@ -1412,10 +1722,38 @@ final class AppState: ObservableObject {
     }
 
     func addRetouchSpot(_ spot: RetouchSpot) {
+        var added = spot
+        if added.mode != .remove && added.sourceX == nil, let src = source {
+            let geo = Engine.geometry(src, params)
+            if let suggested = RetouchEngine.suggestSource(for: added, in: geo, workingSpace: Engine.workingColorSpace) {
+                added.sourceX = Double(suggested.x)
+                added.sourceY = Double(suggested.y)
+            }
+        }
         var p = params
-        p.retouchSpots.append(spot)
-        selectedRetouchSpotID = spot.id
+        p.retouchSpots.append(added)
+        selectedRetouchSpotID = added.id
         commit(p)
+    }
+
+    func resuggestRetouchSource(_ id: UUID) {
+        guard let src = source,
+              let i = params.retouchSpots.firstIndex(where: { $0.id == id }) else { return }
+        var spot = params.retouchSpots[i]
+        guard spot.mode != .remove else { return }
+        let geo = Engine.geometry(src, params)
+        let oldPt: CGPoint? = (spot.sourceX != nil && spot.sourceY != nil)
+            ? CGPoint(x: spot.sourceX!, y: spot.sourceY!) : nil
+        if let suggested = RetouchEngine.suggestSource(for: spot, in: geo,
+                                                       workingSpace: Engine.workingColorSpace,
+                                                       avoiding: oldPt) {
+            spot.sourceX = Double(suggested.x)
+            spot.sourceY = Double(suggested.y)
+            var p = params
+            p.retouchSpots[i] = spot
+            commit(p)
+            status = "已重新挑选干净采样源点"
+        }
     }
 
     func updateRetouchSpotLive(_ spot: RetouchSpot) {

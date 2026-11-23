@@ -135,6 +135,10 @@ struct MaskEditingControls: View {
             if s.maskTool != .position {
                 SliderRow(label: "笔刷", value: $s.brushRadius, range: 0.005...0.3, defaultValue:0.05, photoScoped:false)
                 SliderRow(label: "软边", value: $s.brushFeather, range: 0...1, defaultValue:0.5, photoScoped:false)
+                Toggle(L10n.tr("自动边缘吸附"), isOn: $s.brushAutoMask)
+                    .toggleStyle(.checkbox)
+                    .font(.system(size: 11))
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }.font(.system(size: 11))
     }

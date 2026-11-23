@@ -277,6 +277,8 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
             cmpItem.target = self; cmpItem.representedObject = item.id; m.addItem(cmpItem)
             let refItem = NSMenuItem(title: L10n.tr("设为参考图"), action: #selector(self?.ctxSetReference(_:)), keyEquivalent: "")
             refItem.target = self; refItem.representedObject = item.url; m.addItem(refItem)
+            let simItem = NSMenuItem(title: L10n.tr("找相似照片"), action: #selector(self?.ctxFindSimilar(_:)), keyEquivalent: "")
+            simItem.target = self; simItem.representedObject = item.id; simItem.isEnabled = !item.isVirtualCopy; m.addItem(simItem)
 
             let colorSub = NSMenu(title: L10n.tr("颜色标签"))
             for lbl in ColorLabel.allCases {
@@ -399,7 +401,7 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
     private func updateFilter() {
         let s = model.state
         let cams = s.availableCameras, lenses = s.availableLenses
-        let filterState = AppLanguage.shared.code + "\(s.filterRating)-\(s.filterPicked)-\(s.filterColorLabel?.rawValue ?? "all")-\(s.hideRejected)-\(s.includeSubfolders)-\(s.filterCamera ?? "")-\(s.filterLens ?? "")-\(cams.count)-\(lenses.count)"
+        let filterState = AppLanguage.shared.code + "\(s.filterRating)-\(s.filterPicked)-\(s.filterColorLabel?.rawValue ?? "all")-\(s.hideRejected)-\(s.includeSubfolders)-\(s.filterCamera ?? "")-\(s.filterLens ?? "")-\(cams.count)-\(lenses.count)-\(s.cullingFilter.rawValue)-\(s.cullingRunning)-\(s.cullMetrics.isEmpty)-\(s.similarPhotoTargetID?.uuidString ?? "")"
         guard lastFilterState != filterState else { return }
         lastFilterState = filterState
         let menu = NSMenu()
@@ -448,11 +450,54 @@ final class WorkspaceBrowserView: NSView, NSTableViewDataSource, NSTableViewDele
             lensItem.submenu = lensSub; menu.addItem(lensItem)
         }
         menu.addItem(.separator())
+        let cullSub = NSMenu(title: L10n.tr("智能挑片"))
+        let runCull = NSMenuItem(title: L10n.tr(s.cullingRunning ? "取消智能挑片" : "开始智能挑片分析"),
+                                 action: #selector(toggleSmartCulling), keyEquivalent: "")
+        runCull.target = self; runCull.isEnabled = !s.items.isEmpty; cullSub.addItem(runCull)
+        let pickBest = NSMenuItem(title: L10n.tr("一键精选最佳照片"),
+                                  action: #selector(applyCullBest), keyEquivalent: "")
+        pickBest.target = self; pickBest.isEnabled = !s.cullMetrics.isEmpty; cullSub.addItem(pickBest)
+        let rejBad = NSMenuItem(title: L10n.tr("一键淘汰闭眼/跑焦"),
+                                action: #selector(rejectCullBad), keyEquivalent: "")
+        rejBad.target = self; rejBad.isEnabled = !s.cullMetrics.isEmpty; cullSub.addItem(rejBad)
+        cullSub.addItem(.separator())
+        for cf in CullingFilter.allCases {
+            let fi = NSMenuItem(title: L10n.tr(cf.label), action: #selector(selectCullFilter(_:)), keyEquivalent: "")
+            fi.target = self; fi.representedObject = cf.rawValue
+            fi.state = s.cullingFilter == cf ? .on : .off
+            cullSub.addItem(fi)
+        }
+        let cullItem = NSMenuItem(title: L10n.tr("智能挑片"), action: nil, keyEquivalent: "")
+        cullItem.submenu = cullSub; menu.addItem(cullItem)
+
+        if s.similarPhotoTargetID != nil {
+            let clearSim = NSMenuItem(title: L10n.tr("清除相似排序"), action: #selector(clearSimilarSort), keyEquivalent: "")
+            clearSim.target = self; menu.addItem(clearSim)
+        }
+
+        menu.addItem(.separator())
         for (title, action) in [("全选筛选结果", #selector(selectAllPhotos)), ("清除多选", #selector(clearSelection))] {
             let item = NSMenuItem(title: L10n.tr(title), action: action, keyEquivalent: ""); item.target = self; menu.addItem(item)
         }
         filter.menu = menu
-        filter.contentTintColor = (s.filterRating > 0 || s.filterPicked || s.filterColorLabel != nil || s.hideRejected || s.includeSubfolders || s.filterCamera != nil || s.filterLens != nil) ? .rfGold : .secondaryLabelColor
+        filter.contentTintColor = (s.filterRating > 0 || s.filterPicked || s.filterColorLabel != nil || s.hideRejected || s.includeSubfolders || s.filterCamera != nil || s.filterLens != nil || s.cullingFilter != .all || s.similarPhotoTargetID != nil) ? .rfGold : .secondaryLabelColor
+    }
+    @objc private func toggleSmartCulling() {
+        if model.state.cullingRunning { model.state.cancelSmartCulling() }
+        else { model.state.runSmartCulling() }
+    }
+    @objc private func applyCullBest() { model.state.applyCullBestPicks() }
+    @objc private func rejectCullBad() { model.state.rejectCullDefects() }
+    @objc private func selectCullFilter(_ item: NSMenuItem) {
+        if let raw = item.representedObject as? String, let cf = CullingFilter(rawValue: raw) {
+            model.state.cullingFilter = cf
+        }
+    }
+    @objc private func clearSimilarSort() { model.state.clearSimilarFilter() }
+    @objc private func ctxFindSimilar(_ item: NSMenuItem) {
+        if let id = item.representedObject as? UUID {
+            model.state.findSimilarPhotos(to: id)
+        }
     }
     @objc private func filterRating(_ item: NSMenuItem) { model.state.filterRating = item.tag }
     @objc private func filterPicked() { model.state.filterPicked.toggle() }

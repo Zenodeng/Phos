@@ -643,6 +643,9 @@ struct EditParams: Codable, Equatable {
     var sharpenMask: Double = 0       // 蒙版：按住边缘，平区不被放大噪点
     var denoise: Double = 0
     var denoiseColor: Double = 0
+    var aiDenoise: Double = 0         // AI/Metal RAW 线性域保边降噪 0...100
+    var aiDenoiseDetail: Double = 50  // AI 降噪细节保留 0...100
+    var superResolution: Bool = false // 2x 超分辨率导出/全像素增强
     var grain: Double = 0
     var grainSize: Double = 0.6
     var grainRoughness: Double = 0.5
@@ -656,8 +659,14 @@ struct EditParams: Codable, Equatable {
     var halationRadius: Double = 0.33  // 半径 0...1 → 长边的 0.5%~2%
 
     // 焦外散景：0 = 关闭，0...100 控制虚化强度。
-    // 深度蒙版来源：iPhone 人像 HEIC 的 disparity 辅助数据，或一张「深度涂绘」蒙版（涂白=被虚化）
+    // 深度蒙版来源：深度涂绘蒙版 > HEIC disparity > P3 单目深度估计
     var bokehAmount: Double = 0
+    var bokehFocusDepth: Double = 0.12     // 焦平面深度 0（近）...1（远）
+    var bokehFocusRange: Double = 0.20     // 清晰景深带宽 0.02...0.6
+    var bokehBlades: Int = 0               // 0=圆形，5/6/7/8=多边形光圈叶片
+    var bokehHighlightBoost: Double = 35   // 线性 HDR 高光散景光斑增益 0...100
+    var bokehCatEye: Double = 20           // 边角机械暗角猫眼旋焦 0...100
+    var bokehAutoDepth: Bool = true        // 无 disparity/手涂深度时自动启用单目深度估计
 
     // 镜头校正
     var lensCorrection: LensCorrection? = nil
@@ -794,11 +803,14 @@ struct EditParams: Codable, Equatable {
         out.sharpen = s(sharpen, d.sharpen, 0...2)
         out.denoise = s(denoise, d.denoise, 0...100)
         out.denoiseColor = s(denoiseColor, d.denoiseColor, 0...100)
+        out.aiDenoise = s(aiDenoise, d.aiDenoise, 0...100)
         out.grain = s(grain, d.grain, 0...100)
 
         out.vignette = s(vignette, d.vignette, -100...100)
         out.halation = s(halation, d.halation, 0...100)
         out.bokehAmount = s(bokehAmount, d.bokehAmount, 0...100)
+        out.bokehHighlightBoost = s(bokehHighlightBoost, d.bokehHighlightBoost, 0...100)
+        out.bokehCatEye = s(bokehCatEye, d.bokehCatEye, 0...100)
         out.caAmount = s(caAmount, d.caAmount, -100...100)
         out.purpleFringe = s(purpleFringe, d.purpleFringe, 0...100)
 
@@ -823,10 +835,12 @@ struct EditParams: Codable, Equatable {
         case gradeShadow, gradeMid, gradeHigh, gradeBlend, gradeBalance
         case mono, monoRed, monoGreen, monoBlue
         case sharpen, sharpenRadius, sharpenDetail, sharpenMask
-        case denoise, denoiseColor, grain, grainSize, grainRoughness, retouchSpots
+        case denoise, denoiseColor, aiDenoise, aiDenoiseDetail, superResolution
+        case grain, grainSize, grainRoughness, retouchSpots
         case vignette, vignetteStart
         case halation, halationThreshold, halationRadius
-        case bokehAmount
+        case bokehAmount, bokehFocusDepth, bokehFocusRange, bokehBlades
+        case bokehHighlightBoost, bokehCatEye, bokehAutoDepth
         case lensCorrection, rawEmbeddedLensCorrection
         case caAmount, purpleFringe
         case primRed, primGreen, primBlue, calibShadowTint
@@ -886,6 +900,9 @@ struct EditParams: Codable, Equatable {
         sharpenRadius  = try c.decodeIfPresent(Double.self, forKey: .sharpenRadius)  ?? base.sharpenRadius
         denoise        = try c.decodeIfPresent(Double.self, forKey: .denoise)        ?? base.denoise
         denoiseColor   = try c.decodeIfPresent(Double.self, forKey: .denoiseColor)   ?? base.denoiseColor
+        aiDenoise      = try c.decodeIfPresent(Double.self, forKey: .aiDenoise)      ?? base.aiDenoise
+        aiDenoiseDetail = try c.decodeIfPresent(Double.self, forKey: .aiDenoiseDetail) ?? base.aiDenoiseDetail
+        superResolution = try c.decodeIfPresent(Bool.self, forKey: .superResolution) ?? base.superResolution
         grain          = try c.decodeIfPresent(Double.self, forKey: .grain)          ?? base.grain
         grainSize      = try c.decodeIfPresent(Double.self, forKey: .grainSize)      ?? base.grainSize
         grainRoughness = try c.decodeIfPresent(Double.self, forKey: .grainRoughness) ?? base.grainRoughness
@@ -895,7 +912,13 @@ struct EditParams: Codable, Equatable {
         halation       = try c.decodeIfPresent(Double.self, forKey: .halation)       ?? base.halation
         halationThreshold = try c.decodeIfPresent(Double.self, forKey: .halationThreshold) ?? base.halationThreshold
         halationRadius = try c.decodeIfPresent(Double.self, forKey: .halationRadius) ?? base.halationRadius
-        bokehAmount    = try c.decodeIfPresent(Double.self, forKey: .bokehAmount) ?? base.bokehAmount
+        bokehAmount    = try c.decodeIfPresent(Double.self, forKey: .bokehAmount)    ?? base.bokehAmount
+        bokehFocusDepth = try c.decodeIfPresent(Double.self, forKey: .bokehFocusDepth) ?? base.bokehFocusDepth
+        bokehFocusRange = try c.decodeIfPresent(Double.self, forKey: .bokehFocusRange) ?? base.bokehFocusRange
+        bokehBlades    = try c.decodeIfPresent(Int.self, forKey: .bokehBlades)       ?? base.bokehBlades
+        bokehHighlightBoost = try c.decodeIfPresent(Double.self, forKey: .bokehHighlightBoost) ?? base.bokehHighlightBoost
+        bokehCatEye    = try c.decodeIfPresent(Double.self, forKey: .bokehCatEye)    ?? base.bokehCatEye
+        bokehAutoDepth = try c.decodeIfPresent(Bool.self, forKey: .bokehAutoDepth)   ?? base.bokehAutoDepth
         lensCorrection = try c.decodeIfPresent(LensCorrection.self, forKey: .lensCorrection)
         if lensCorrection?.valid == false { lensCorrection = nil }
         rawEmbeddedLensCorrection = try c.decodeIfPresent(Bool.self, forKey: .rawEmbeddedLensCorrection) ?? base.rawEmbeddedLensCorrection

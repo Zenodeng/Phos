@@ -79,7 +79,8 @@ final class MetalEngine: @unchecked Sendable {
          "gf_box_h", "gf_box_v", "gf_coeff", "gf_apply_mask",
          "local_tone_apply", "dehaze_apply", "edge_detail_apply",
          "curves_grading_apply", "oklch_color_apply", "film_grain_apply",
-         "mask_boolean_combine", "clipping_overlay"]
+         "mask_boolean_combine", "clipping_overlay",
+         "bokeh_optical_apply", "depth_visualize_overlay", "raw_denoise_apply", "super_res_enhance"]
     }
 
     func selfTestAllPipelines() -> Bool {
@@ -748,5 +749,236 @@ final class MetalClippingOverlayKernel: CIImageProcessorKernel {
         let e = image.extent
         guard MetalEngine.shared.isAvailable, !e.isEmpty, !e.isInfinite else { return image }
         return (try? apply(withExtent: e, inputs: [image], arguments: nil)) ?? image
+    }
+}
+
+final class MetalOpticalBokehKernel: CIImageProcessorKernel {
+    override class var outputFormat: CIFormat { .RGBAh }
+    override class func formatForInput(at input: Int32) -> CIFormat { .RGBAh }
+    override class var synchronizeInputs: Bool { false }
+
+    override class func roi(forInput input: Int32, arguments: [String: Any]?, outputRect: CGRect) -> CGRect {
+        let maxR = (arguments?["maxRadiusPx"] as? NSNumber)?.doubleValue ?? 0
+        let pad = input == 0 || input == 1 ? CGFloat(ceil(min(max(maxR, 0), 120)) + 2) : 0
+        let grown = pad > 0 ? outputRect.insetBy(dx: -pad, dy: -pad) : outputRect
+        if let arr = arguments?["extent"] as? [Double], arr.count == 4 {
+            let full = CGRect(x: arr[0], y: arr[1], width: arr[2], height: arr[3])
+            let clamped = grown.intersection(full)
+            return clamped.isEmpty ? outputRect.intersection(full) : clamped
+        }
+        return grown
+    }
+
+    override class func process(with inputs: [CIImageProcessorInput]?, arguments: [String: Any]?, output: CIImageProcessorOutput) throws {
+        guard let inputs, inputs.count >= 2,
+              let srcTex = inputs[0].metalTexture,
+              let depTex = inputs[1].metalTexture,
+              let outTex = output.metalTexture,
+              let cmd = output.metalCommandBuffer,
+              let pApply = MetalEngine.shared.pipeline("bokeh_optical_apply"),
+              let enc = cmd.makeComputeCommandEncoder() else { return }
+
+        let (ox0, oy0) = MetalEngine.textureOffset(inputRegion: inputs[0].region, outputRegion: output.region)
+        let (dx0, dy0) = MetalEngine.textureOffset(inputRegion: inputs[1].region, outputRegion: output.region)
+        let arr = (arguments?["extent"] as? [Double]) ?? [0, 0, Double(outTex.width), Double(outTex.height)]
+        var u = MetalShaders.OpticalBokehUniforms(
+            maxRadiusPx: Float((arguments?["maxRadiusPx"] as? NSNumber)?.doubleValue ?? 18),
+            focusDepth: Float((arguments?["focusDepth"] as? NSNumber)?.doubleValue ?? 0.12),
+            focusRange: Float((arguments?["focusRange"] as? NSNumber)?.doubleValue ?? 0.20),
+            blades: Int32((arguments?["blades"] as? NSNumber)?.intValue ?? 0),
+            highlightBoost: Float(((arguments?["highlightBoost"] as? NSNumber)?.doubleValue ?? 35) / 100.0),
+            catEye: Float(((arguments?["catEye"] as? NSNumber)?.doubleValue ?? 20) / 100.0),
+            fullWidth: Float(arr.count == 4 ? max(arr[2], 1) : Double(outTex.width)),
+            fullHeight: Float(arr.count == 4 ? max(arr[3], 1) : Double(outTex.height)),
+            outOriginX: Float(output.region.minX - (arr.count == 4 ? arr[0] : 0)),
+            outOriginY: Float((arr.count == 4 ? (arr[1] + arr[3]) : Double(outTex.height)) - output.region.maxY),
+            offsetX: ox0,
+            offsetY: oy0,
+            depthOffsetX: dx0,
+            depthOffsetY: dy0
+        )
+        enc.setComputePipelineState(pApply)
+        enc.setTexture(srcTex, index: 0)
+        enc.setTexture(depTex, index: 1)
+        enc.setTexture(outTex, index: 2)
+        enc.setBytes(&u, length: MemoryLayout<MetalShaders.OpticalBokehUniforms>.stride, index: 0)
+        MetalEngine.dispatch2D(enc, pipeline: pApply, width: outTex.width, height: outTex.height)
+        enc.endEncoding()
+    }
+
+    static func apply(_ image: CIImage, depthMask: CIImage, maxRadiusPx: Double,
+                      focusDepth: Double, focusRange: Double, blades: Int,
+                      highlightBoost: Double, catEye: Double) -> CIImage {
+        let e = image.extent
+        guard MetalEngine.shared.isAvailable, !e.isEmpty, !e.isInfinite else { return image }
+        let args: [String: Any] = [
+            "maxRadiusPx": NSNumber(value: min(max(maxRadiusPx, 0), 120)),
+            "focusDepth": NSNumber(value: min(max(focusDepth, 0), 1)),
+            "focusRange": NSNumber(value: min(max(focusRange, 0.02), 0.6)),
+            "blades": NSNumber(value: blades),
+            "highlightBoost": NSNumber(value: min(max(highlightBoost, 0), 100)),
+            "catEye": NSNumber(value: min(max(catEye, 0), 100)),
+            "extent": MetalEngine.extentArgs(e)
+        ]
+        return (try? apply(withExtent: e, inputs: [image.cropped(to: e), depthMask.cropped(to: e)], arguments: args)) ?? image
+    }
+}
+
+final class MetalDepthVisualizeKernel: CIImageProcessorKernel {
+    override class var outputFormat: CIFormat { .RGBAh }
+    override class func formatForInput(at input: Int32) -> CIFormat { .RGBAh }
+    override class var synchronizeInputs: Bool { false }
+    override class func roi(forInput input: Int32, arguments: [String: Any]?, outputRect: CGRect) -> CGRect { outputRect }
+
+    override class func process(with inputs: [CIImageProcessorInput]?, arguments: [String: Any]?, output: CIImageProcessorOutput) throws {
+        guard let inputs, inputs.count >= 2,
+              let srcTex = inputs[0].metalTexture,
+              let depTex = inputs[1].metalTexture,
+              let outTex = output.metalTexture,
+              let cmd = output.metalCommandBuffer,
+              let pApply = MetalEngine.shared.pipeline("depth_visualize_overlay"),
+              let enc = cmd.makeComputeCommandEncoder() else { return }
+
+        let (ox0, oy0) = MetalEngine.textureOffset(inputRegion: inputs[0].region, outputRegion: output.region)
+        let (dx0, dy0) = MetalEngine.textureOffset(inputRegion: inputs[1].region, outputRegion: output.region)
+        var u = MetalShaders.DepthVisUniforms(
+            focusDepth: Float((arguments?["focusDepth"] as? NSNumber)?.doubleValue ?? 0.12),
+            focusRange: Float((arguments?["focusRange"] as? NSNumber)?.doubleValue ?? 0.20),
+            offsetX: ox0,
+            offsetY: oy0,
+            depthOffsetX: dx0,
+            depthOffsetY: dy0
+        )
+        enc.setComputePipelineState(pApply)
+        enc.setTexture(srcTex, index: 0)
+        enc.setTexture(depTex, index: 1)
+        enc.setTexture(outTex, index: 2)
+        enc.setBytes(&u, length: MemoryLayout<MetalShaders.DepthVisUniforms>.stride, index: 0)
+        MetalEngine.dispatch2D(enc, pipeline: pApply, width: outTex.width, height: outTex.height)
+        enc.endEncoding()
+    }
+
+    static func apply(_ image: CIImage, depthMask: CIImage, focusDepth: Double, focusRange: Double) -> CIImage {
+        let e = image.extent
+        guard MetalEngine.shared.isAvailable, !e.isEmpty, !e.isInfinite else { return image }
+        let args: [String: Any] = [
+            "focusDepth": NSNumber(value: min(max(focusDepth, 0), 1)),
+            "focusRange": NSNumber(value: min(max(focusRange, 0.02), 0.6))
+        ]
+        return (try? apply(withExtent: e, inputs: [image.cropped(to: e), depthMask.cropped(to: e)], arguments: args)) ?? image
+    }
+}
+
+final class MetalRawDenoiseKernel: CIImageProcessorKernel {
+    override class var outputFormat: CIFormat { .RGBAh }
+    override class func formatForInput(at input: Int32) -> CIFormat { .RGBAh }
+    override class var synchronizeInputs: Bool { false }
+
+    override class func roi(forInput input: Int32, arguments: [String: Any]?, outputRect: CGRect) -> CGRect {
+        let step = (arguments?["stepPx"] as? NSNumber)?.doubleValue ?? 1.0
+        let pad = CGFloat(ceil(max(1.0, step) * 2.5) + 1)
+        let grown = outputRect.insetBy(dx: -pad, dy: -pad)
+        if let arr = arguments?["extent"] as? [Double], arr.count == 4 {
+            let full = CGRect(x: arr[0], y: arr[1], width: arr[2], height: arr[3])
+            let clamped = grown.intersection(full)
+            return clamped.isEmpty ? outputRect.intersection(full) : clamped
+        }
+        return grown
+    }
+
+    override class func process(with inputs: [CIImageProcessorInput]?, arguments: [String: Any]?, output: CIImageProcessorOutput) throws {
+        guard let input = inputs?.first,
+              let inTex = input.metalTexture,
+              let outTex = output.metalTexture,
+              let cmd = output.metalCommandBuffer,
+              let pApply = MetalEngine.shared.pipeline("raw_denoise_apply"),
+              let enc = cmd.makeComputeCommandEncoder() else { return }
+
+        let (ox, oy) = MetalEngine.textureOffset(inputRegion: input.region, outputRegion: output.region)
+        let amount = Float((arguments?["amount"] as? NSNumber)?.doubleValue ?? 0.5)
+        let detail = Float((arguments?["detail"] as? NSNumber)?.doubleValue ?? 0.5)
+        let chromaOnly = (arguments?["chromaOnly"] as? NSNumber)?.boolValue == true
+        let stepPx = Float((arguments?["stepPx"] as? NSNumber)?.doubleValue ?? 1.0)
+        var u = MetalShaders.RawDenoiseUniforms(
+            amount: amount,
+            detail: detail,
+            lumaSigma: 0.04 + 0.16 * amount * (1.0 - detail * 0.55),
+            chromaSigma: 0.04 + 0.24 * amount,
+            chromaOnly: chromaOnly ? 1 : 0,
+            stepPx: stepPx,
+            offsetX: ox,
+            offsetY: oy
+        )
+        enc.setComputePipelineState(pApply)
+        enc.setTexture(inTex, index: 0)
+        enc.setTexture(outTex, index: 1)
+        enc.setBytes(&u, length: MemoryLayout<MetalShaders.RawDenoiseUniforms>.stride, index: 0)
+        MetalEngine.dispatch2D(enc, pipeline: pApply, width: outTex.width, height: outTex.height)
+        enc.endEncoding()
+    }
+
+    static func apply(_ image: CIImage, amount: Double, detail: Double,
+                      chromaOnly: Bool = false, refScale: CGFloat = 1.0) -> CIImage {
+        let e = image.extent
+        guard MetalEngine.shared.isAvailable, !e.isEmpty, !e.isInfinite, amount > 0 else { return image }
+        let stepPx = min(max(Double(refScale), 1.0), 3.0)
+        let args: [String: Any] = [
+            "amount": NSNumber(value: min(max(amount / 100.0, 0), 1)),
+            "detail": NSNumber(value: min(max(detail / 100.0, 0), 1)),
+            "chromaOnly": NSNumber(value: chromaOnly),
+            "stepPx": NSNumber(value: stepPx),
+            "extent": MetalEngine.extentArgs(e)
+        ]
+        return (try? apply(withExtent: e, inputs: [image.cropped(to: e)], arguments: args)) ?? image
+    }
+}
+
+final class MetalSuperResKernel: CIImageProcessorKernel {
+    override class var outputFormat: CIFormat { .RGBAh }
+    override class func formatForInput(at input: Int32) -> CIFormat { .RGBAh }
+    override class var synchronizeInputs: Bool { false }
+
+    override class func roi(forInput input: Int32, arguments: [String: Any]?, outputRect: CGRect) -> CGRect {
+        let grown = outputRect.insetBy(dx: -2, dy: -2)
+        if let arr = arguments?["extent"] as? [Double], arr.count == 4 {
+            let full = CGRect(x: arr[0], y: arr[1], width: arr[2], height: arr[3])
+            let clamped = grown.intersection(full)
+            return clamped.isEmpty ? outputRect.intersection(full) : clamped
+        }
+        return grown
+    }
+
+    override class func process(with inputs: [CIImageProcessorInput]?, arguments: [String: Any]?, output: CIImageProcessorOutput) throws {
+        guard let input = inputs?.first,
+              let inTex = input.metalTexture,
+              let outTex = output.metalTexture,
+              let cmd = output.metalCommandBuffer,
+              let pApply = MetalEngine.shared.pipeline("super_res_enhance"),
+              let enc = cmd.makeComputeCommandEncoder() else { return }
+
+        let (ox, oy) = MetalEngine.textureOffset(inputRegion: input.region, outputRegion: output.region)
+        var u = MetalShaders.SuperResUniforms(
+            sharpen: Float((arguments?["sharpen"] as? NSNumber)?.doubleValue ?? 0.55),
+            edgePreserve: Float((arguments?["edgePreserve"] as? NSNumber)?.doubleValue ?? 0.85),
+            offsetX: ox,
+            offsetY: oy
+        )
+        enc.setComputePipelineState(pApply)
+        enc.setTexture(inTex, index: 0)
+        enc.setTexture(outTex, index: 1)
+        enc.setBytes(&u, length: MemoryLayout<MetalShaders.SuperResUniforms>.stride, index: 0)
+        MetalEngine.dispatch2D(enc, pipeline: pApply, width: outTex.width, height: outTex.height)
+        enc.endEncoding()
+    }
+
+    static func apply(_ image: CIImage, sharpen: Double = 0.55, edgePreserve: Double = 0.85) -> CIImage {
+        let e = image.extent
+        guard MetalEngine.shared.isAvailable, !e.isEmpty, !e.isInfinite else { return image }
+        let args: [String: Any] = [
+            "sharpen": NSNumber(value: sharpen),
+            "edgePreserve": NSNumber(value: edgePreserve),
+            "extent": MetalEngine.extentArgs(e)
+        ]
+        return (try? apply(withExtent: e, inputs: [image.cropped(to: e)], arguments: args)) ?? image
     }
 }

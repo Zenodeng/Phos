@@ -86,6 +86,41 @@ struct GridCanvasView: View {
                         }
                     }
 
+                    Menu {
+                        if s.cullingRunning {
+                            Button(L10n.tr("取消智能挑片")) { s.cancelSmartCulling() }
+                        } else {
+                            Button(L10n.tr("开始智能挑片分析")) { s.runSmartCulling() }
+                        }
+                        Button(L10n.tr("一键精选最佳照片")) { s.applyCullBestPicks() }
+                            .disabled(s.cullMetrics.isEmpty)
+                        Button(L10n.tr("一键淘汰闭眼/跑焦")) { s.rejectCullDefects() }
+                            .disabled(s.cullMetrics.isEmpty)
+                        Divider()
+                        ForEach(CullingFilter.allCases, id: \.self) { cf in
+                            Button {
+                                s.cullingFilter = cf
+                            } label: {
+                                if s.cullingFilter == cf {
+                                    Label(L10n.tr(cf.label), systemImage: "checkmark")
+                                } else {
+                                    Text(L10n.tr(cf.label))
+                                }
+                            }
+                        }
+                    } label: {
+                        Label(L10n.tr(s.cullingRunning ? "挑片中…" : (s.cullingFilter == .all ? "智能挑片" : s.cullingFilter.label)),
+                              systemImage: "sparkles.rectangle.stack")
+                            .font(.system(size: 10.5)).lineLimit(1)
+                    }
+                    .menuStyle(.borderlessButton)
+                    .controlSize(.mini)
+
+                    if s.similarPhotoTargetID != nil {
+                        Button(L10n.tr("清除相似排序")) { s.clearSimilarFilter() }
+                            .controlSize(.mini).lineLimit(1)
+                    }
+
                     Spacer(minLength: 8)
 
                     Image(systemName: "photo.fill")
@@ -173,6 +208,33 @@ struct GridCanvasView: View {
                                             .padding(6)
                                         Spacer()
                                     }
+                                } else if let cm = s.cullMetrics[item.id] {
+                                    VStack {
+                                        HStack {
+                                            if cm.eyesClosed {
+                                                Text(L10n.tr("闭眼"))
+                                                    .font(.system(size: 9, weight: .semibold))
+                                                    .padding(.horizontal, 5).padding(.vertical, 2)
+                                                    .background(.red.opacity(0.85), in: Capsule())
+                                                    .foregroundStyle(.white)
+                                            } else if cm.isBlurry {
+                                                Text(L10n.tr("模糊"))
+                                                    .font(.system(size: 9, weight: .semibold))
+                                                    .padding(.horizontal, 5).padding(.vertical, 2)
+                                                    .background(.orange.opacity(0.85), in: Capsule())
+                                                    .foregroundStyle(.white)
+                                            } else if cm.isBurstBest {
+                                                Text(L10n.tr("最佳"))
+                                                    .font(.system(size: 9, weight: .semibold))
+                                                    .padding(.horizontal, 5).padding(.vertical, 2)
+                                                    .background(.green.opacity(0.85), in: Capsule())
+                                                    .foregroundStyle(.white)
+                                            }
+                                            Spacer()
+                                        }
+                                        Spacer()
+                                    }
+                                    .padding(6)
                                 }
                             }
 
@@ -286,6 +348,10 @@ struct GridCanvasView: View {
             s.setReferencePhoto(item.url)
             s.canvasDisplayMode = .reference
         }
+        Button(L10n.tr("找相似照片")) {
+            s.findSimilarPhotos(to: item.id)
+        }
+        .disabled(item.isVirtualCopy)
         Divider()
         Button(L10n.tr(item.picked ? "取消标记" : "标记为精选")) {
             s.togglePick(for: item.id)
@@ -732,6 +798,11 @@ struct ReferenceCanvasView: View {
 
                 Button(L10n.tr("适合")) { scale = 1.0; offset = .zero; dragStart = .zero }.controlSize(.mini)
                 Button("2x") { scale = 2.0 }.controlSize(.mini)
+                Button(L10n.tr("匹配参考色调")) {
+                    _ = s.runColorMatch(referenceURL: s.referencePhotoURL)
+                }
+                .controlSize(.mini)
+                .disabled(s.source == nil || s.referencePhotoURL == nil)
                 Button(L10n.tr("将当前设为参考")) { s.setReferencePhoto(s.current?.url) }
                     .controlSize(.mini)
                     .disabled(s.current == nil)

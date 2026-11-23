@@ -150,7 +150,8 @@ enum Engine {
     }
 
     static func render(_ source: CIImage, _ p: EditParams, disparityMask: CIImage? = nil,
-                       selectedMask: UUID? = nil, resolvedAuto: ResolvedPerspective? = nil, maskPreview: ((CIImage) -> Void)? = nil) -> CIImage {
+                       selectedMask: UUID? = nil, resolvedAuto: ResolvedPerspective? = nil,
+                       forExport: Bool = false, maskPreview: ((CIImage) -> Void)? = nil) -> CIImage {
         let baseImg: CIImage
         if resolvedAuto == nil, let cached = lookupStageCache(source: source, params: p) {
             baseImg = cached
@@ -174,6 +175,10 @@ enum Engine {
                 "inputGVector": CIVector(x: 0, y: gains[1], z: 0, w: 0),
                 "inputBVector": CIVector(x: 0, y: 0, z: gains[2], w: 0)
             ])
+        }
+        // 2a) P3 线性 RAW 域保边降噪（在曝光/对比拉升之前压平噪点，避免放大颗粒与彩色伪影）
+        if p.aiDenoise > 0 {
+            img = NeuralDenoiseEngine.applyDenoise(img, amount: p.aiDenoise, detail: p.aiDenoiseDetail, refScale: refScale)
         }
         // 2b) 镜头校正：横向色差（R/B 通道反向微缩放）与紫边抑制
         if p.caAmount != 0 { img = correctLateralCA(img, amount: p.caAmount) }
@@ -338,7 +343,9 @@ enum Engine {
 
         // 10) 降噪与锐化（半径均随画幅比例归一化，确保预览与导出 100% 一致）
         if p.denoiseColor > 0 {
-            if let f = CIFilter(name: "CIDissolveTransition") {
+            if useMetal {
+                img = MetalRawDenoiseKernel.apply(img, amount: p.denoiseColor, detail: 100, chromaOnly: true, refScale: refScale)
+            } else if let f = CIFilter(name: "CIDissolveTransition") {
                 f.setValue(img, forKey: "inputImage")
                 f.setValue(img.applyingFilter("CIMedianFilter"), forKey: "inputTargetImage")
                 f.setValue(NSNumber(value: min(p.denoiseColor / 100, 1)), forKey: "inputTime")
@@ -431,6 +438,10 @@ enum Engine {
             maskPreview?(image)
         }
         img = applyMasks(img, p, selectedMask: selectedMask, maskPreview: maskPreview, refScale: refScale)
+
+        if forExport && p.superResolution {
+            img = NeuralDenoiseEngine.applySuperResolution(img)
+        }
 
         return img
     }

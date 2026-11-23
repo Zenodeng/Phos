@@ -109,6 +109,50 @@ enum MetalShaders {
         var subOffsetY: Int32
     }
 
+    struct OpticalBokehUniforms {
+        var maxRadiusPx: Float
+        var focusDepth: Float
+        var focusRange: Float
+        var blades: Int32
+        var highlightBoost: Float
+        var catEye: Float
+        var fullWidth: Float
+        var fullHeight: Float
+        var outOriginX: Float
+        var outOriginY: Float
+        var offsetX: Int32
+        var offsetY: Int32
+        var depthOffsetX: Int32
+        var depthOffsetY: Int32
+    }
+
+    struct DepthVisUniforms {
+        var focusDepth: Float
+        var focusRange: Float
+        var offsetX: Int32
+        var offsetY: Int32
+        var depthOffsetX: Int32
+        var depthOffsetY: Int32
+    }
+
+    struct RawDenoiseUniforms {
+        var amount: Float
+        var detail: Float
+        var lumaSigma: Float
+        var chromaSigma: Float
+        var chromaOnly: Int32
+        var stepPx: Float
+        var offsetX: Int32
+        var offsetY: Int32
+    }
+
+    struct SuperResUniforms {
+        var sharpen: Float
+        var edgePreserve: Float
+        var offsetX: Int32
+        var offsetY: Int32
+    }
+
     static let source = #"""
 #include <metal_stdlib>
 using namespace metal;
@@ -873,6 +917,256 @@ kernel void clipping_overlay(
         px.rgb = stripe ? float3(0.14, 0.45, 1.0) : px.rgb + float3(0.05, 0.15, 0.42);
     }
     dst.write(px, gid);
+}
+
+// MARK: - 10. 物理光学散景（多边形叶片 + 猫眼旋焦 + 线性高光光斑）
+struct OpticalBokehUniforms {
+    float maxRadiusPx;
+    float focusDepth;
+    float focusRange;
+    int blades;
+    float highlightBoost;
+    float catEye;
+    float fullWidth;
+    float fullHeight;
+    float outOriginX;
+    float outOriginY;
+    int offsetX;
+    int offsetY;
+    int depthOffsetX;
+    int depthOffsetY;
+};
+
+inline float cocForDepth(float d, float focusDepth, float focusRange, float maxRadiusPx) {
+    float deadZone = max(0.02, focusRange * 0.75);
+    float dist = max(0.0, abs(d - focusDepth) - deadZone);
+    float span = max(0.12, 1.0 - deadZone);
+    return clamp(dist / span, 0.0, 1.0) * maxRadiusPx;
+}
+
+kernel void bokeh_optical_apply(
+    texture2d<float, access::read> src [[texture(0)]],
+    texture2d<float, access::read> depthTex [[texture(1)]],
+    texture2d<float, access::write> dst [[texture(2)]],
+    constant OpticalBokehUniforms &u [[buffer(0)]],
+    uint2 gid [[thread_position_in_grid]]
+) {
+    if (gid.x >= dst.get_width() || gid.y >= dst.get_height()) return;
+    int2 srcC = int2(gid) + int2(u.offsetX, u.offsetY);
+    int2 depC = int2(gid) + int2(u.depthOffsetX, u.depthOffsetY);
+    float4 centerPx = readClamped(src, srcC);
+    float d0 = clamp(readClamped(depthTex, depC).r, 0.0, 1.0);
+    float coc0 = cocForDepth(d0, u.focusDepth, u.focusRange, u.maxRadiusPx);
+    if (coc0 < 0.75) {
+        dst.write(centerPx, gid);
+        return;
+    }
+
+    float2 uvNorm = (float2(float(gid.x) + u.outOriginX, float(gid.y) + u.outOriginY)
+                     / max(float2(u.fullWidth, u.fullHeight), float2(1.0))) * 2.0 - 1.0;
+    float2 catCenter = uvNorm * (u.catEye * 0.55);
+    float catR2 = dot(uvNorm, uvNorm);
+    float catScale = 1.0 / max(1.0 - min(catR2 * u.catEye * 0.35, 0.45), 0.55);
+
+    float3 sumRGB = centerPx.rgb * 0.65;
+    float sumW = 0.65;
+
+    float sec = u.blades >= 5 ? (2.0 * M_PI_F / float(u.blades)) : 1.0;
+    for (int k = 0; k < 37; k++) {
+        float theta = float(k) * 2.39996323;
+        float r = sqrt((float(k) + 0.5) / 37.0);
+        float2 disk = float2(cos(theta), sin(theta)) * r;
+
+        float pupilMask = 1.0;
+        if (u.blades >= 5) {
+            float ang = atan2(disk.y, disk.x);
+            if (ang < 0.0) ang += 2.0 * M_PI_F;
+            float la = fmod(ang, sec) - 0.5 * sec;
+            float polyMax = cos(0.5 * sec) / max(cos(la), 0.35);
+            pupilMask *= smoothstep(1.06, 0.88, r / polyMax);
+        }
+        if (u.catEye > 0.001) {
+            float2 shifted = (disk - catCenter) * float2(catScale, 1.0);
+            pupilMask *= smoothstep(1.05, 0.85, length(shifted));
+        }
+        if (pupilMask < 0.02) continue;
+
+        int2 off = int2(round(disk.x * coc0), round(disk.y * coc0));
+        float4 spx = readClamped(src, srcC + off);
+        float ds = clamp(readClamped(depthTex, depC + off).r, 0.0, 1.0);
+        float cocS = cocForDepth(ds, u.focusDepth, u.focusRange, u.maxRadiusPx);
+
+        // 防前景渗色门控：锐利前景边界不向虚化背景溢色
+        float bleed = (ds >= d0 - 0.06) ? 1.0 : smoothstep(0.15 * coc0, 0.45 * coc0, cocS);
+        float luma = dot(max(spx.rgb, float3(0.0)), LUMA_W);
+        float hiWeight = 1.0;
+        if (luma > 0.65 && u.highlightBoost > 0.001) {
+            hiWeight += pow(clamp((luma - 0.65) / 1.4, 0.0, 3.0), 1.35) * (u.highlightBoost * 4.5);
+        }
+        float w = pupilMask * mix(0.12, 1.0, bleed) * hiWeight;
+        sumRGB += spx.rgb * w;
+        sumW += w;
+    }
+
+    float3 outRGB = sumRGB / max(sumW, 1e-4);
+    float edgeBlend = smoothstep(0.75, 2.2, coc0);
+    dst.write(float4(mix(centerPx.rgb, outRGB, edgeBlend), centerPx.a), gid);
+}
+
+// MARK: - 11. 深度热力图叠加显示
+struct DepthVisUniforms {
+    float focusDepth;
+    float focusRange;
+    int offsetX;
+    int offsetY;
+    int depthOffsetX;
+    int depthOffsetY;
+};
+
+kernel void depth_visualize_overlay(
+    texture2d<float, access::read> src [[texture(0)]],
+    texture2d<float, access::read> depthTex [[texture(1)]],
+    texture2d<float, access::write> dst [[texture(2)]],
+    constant DepthVisUniforms &u [[buffer(0)]],
+    uint2 gid [[thread_position_in_grid]]
+) {
+    if (gid.x >= dst.get_width() || gid.y >= dst.get_height()) return;
+    float4 px = readClamped(src, int2(gid) + int2(u.offsetX, u.offsetY));
+    float d = clamp(readClamped(depthTex, int2(gid) + int2(u.depthOffsetX, u.depthOffsetY)).r, 0.0, 1.0);
+    float diff = d - u.focusDepth;
+    float dead = max(0.02, u.focusRange * 0.75);
+    float focusBand = 1.0 - smoothstep(dead * 0.7, dead * 1.25, abs(diff));
+    float3 nearCol = float3(0.95, 0.34, 0.10);
+    float3 farCol  = float3(0.08, 0.38, 0.96);
+    float3 focCol  = float3(0.92, 0.78, 0.16);
+    float3 heat = diff < 0.0 ? mix(float3(0.55, 0.25, 0.15), nearCol, clamp(-diff * 2.0, 0.0, 1.0))
+                             : mix(float3(0.12, 0.32, 0.55), farCol,  clamp(diff * 2.0, 0.0, 1.0));
+    heat = mix(heat, focCol, focusBand);
+    dst.write(float4(mix(px.rgb, heat, 0.45), px.a), gid);
+}
+
+// MARK: - 12. 线性 RAW 域保边双边降噪（YCbCr/YCoCg 对立色度-明度分离）
+struct RawDenoiseUniforms {
+    float amount;
+    float detail;
+    float lumaSigma;
+    float chromaSigma;
+    int chromaOnly;
+    float stepPx;
+    int offsetX;
+    int offsetY;
+};
+
+inline float3 rgbToYCoCg(float3 c) {
+    float y  = (c.r + 2.0 * c.g + c.b) * 0.25;
+    float co = c.r - c.b;
+    float cg = c.g - 0.5 * (c.r + c.b);
+    return float3(y, co, cg);
+}
+
+inline float3 yCoCgToRGB(float3 ycc) {
+    float tmp = ycc.x - 0.5 * ycc.z;
+    float r = tmp + 0.5 * ycc.y;
+    float g = ycc.x + 0.5 * ycc.z;
+    float b = tmp - 0.5 * ycc.y;
+    return float3(r, g, b);
+}
+
+kernel void raw_denoise_apply(
+    texture2d<float, access::read> src [[texture(0)]],
+    texture2d<float, access::write> dst [[texture(1)]],
+    constant RawDenoiseUniforms &u [[buffer(0)]],
+    uint2 gid [[thread_position_in_grid]]
+) {
+    if (gid.x >= dst.get_width() || gid.y >= dst.get_height()) return;
+    int2 c = int2(gid) + int2(u.offsetX, u.offsetY);
+    float4 center = readClamped(src, c);
+    float3 ycc0 = rgbToYCoCg(center.rgb);
+
+    float lSigma = max(u.lumaSigma, 0.005);
+    float cSigma = max(u.chromaSigma, 0.008);
+    float invL2 = 1.0 / (2.0 * lSigma * lSigma);
+    float invC2 = 1.0 / (2.0 * cSigma * cSigma);
+    float stepS = max(u.stepPx, 1.0);
+
+    float sumY = 0.0, wY = 0.0;
+    float2 sumCC = float2(0.0);
+    float wCC = 0.0;
+
+    for (int dy = -2; dy <= 2; dy++) {
+        for (int dx = -2; dx <= 2; dx++) {
+            float d2 = float(dx * dx + dy * dy);
+            float gW = exp(-d2 * 0.22);
+            int2 p = c + int2(int(round(float(dx) * stepS)), int(round(float(dy) * stepS)));
+            float3 ycc = rgbToYCoCg(readClamped(src, p).rgb);
+            float dL = toPerceptual1(max(ycc.x, 0.0)) - toPerceptual1(max(ycc0.x, 0.0));
+            float2 dCC = ycc.yz - ycc0.yz;
+
+            float wy = gW * exp(-(dL * dL) * invL2);
+            float wcc = gW * exp(-(dL * dL) * (invL2 * 0.35) - dot(dCC, dCC) * invC2);
+
+            sumY += ycc.x * wy;
+            wY += wy;
+            sumCC += ycc.yz * wcc;
+            wCC += wcc;
+        }
+    }
+
+    float cleanY = sumY / max(wY, 1e-5);
+    float2 cleanCC = sumCC / max(wCC, 1e-5);
+    float3 denoisedYCC = float3(
+        u.chromaOnly != 0 ? ycc0.x : mix(cleanY, ycc0.x, clamp(u.detail * 0.55, 0.0, 0.65)),
+        mix(ycc0.yz, cleanCC, clamp(u.amount * 1.15, 0.0, 1.0))
+    );
+    float3 outRGB = yCoCgToRGB(denoisedYCC);
+    if (min(center.r, min(center.g, center.b)) >= 0.0) {
+        outRGB = max(outRGB, float3(0.0));
+    }
+    dst.write(float4(mix(center.rgb, outRGB, clamp(u.amount, 0.0, 1.0)), center.a), gid);
+}
+
+// MARK: - 13. 2x 超分方向性结构张量边缘增强
+struct SuperResUniforms {
+    float sharpen;
+    float edgePreserve;
+    int offsetX;
+    int offsetY;
+};
+
+kernel void super_res_enhance(
+    texture2d<float, access::read> src [[texture(0)]],
+    texture2d<float, access::write> dst [[texture(1)]],
+    constant SuperResUniforms &u [[buffer(0)]],
+    uint2 gid [[thread_position_in_grid]]
+) {
+    if (gid.x >= dst.get_width() || gid.y >= dst.get_height()) return;
+    int2 c = int2(gid) + int2(u.offsetX, u.offsetY);
+    float4 pC = readClamped(src, c);
+    float3 c00 = readClamped(src, c + int2(-1, -1)).rgb;
+    float3 c10 = readClamped(src, c + int2( 0, -1)).rgb;
+    float3 c20 = readClamped(src, c + int2( 1, -1)).rgb;
+    float3 c01 = readClamped(src, c + int2(-1,  0)).rgb;
+    float3 c21 = readClamped(src, c + int2( 1,  0)).rgb;
+    float3 c02 = readClamped(src, c + int2(-1,  1)).rgb;
+    float3 c12 = readClamped(src, c + int2( 0,  1)).rgb;
+    float3 c22 = readClamped(src, c + int2( 1,  1)).rgb;
+
+    float y00 = dot(c00, LUMA_W), y10 = dot(c10, LUMA_W), y20 = dot(c20, LUMA_W);
+    float y01 = dot(c01, LUMA_W), yC  = dot(pC.rgb, LUMA_W), y21 = dot(c21, LUMA_W);
+    float y02 = dot(c02, LUMA_W), y12 = dot(c12, LUMA_W), y22 = dot(c22, LUMA_W);
+
+    float gx = (y20 + 2.0 * y21 + y22) - (y00 + 2.0 * y01 + y02);
+    float gy = (y02 + 2.0 * y12 + y22) - (y00 + 2.0 * y10 + y20);
+    float gradMag = sqrt(gx * gx + gy * gy);
+    float coh = smoothstep(0.015, 0.14, gradMag);
+
+    // 邻域局部范围钳制防止振铃过冲
+    float3 lo3 = min(min(min(c10, c12), min(c01, c21)), pC.rgb);
+    float3 hi3 = max(max(max(c10, c12), max(c01, c21)), pC.rgb);
+    float3 lap = pC.rgb - (c10 + c12 + c01 + c21) * 0.25;
+    float gain = u.sharpen * mix(0.25, 1.0, coh * u.edgePreserve);
+    float3 outRGB = clamp(pC.rgb + lap * gain, lo3 * 0.96, hi3 * 1.04 + float3(0.005));
+    dst.write(float4(max(outRGB, float3(0.0)), pC.a), gid);
 }
 """#
 }

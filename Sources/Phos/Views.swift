@@ -689,7 +689,7 @@ struct CanvasPane: View {
             .onChanged { v in
                 guard !s.cropMode, !s.splitComparison else { return }
                 guard frame.contains(v.startLocation) else { return }
-                if (s.whiteBalancePicker || s.pointColorPicker) && !s.temporaryPan { return }
+                if (s.whiteBalancePicker || s.pointColorPicker || s.bokehFocusPicker) && !s.temporaryPan { return }
                 if !s.showBefore, !s.temporaryPan, s.retouchActive {
                     handleRetouchDrag(v.location, frame: frame)
                     return
@@ -781,6 +781,9 @@ struct CanvasPane: View {
                                                     y: 1 - (value.location.y - frame.minY) / frame.height))
                 } else if s.pointColorPicker, !s.cropMode, !s.showBefore, panOrigin == nil, frame.contains(value.location) {
                     s.samplePointColor(at: CGPoint(x: (value.location.x - frame.minX) / frame.width,
+                                                   y: 1 - (value.location.y - frame.minY) / frame.height))
+                } else if s.bokehFocusPicker, !s.cropMode, !s.showBefore, panOrigin == nil, frame.contains(value.location) {
+                    s.sampleBokehFocus(at: CGPoint(x: (value.location.x - frame.minX) / frame.width,
                                                    y: 1 - (value.location.y - frame.minY) / frame.height))
                 }
                 if s.retouchActive {

@@ -94,7 +94,7 @@ struct WorkspaceLayout {
 }
 
 enum WorkspacePresentation: String, Identifiable, CaseIterable {
-    case export, batch, merge, sync, snapshots, error, update, photoAI
+    case export, batch, merge, sync, snapshots, error, update, photoAI, nativeAI
     var id: String { rawValue }
 }
 
@@ -122,6 +122,7 @@ final class WorkspaceSheetRouter: ObservableObject {
                 .sink { [weak self] _ in self?.requestLegacy(route) }.store(in: &observations)
         }
         watch(state.$showPhotoAI, .photoAI)
+        watch(state.$showNativeAI, .nativeAI)
         watch(state.$showExport, .export); watch(state.$showBatch, .batch)
         watch(state.$showMerge, .merge); watch(state.$showSync, .sync)
         watch(state.$showSnapshots, .snapshots); watch(state.$showUpdateResult, .update)
@@ -146,7 +147,8 @@ final class WorkspaceSheetRouter: ObservableObject {
     func resumeLegacyRequests() {
         for (flag, route) in [(state.showExport, WorkspacePresentation.export), (state.showBatch, .batch),
                               (state.showMerge, .merge), (state.showSync, .sync), (state.showSnapshots, .snapshots),
-                              (state.showPhotoAI, .photoAI), (state.showUpdateResult, .update), (state.workflowError != nil, .error)] where flag {
+                              (state.showPhotoAI, .photoAI), (state.showNativeAI, .nativeAI),
+                              (state.showUpdateResult, .update), (state.workflowError != nil, .error)] where flag {
             if route == .error { errorMessage = state.workflowError ?? "" }
             requestLegacy(route)
         }
@@ -169,6 +171,7 @@ final class WorkspaceSheetRouter: ObservableObject {
         presented = nil
         switch route {
         case .photoAI: state.showPhotoAI = false
+        case .nativeAI: state.showNativeAI = false
         case .export: state.showExport = false
         case .batch: state.showBatch = false
         case .merge: state.showMerge = false

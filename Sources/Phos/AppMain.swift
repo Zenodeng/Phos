@@ -2,6 +2,7 @@ import SwiftUI
 import CoreImage
 import UniformTypeIdentifiers
 import ImageIO
+import Vision
 
 struct PhotoItem: Identifiable, Equatable {
     let id: UUID
@@ -100,21 +101,40 @@ final class AppState: ObservableObject {
     }
     var visiblePhotoIndices: [Int] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        return items.indices.filter {
+        var filtered = items.indices.filter {
             let it = items[$0]
-            return (filterRating == 0 || it.rating >= filterRating) &&
+            let cm = cullMetrics[it.id]
+            let cullOK: Bool
+            switch cullingFilter {
+            case .all:
+                cullOK = true
+            case .bestShots:
+                cullOK = cm != nil && !cm!.eyesClosed && !cm!.isBlurry && (cm!.overallScore >= 60 || cm!.isBurstBest)
+            case .eyesClosed:
+                cullOK = cm?.eyesClosed == true
+            case .blurry:
+                cullOK = cm?.isBlurry == true
+            case .bursts:
+                cullOK = cm?.isBurstBest == true
+            }
+            return cullOK &&
+                   (filterRating == 0 || it.rating >= filterRating) &&
                    (!filterPicked || it.picked) &&
                    (filterColorLabel == nil || it.colorLabel == filterColorLabel) &&
                    (!hideRejected || !it.rejected) &&
                    (filterCamera == nil || it.cameraModel == filterCamera) &&
                    (filterLens == nil || it.lensModel == filterLens) &&
                    (query.isEmpty ||
-                    it.url.lastPathComponent.localizedStandardContains(query) ||
                     (it.virtualCopyName?.localizedStandardContains(query) ?? false) ||
-                    it.cameraModel.localizedStandardContains(query) ||
-                    it.lensModel.localizedStandardContains(query) ||
-                    it.keywords.contains(where: { $0.localizedStandardContains(query) }))
+                    SemanticSearchEngine.matches(metrics: cm, fileName: it.url.lastPathComponent,
+                                                 keywords: it.keywords, camera: it.cameraModel,
+                                                 lens: it.lensModel, query: query))
         }
+        if similarPhotoTargetID != nil, !similarPhotoOrder.isEmpty {
+            let rank = Dictionary(uniqueKeysWithValues: similarPhotoOrder.enumerated().map { ($1, $0) })
+            filtered.sort { (rank[items[$0].id] ?? Int.max) < (rank[items[$1].id] ?? Int.max) }
+        }
+        return filtered
     }
     var previousVisiblePhotoIndex: Int? {
         visiblePhotoIndices.last { $0 < currentIndex }
@@ -139,7 +159,7 @@ final class AppState: ObservableObject {
     @Published var pointColorPicker = false {
         didSet {
             if pointColorPicker {
-                whiteBalancePicker = false; retouchActive = false
+                whiteBalancePicker = false; retouchActive = false; bokehFocusPicker = false
                 showBefore = false; splitComparison = false; cancelMaskDrawing()
             } else {
                 localPointColorMaskID = nil
@@ -160,7 +180,7 @@ final class AppState: ObservableObject {
     @Published var retouchActive = false {
         didSet {
             if retouchActive {
-                whiteBalancePicker = false; pointColorPicker = false
+                whiteBalancePicker = false; pointColorPicker = false; bokehFocusPicker = false
                 showBefore = false; splitComparison = false; cancelMaskDrawing()
                 selectedMask = nil
             }
@@ -172,6 +192,27 @@ final class AppState: ObservableObject {
     @Published var retouchFeather: Double = 0.45
     @Published var retouchOpacity: Double = 1.0
     @Published var selectedRetouchSpotID: UUID? = nil
+    @Published var showNativeAI = false
+    @Published var nativeAITab: NativeAITab = .edit
+    @Published var showDepthOverlay = false {
+        didSet { if oldValue != showDepthOverlay { previewQueue.invalidate(); render() } }
+    }
+    @Published var bokehFocusPicker = false {
+        didSet {
+            if bokehFocusPicker {
+                whiteBalancePicker = false; pointColorPicker = false; retouchActive = false
+                showBefore = false; splitComparison = false; cancelMaskDrawing()
+            }
+        }
+    }
+    @Published var cullMetrics: [UUID: PhotoCullMetrics] = [:]
+    @Published var cullingRunning = false
+    @Published var cullingProgress: Double = 0
+    @Published var cullingFilter: CullingFilter = .all
+    @Published var similarPhotoTargetID: UUID? = nil
+    @Published var similarPhotoOrder: [UUID] = []
+    private var cullFeatureCache: [UUID: VNFeaturePrintObservation] = [:]
+    private var cullingTask: Task<Void, Never>? = nil
     @Published var autoSyncXMP: Bool = UserDefaults.standard.bool(forKey: "phos.autoSyncXMP") {
         didSet { UserDefaults.standard.set(autoSyncXMP, forKey: "phos.autoSyncXMP") }
     }
@@ -326,6 +367,7 @@ final class AppState: ObservableObject {
         let longEdge: CGFloat
         let overlayMask: UUID?
         let split: Bool
+        var showDepthOverlay: Bool = false
     }
     nonisolated private static func lightweightCameraLens(_ url: URL) -> (camera: String, lens: String) {
         guard let src = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
@@ -389,6 +431,13 @@ final class AppState: ObservableObject {
             self.folderLoading = false
             guard let result else { self.status = "无法读取文件夹"; self.folderFailure = self.status; return }
             self.items = result
+            var hydrated: [UUID: PhotoCullMetrics] = [:]
+            for it in result {
+                if let cached = SmartCullingEngine.cachedMetrics(for: it.url) {
+                    hydrated[it.id] = cached
+                }
+            }
+            self.cullMetrics = hydrated
             self.status = result.isEmpty ? "文件夹里没有支持的图像" : "共 \(result.count) 张"
             if !result.isEmpty { self.select(0) }
             self.loadThumbnails()
@@ -502,6 +551,17 @@ final class AppState: ObservableObject {
         localPointColorMaskID = nil
         whiteBalancePicker = false
         pointColorPicker = false
+        bokehFocusPicker = false
+        showDepthOverlay = false
+        cullingTask?.cancel()
+        cullingTask = nil
+        cullingRunning = false
+        cullingProgress = 0
+        cullingFilter = .all
+        cullMetrics.removeAll()
+        cullFeatureCache.removeAll()
+        similarPhotoTargetID = nil
+        similarPhotoOrder.removeAll()
         filterCamera = nil
         filterLens = nil
         comparePrimaryID = nil
@@ -932,26 +992,31 @@ final class AppState: ObservableObject {
     private func submitPreview(source: CIImage, parameters: EditParams, mask: UUID?) {
         guard let photoID = current?.id else { return }
         previewRevision &+= 1
+        let depthVis = showDepthOverlay && !cropMode
         let key = PreviewFrameKey(photoID: photoID, revision: previewRevision,
                                   purpose: cropMode ? .cropReference : .edited,
-                                  paramsFingerprint: PreviewFrame.fingerprint(parameters))
+                                  paramsFingerprint: PreviewFrame.fingerprint(parameters) + (depthVis ? "|depthVis" : ""))
         expectedPreview = key
         previewQueue.submit(PreviewRequest(key: key, source: source, params: parameters,
                                            url: current?.url, fullResolution: fullResPreview || oneToOne,
-                                           cropMode: cropMode, longEdge: previewLongEdge, overlayMask: mask, split:splitComparison))
+                                           cropMode: cropMode, longEdge: previewLongEdge, overlayMask: mask,
+                                           split: splitComparison, showDepthOverlay: depthVis))
     }
     nonisolated private static func makePreview(_ request: PreviewRequest) -> (edited:PreviewFrame,before:PreviewFrame?)? {
         let src = request.source, p = request.params, e = src.extent
         let scale: CGFloat = request.fullResolution ? 1 : min(1, request.longEdge / max(e.width, e.height))
         let base = scale < 1 ? src.transformed(by: CGAffineTransform(scaleX: scale, y: scale)) : src
         var disparity: CIImage?
-        if !request.cropMode, p.bokehAmount > 0,
+        if !request.cropMode, (p.bokehAmount > 0 || request.showDepthOverlay),
            !p.masks.contains(where: { $0.kind == .depth && $0.enabled }), let url = request.url {
             disparity = Engine.disparityBokehMask(for: url, target: base.extent)
         }
         let resolved = Engine.resolvedPerspective(src,p)
         var mask: CIImage?
-        let out = Engine.render(base, p, disparityMask: disparity, selectedMask: request.overlayMask, resolvedAuto:resolved) { mask = $0 }
+        var out = Engine.render(base, p, disparityMask: disparity, selectedMask: request.overlayMask, resolvedAuto:resolved) { mask = $0 }
+        if request.showDepthOverlay && !request.cropMode {
+            out = Engine.applyDepthVisualization(out, p, disparityMask: disparity)
+        }
         guard let image = Engine.ctx.createCGImage(out, from: out.extent, format: .RGBA8,
                                                    colorSpace: Engine.srgb) else { return nil }
         // Histogram the displayed pixels without evaluating the RAW/filter graph a second time.
@@ -1294,7 +1359,7 @@ final class AppState: ObservableObject {
         Task {
             let error: String? = await Task.detached(priority: .userInitiated) {
                 autoreleasepool {
-                    var rendered = Engine.render(src, parameters)
+                    var rendered = Engine.render(src, parameters, forExport: true)
                     if let foreground {
                         guard let mask = Engine.maskImage(for: foreground, extent: rendered.extent,
                                                           analyzed: rendered) else {
@@ -1403,7 +1468,7 @@ final class AppState: ObservableObject {
                 guard let src = Engine.decode(url, rawEmbeddedLensCorrection: params.rawEmbeddedLensCorrection) else {
                     return "无法解码"
                 }
-                let rendered = Engine.render(src, params)
+                let rendered = Engine.render(src, params, forExport: true)
                 if cancellation.cancelled { return "已取消" }
                 let staging = dest.deletingLastPathComponent().appendingPathComponent(".phos-batch-"+UUID().uuidString+"."+settings.format)
                 defer { try? FileManager.default.removeItem(at:staging) }
@@ -1770,6 +1835,185 @@ final class AppState: ObservableObject {
         p.retouchSpots.removeAll { $0.id == id }
         if selectedRetouchSpotID == id { selectedRetouchSpotID = nil }
         commit(p)
+    }
+
+    // MARK: - P3 单目深度点击对焦 / 参考图反解 / 智能挑片与以图搜图
+    func sampleBokehFocus(at normPoint: CGPoint) {
+        guard let src = source else { return }
+        let geo = Engine.geometry(src, params)
+        let disp = current.flatMap { Engine.disparityBokehMask(for: $0.url, target: geo.extent) }
+        let painted: CIImage? = params.masks.first(where: { $0.kind == .depth && $0.enabled }).flatMap {
+            Engine.maskImage(for: $0, extent: geo.extent, analyzed: geo)
+        }
+        if let d = DepthEngine.sampleDepth(at: normPoint, in: geo, disparityMask: disp, paintedDepth: painted) {
+            var p = params
+            p.bokehFocusDepth = d
+            if p.bokehAmount <= 0 { p.bokehAmount = 42 }
+            bokehFocusPicker = false
+            commit(p)
+            status = String(format: "已锁定焦平面深度 %.2f", d)
+        } else {
+            bokehFocusPicker = false
+        }
+    }
+
+    @discardableResult
+    func runColorMatch(referenceURL: URL?, options: ColorMatchOptions = ColorMatchOptions()) -> ColorMatchResult? {
+        guard let src = source, let url = referenceURL, let refCI = Engine.decode(url) else {
+            status = "未能读取参考图"
+            return nil
+        }
+        let res = ColorMatchEngine.solve(source: src, reference: refCI, base: params, options: options)
+        commit(res.params)
+        status = String(format: "已匹配参考色调（ΔE %.1f → %.1f，可在面板继续微调）", res.initialDeltaE, res.finalDeltaE)
+        return res
+    }
+
+    func runSmartCulling() {
+        cullingTask?.cancel()
+        let masters = items.filter { !$0.isVirtualCopy }
+        guard !masters.isEmpty else { return }
+        cullingRunning = true
+        cullingProgress = 0
+        status = "正在运行端侧智能挑片与语义索引…"
+
+        let entriesInput: [(id: UUID, url: URL, date: Date?)] = masters.map { item in
+            let dt = (try? item.url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+            return (item.id, item.url, dt)
+        }
+
+        cullingTask = Task.detached(priority: .utility) { [weak self] in
+            var entries: [(id: UUID, date: Date?, feature: VNFeaturePrintObservation?, metrics: PhotoCullMetrics)] = []
+            entries.reserveCapacity(entriesInput.count)
+            for (idx, entry) in entriesInput.enumerated() {
+                if Task.isCancelled { return }
+                let result: (PhotoCullMetrics, VNFeaturePrintObservation?) = autoreleasepool {
+                    if let cg = Self.loadCGForCulling(entry.url) {
+                        if let cached = SmartCullingEngine.cachedMetrics(for: entry.url) {
+                            let fp = SmartCullingEngine.featurePrint(for: cg)
+                            return (cached, fp)
+                        }
+                        let analyzed = SmartCullingEngine.analyzeImage(cg, captureDate: entry.date)
+                        SmartCullingEngine.saveCachedMetrics(analyzed.metrics, for: entry.url)
+                        return analyzed
+                    }
+                    return (PhotoCullMetrics(), nil)
+                }
+                entries.append((entry.id, entry.date, result.1, result.0))
+                let prog = Double(idx + 1) / Double(max(entriesInput.count, 1))
+                let metricsSnap = result.0
+                let fpSnap = result.1
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    self.cullMetrics[entry.id] = metricsSnap
+                    if let fp = fpSnap { self.cullFeatureCache[entry.id] = fp }
+                    self.cullingProgress = prog
+                    self.status = "智能挑片分析 \(idx + 1)/\(entriesInput.count)"
+                }
+            }
+
+            if Task.isCancelled { return }
+            let grouped = SmartCullingEngine.assignBurstGroups(entries: entries)
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                for (id, m) in grouped {
+                    self.cullMetrics[id] = m
+                }
+                self.cullingRunning = false
+                self.cullingProgress = 1.0
+                let closed = grouped.values.filter(\.eyesClosed).count
+                let blurry = grouped.values.filter(\.isBlurry).count
+                let bursts = grouped.values.filter(\.isBurstBest).count
+                self.status = "智能挑片完成：连拍最佳 \(bursts) · 闭眼 \(closed) · 模糊 \(blurry)"
+            }
+        }
+    }
+
+    func cancelSmartCulling() {
+        cullingTask?.cancel()
+        cullingTask = nil
+        cullingRunning = false
+        status = "已取消智能挑片"
+    }
+
+    func applyCullBestPicks() {
+        var cnt = 0
+        for it in items where !it.isVirtualCopy {
+            if let m = cullMetrics[it.id], !m.eyesClosed, !m.isBlurry, (m.isBurstBest || m.overallScore >= 68) {
+                if !it.picked { togglePick(for: it.id); cnt += 1 }
+            }
+        }
+        status = "已自动标记 \(cnt) 张智能最佳照片为精选"
+    }
+
+    func rejectCullDefects() {
+        var cnt = 0
+        for it in items where !it.isVirtualCopy {
+            if let m = cullMetrics[it.id], m.eyesClosed || m.isBlurry {
+                if !it.rejected { toggleReject(for: it.id); cnt += 1 }
+            }
+        }
+        status = "已淘汰 \(cnt) 张闭眼/跑焦照片"
+    }
+
+    func findSimilarPhotos(to targetID: UUID) {
+        guard let target = items.first(where: { $0.id == targetID }) else { return }
+        status = "正在检索视觉相似照片…"
+        Task.detached(priority: .userInitiated) { [weak self] in
+            guard let self else { return }
+            let existingFeatures = await MainActor.run { self.cullFeatureCache }
+            let allItems = await MainActor.run { self.items }
+
+            let targetFP: VNFeaturePrintObservation? = existingFeatures[targetID] ?? {
+                guard let cg = Self.loadCGForCulling(target.url) else { return nil }
+                return SmartCullingEngine.featurePrint(for: cg)
+            }()
+            guard let tFP = targetFP else {
+                await MainActor.run { self.status = "无法提取目标特征" }
+                return
+            }
+
+            var pairs: [(id: UUID, feature: VNFeaturePrintObservation)] = []
+            for it in allItems where !it.isVirtualCopy {
+                if let cached = existingFeatures[it.id] {
+                    pairs.append((it.id, cached))
+                } else if let cg = Self.loadCGForCulling(it.url),
+                          let fp = SmartCullingEngine.featurePrint(for: cg) {
+                    pairs.append((it.id, fp))
+                }
+            }
+            let ordered = SemanticSearchEngine.rankSimilar(target: tFP, candidates: pairs)
+            let finalPairs = pairs
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                for (id, fp) in finalPairs { self.cullFeatureCache[id] = fp }
+                self.similarPhotoTargetID = targetID
+                self.similarPhotoOrder = ordered
+                self.status = "已按与 \(target.displayName) 的视觉相似度排序（\(ordered.count) 张）"
+            }
+        }
+    }
+
+    func clearSimilarFilter() {
+        similarPhotoTargetID = nil
+        similarPhotoOrder = []
+    }
+
+    nonisolated private static func loadCGForCulling(_ url: URL) -> CGImage? {
+        let opts: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: 512,
+            kCGImageSourceShouldCache: false
+        ]
+        if let src = CGImageSourceCreateWithURL(url as CFURL, nil),
+           let thumb = CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary) {
+            return thumb
+        }
+        guard let ci = Engine.decode(url) else { return nil }
+        let s = min(1.0, 512.0 / max(ci.extent.width, ci.extent.height, 1.0))
+        let small = ci.transformed(by: CGAffineTransform(scaleX: s, y: s))
+        return Engine.ctx.createCGImage(small, from: small.extent, format: .RGBA8, colorSpace: Engine.srgb)
     }
 }
 

@@ -130,14 +130,16 @@ struct RetouchPane: View {
             }
 
             if let idx = selectedIndex {
+                let spot = s.params.retouchSpots[idx]
+                let spotID = spot.id
                 HStack(spacing: 4) {
                     Text(L10n.tr("正在编辑 #\(idx + 1)"))
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(WorkspaceTokens.accent)
                     Spacer()
-                    if s.params.retouchSpots[idx].mode != .remove {
+                    if spot.mode != .remove {
                         Button(L10n.tr("重选源点")) {
-                            s.resuggestRetouchSource(s.params.retouchSpots[idx].id)
+                            s.resuggestRetouchSource(spotID)
                         }
                         .controlSize(.mini)
                     }

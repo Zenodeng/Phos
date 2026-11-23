@@ -525,6 +525,7 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
                     if state.parameterEdits.token != nil { state.parameterEdits.invalidate(); return nil }
                     if state.maskDrawingKind != nil { state.cancelMaskDrawing(); return nil }
                     if state.pointColorPicker { state.pointColorPicker = false; return nil }
+                    if state.bokehFocusPicker { state.bokehFocusPicker = false; return nil }
                     if state.retouchActive { state.retouchActive = false; return nil }
                 }
                 if !text, (event.keyCode == 51 || event.keyCode == 117),
@@ -783,6 +784,11 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         item(L10n.tr("切换 EDR 动态范围"), in: menu, enabled: true, checked: s.edrEnabled) { s.edrEnabled.toggle() }
         item(L10n.tr("复制调整"), in: menu, enabled: model.enabled(.copy)) { [weak self] in self?.model.perform(.copy) }
         item(L10n.tr("全像素预览"), in: menu, enabled: ready, checked: s.fullResPreview) { s.fullResPreview.toggle() }
+        menu.addItem(.separator())
+        item(L10n.tr("端侧原生 AI 工作台…"), in: menu, enabled: true) { [weak self] in self?.model.perform(.nativeAIWorkspace) }
+        item(L10n.tr("参考图智能对色…"), in: menu, enabled: ready) { [weak self] in self?.model.perform(.colorMatchTool) }
+        item(L10n.tr(s.cullingRunning ? "取消智能挑片" : "智能挑片分析"), in: menu, enabled: !s.items.isEmpty) { [weak self] in self?.model.perform(.smartCulling) }
+        item(L10n.tr("端侧 Core ML 模型中心…"), in: menu, enabled: true) { [weak self] in self?.model.perform(.modelHub) }
         menu.addItem(.separator())
         let appearance = NSMenu(title: L10n.tr("外观"))
         for (name, value) in [("跟随系统", "system"), ("浅色", "light"), ("深色", "dark")] {

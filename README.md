@@ -36,7 +36,7 @@ Older releases may still use the former application and archive names.
 
 Phos is a non-destructive RAW photo editor written in Swift on top of **Metal**, Core Image, Vision and AppKit.
 Everything runs on the local machine: no cloud services, no accounts, no subscription, no telemetry.
-The entire colour and toning pipeline executes on the GPU in a **16-bit floating-point extended linear space (`extendedLinearSRGB` / `.RGBAh`)** with an optional **EDR / HDR Metal preview canvas** (plus automatic `CGImage` fallback). Optional local AI retouching uses a separately installed MLX-VLM environment, and optional offline Core ML models enable Big-LaMa content-aware removal and neural sky segmentation.
+The entire colour and toning pipeline executes on the GPU in a **16-bit floating-point extended linear space (`extendedLinearSRGB` / `.RGBAh`, 20 Metal compute kernels)** with an optional **EDR / HDR Metal preview canvas** (plus automatic `CGImage` fallback). On-device AI features — including Reference Color Match, Monocular Depth Optical Bokeh, RAW-domain Denoise & Export 2x Super Resolution, Smart Culling, Bilingual Semantic Search and a pure-Swift Native AI Workbench — work out of the box with zero Python dependencies, and a unified 5-slot **Core ML Model Hub** optionally accelerates LaMa removal, sky segmentation, DepthAnythingV2, denoise and 2x super resolution (plus optional external MLX-VLM support).
 
 **The only external network request** is a version check against its own website at launch. Optional AI retouching sends image previews and editing parameters only to `127.0.0.1` on your Mac (port 8765 when available, otherwise a system-assigned local port).
 It sends nothing about you, your photos or your machine, and it is the sole reason the app is not
@@ -114,15 +114,16 @@ The inspector is organised into five tabs. Everything below is a local operation
 | Black & white | One-click conversion with its own channel mix |
 | Calibration | RGB primary adjustment implemented as a row-normalised 3×3 matrix, so the white point stays put |
 | Film CLUT | 303 built-in HALD film-emulation LUTs with search, plus background asynchronous scanning of an external HaldCLUT directory (`~/Documents/RawTherapee/HaldCLUT`) and a refresh action |
+| Reference Colour Match | Reverse-solves any reference still into editable global exposure / AgX / curve / WB / 3-band colour grading / OKLCH HSL / film params (`0%–150%` blend + skin protection) |
 
 #### Detail — 细节
 
 | Panel | Controls |
 | ----- | -------- |
-| Detail | Sharpening (amount, radius, detail, masking) and dual-channel luminance + colour noise reduction |
+| Detail & AI NR / 2x SR | Sharpening (amount, radius, detail, masking), YCoCg RAW-domain edge-preserving denoise (`raw_denoise_apply` + optional tiled Core ML `Denoise.mlmodelc`), and **export-only 2x Super Resolution** (`super_res_enhance` / optional `SuperRes.mlmodelc`) |
 | Spot retouch & remove | **Heal** (auto-suggested source sampling + Poisson seamless blending), **Clone**, and **Content-Aware Remove** (4-level PatchMatch fallback plus optional offline Core ML **Big-LaMa `LaMa.mlmodelc`** inpainting via model import or `Scripts/install_lama_model.sh`). Supports direct canvas clicking/dragging on spot centres and yellow source handles, Re-suggest Source, hover brush preview rings, `H` to toggle pins and `Delete` to remove selected spots |
 | Effects | Film grain (amount, size and silver-halide **roughness**), vignette, and halation (highlight extraction → wide-radius blur → warm tint → screen blend) |
-| Bokeh | Depth-driven defocus. The depth source is either the portrait **disparity** auxiliary data in the file, or a **depth-painting mask** you paint yourself |
+| Optical Bokeh | Depth-driven physical defocus supporting portrait **disparity**, **depth-painting mask**, built-in **zero-model monocular depth estimation** (Vision saliency + person matte + horizon gradient) or optional `DepthAnythingV2.mlmodelc` (`Scripts/install_depth_model.sh`), click-on-canvas focus depth sampler, depth heatmap overlay, polygon aperture blades (circle or 5–8), specular HDR bokeh boost and cat-eye mechanical vignetting |
 | Lens correction | **82 built-in lens profiles** (Sony FE, Canon RF, Nikon Z, Fujifilm X, Sigma, Tamron, Leica, Panasonic) plus custom Lensfun XML import, before/after comparison, 8-division grid overlay, lateral chromatic aberration (counter-scaled R/B channels) and purple-fringe suppression |
 
 #### Geometry — 变换
@@ -162,13 +163,14 @@ full resolution as 16-bit TIFF and can be edited further.
 - **Presets & Lightroom `.xmp` import** — save named presets, import Lightroom `.xmp` presets directly, preview presets live on hover and scale intensity smoothly from **0% to 200%**.
 - **Virtual copies & Snapshots** — create, rename and delete non-destructive virtual copies (`⌘'`), and save/restore per-photo named snapshots.
 - **Copy / sync adjustments** — copy adjustments to other photos or sync across a selection; geometry and masks are excluded by default, and every sync target receives a recovery snapshot first.
-- **Multi-view culling & Browser** — recursive subfolder scanning toggle, keyword search/tagging, camera & lens filters, star ratings, colour labels, pick/reject (`X`) flags, plus **Grid View (`G`)**, **Synchronised Side-by-Side Compare (`C`)**, **2–4 Up Survey View (`N`)** with pinch-zoom/pan sync and per-card rating/baseline actions, and **Reference View (`⇧R`)** supporting external reference files and horizontal/vertical split.
+- **Multi-view culling, Smart Culling & Semantic Search** — recursive subfolder scanning toggle, on-device **Smart Culling** (Vision face EAR eye-closure warnings, ROI sharpness scoring, burst clustering with `isBurstBest` & disk index cache), **bilingual concept-group semantic search** + visual similarity ranking, keyword search/tagging, camera & lens filters, star ratings, colour labels, pick/reject (`X`) flags, plus **Grid View (`G`)**, **Synchronised Side-by-Side Compare (`C`)**, **2–4 Up Survey View (`N`)** with pinch-zoom/pan sync and per-card rating/baseline actions, and **Reference View (`⇧R`)** supporting external reference files, Reference Colour Match and horizontal/vertical split.
+- **Native AI Workbench & 5-Slot Core ML Hub** — pure-Swift zero-Python AI edit planner (`NativePhotoPlanner`) with automatic local masks, alongside a unified 5-slot model hub (`lama`, `sky`, `depth`, `denoise`, `superRes`).
 - **Preview modes** — a 2200px proxy for speed, a full-pixel mode that runs the whole pipeline at the original resolution, and a 1:1 pixel view for checking sharpness.
 - **Before / after comparison** (toggle `⌘B` or split view `⌥⌘B`) and a live EDR-aware output histogram.
 - **Export & Metadata** — JPEG / PNG / TIFF / HEIC (including **Gain-Map HDR JPEG**, **10-bit PQ HEIC** and **16-bit Display P3 TIFF/PNG**), preserves source EXIF / IPTC / GPS with optional GPS privacy stripping and copyright injection, plus watermark overlay applied strictly at export time.
 - **Batch export** — bounded concurrent batch export applying each photo's sidecar (or picked-only / virtual copies).
 - **Transparent-background export** — exports a cut-out using the foreground mask (PNG or TIFF with alpha).
-- **Live Bilingual UI (909 entries)** — adaptive light/dark interface & Dock icon plus instant switching between Simplified Chinese and English without restarting.
+- **Live Bilingual UI (1,015 entries)** — adaptive light/dark interface & Dock icon plus instant switching between Simplified Chinese and English without restarting.
 - **Update check** — on launch Phos asks its own website for the latest version number. If a newer
   release exists, a small badge appears next to the app name in the toolbar; clicking it opens the
   download page. Nothing about you or your machine is sent, and the check can be turned off (see
@@ -256,6 +258,16 @@ separate real-photo testing.
 | `Sources/Phos/MaskAdvancedControls.swift` | Boolean component editor, sky model importer, local CurveEditor & local Point Color UI      |
 | `Sources/Phos/RetouchEngine.swift`        | Heal (Poisson), Clone, 4-level PatchMatch Remove, Core ML `LaMa.mlmodelc` & `suggestSource` |
 | `Sources/Phos/RetouchPane.swift`          | Spot retouch inspector controls, model installation/management & selected spot binding       |
+| `Sources/Phos/ColorMatchEngine.swift`     | Reference-to-editable-params OKLab/OKLCH solver with 0%–150% blend & skin protection         |
+| `Sources/Phos/ColorMatchPane.swift`       | Reference Colour Match inspector subsection & options                                        |
+| `Sources/Phos/DepthEngine.swift`          | Zero-model hybrid Vision depth estimation, click sampling & optional `DepthAnythingV2`       |
+| `Sources/Phos/BokehPane.swift`            | Optical bokeh (focus, range, polygon blades, HDR specular boost, cat-eye) & AI NR/2x SR UI  |
+| `Sources/Phos/NeuralDenoiseEngine.swift`  | Linear YCoCg edge-preserving RAW denoise, export 2x Super Resolution & tiled Core ML inference |
+| `Sources/Phos/SmartCullingEngine.swift`   | Face EAR eye-closure, ROI sharpness, burst feature clustering & persistent index cache       |
+| `Sources/Phos/SemanticSearchEngine.swift` | Bilingual 120+ concept-group query expansion & `VNFeaturePrint` visual similarity ranking    |
+| `Sources/Phos/NativePhotoPlanner.swift`   | Pure-Swift zero-Python AI retouching planner with closed-loop verification                   |
+| `Sources/Phos/AIModelHub.swift`           | Unified 5-slot Core ML model hub (`lama`, `sky`, `depth`, `denoise`, `superRes`)             |
+| `Sources/Phos/NativeAISheet.swift`        | 3-tab Native AI Workbench (AI Retouch, Reference Colour Match & Core ML Model Hub)           |
 | `Sources/Phos/PointColorPane.swift`       | Global OKLCH Point Color swatch inspector                                                    |
 | `Sources/Phos/MultiViewCanvas.swift`      | Grid, Side-by-Side / Survey / Before-After compare, Reference view & interactive Retouch overlay |
 | `Sources/Phos/MetadataIO.swift`           | ImageIO EXIF/IPTC/GPS preservation, HDR HEIC & Gain-Map JPEG / 16-bit TIFF export           |
@@ -295,7 +307,7 @@ Released under the [MIT License](LICENSE).
 ### 概述
 
 Phos 是一款用 Swift 编写、基于 **Metal**、Core Image、Vision 与 AppKit 的**非破坏性 RAW 修图软件**。
-所有处理都在本机完成：无账号、无订阅、无遥测。完整色彩与影调管线均在 GPU 上以 **16-bit 浮点扩展线性色彩空间（`extendedLinearSRGB` / `.RGBAh`）** 执行，并提供 **EDR / HDR Metal 直通预览画布**（保留 `CGImage` 自动回退）；可选本地 AI 修图使用独立的 MLX-VLM 环境，并可选导入离线 Core ML 模型（Big-LaMa 内容感知消除与 `SkySegmentation` 天空分割）。
+所有处理都在本机完成：无账号、无订阅、无遥测。完整色彩与影调管线均在 GPU 上以 **16-bit 浮点扩展线性色彩空间（`extendedLinearSRGB` / `.RGBAh`，20 个 Metal Compute 内核）** 执行，并提供 **EDR / HDR Metal 直通预览画布**（保留 `CGImage` 自动回退）；P3 端侧 AI 能力——**参考图全可编辑参数调色、任意 RAW 单目深度物理散景、非破坏 RAW 域降噪与导出 2x 超分、智能挑片与双语语义搜图、以及纯 Swift 原生 AI 修图工坊**——全部零 Python 开箱即用，并支持统一 5 槽位 **Core ML 模型中心**可选接入 Big-LaMa、`SkySegmentation`、`DepthAnythingV2`、降噪与 2x 超分模型（保留外部 MLX-VLM 支持）。
 
 **Phos 唯一的外网请求**是启动时向自己的官网查一次版本号。本地 AI 修图仅向本机 127.0.0.1 发送照片预览和编辑参数。请求里不带任何关于你、你的照片或
 本机环境的信息 —— 这也是这个应用唯一不是「完全离线」的地方。想关掉：
@@ -375,15 +387,16 @@ defaults write com.zeno.phos updateCheckDisabled -bool true
 | 黑白 | 一键转为黑白，带独立通道混合 |
 | 校准 | RGB 三原色调整，实现为行归一化 3×3 矩阵，**保证白点不变形** |
 | 胶片 CLUT | 内置 303 个 HALD 胶片模拟 LUT，支持搜索；可后台异步扫描外置 HaldCLUT 目录（`~/Documents/RawTherapee/HaldCLUT`）并刷新 |
+| 参考图色彩匹配 | 基于 OKLab/OKLCH 感知统计与坐标下降将参考图反解为完全可继续编辑的全局参数（`0%–150%` 强度 + 肤色保护） |
 
 #### 细节
 
 | 面板 | 控件 |
 | ---- | ---- |
-| 细节 | 锐化（数量 / 半径 / 细节 / 蒙版）；亮度与颜色双通道降噪 |
+| 细节与 AI 降噪 / 2x 超分 | 锐化（数量 / 半径 / 细节 / 蒙版）；YCoCg 线性保边 RAW 降噪（`raw_denoise_apply` + 可选 512×512 Hann 窗 Core ML `Denoise.mlmodelc`）及**仅导出阶段 2x 超分辨率**（`super_res_enhance` / 可选 `SuperRes.mlmodelc`） |
 | 污点修复与消除 | **修复 (Heal)**（自动推荐干净采样源点 + 泊松融合）、**仿制 (Clone)** 与**内容感知消除 (Remove)**（内置 4 层 PatchMatch，支持导入离线 Core ML **Big-LaMa `LaMa.mlmodelc`** 及 `Scripts/install_lama_model.sh` 一键安装）。支持画布点选、直接拖动修补点与黄色采样源点、重选源点、悬停双环画笔光标、`H` 显隐标记与 `Delete` 删除选中 |
 | 效果 | 胶片颗粒（浓度 / 颗粒大小 / **颗粒粗糙度**）、暗角、Halation 光晕（高光提取 → 大半径模糊 → 暖色染色 → 屏幕混合） |
-| 焦外散景 | 按深度虚化。深度来源可选文件里的人像 **disparity** 辅助数据，或自己涂的**深度涂绘蒙版** |
+| 物理光学散景 | 按深度虚化，支持文件内置 **disparity**、手绘**深度涂绘蒙版**、**内置零模型单目深度估计**或可选 `DepthAnythingV2.mlmodelc`（`Scripts/install_depth_model.sh`）；支持画布点击采样对焦、深度热力图、圆形及 5–8 边形叶片、HDR 高光光斑与边缘猫眼旋焦 |
 | 镜头校正 | 内置 **82 组镜头配置**（覆盖 Sony FE / Canon RF / Nikon Z / Fujifilm X / Sigma / Tamron / Leica / Panasonic），支持导入 Lensfun XML、校正前后切换、8 等分网格、横向色差与紫边抑制 |
 
 #### 变换
@@ -420,13 +433,14 @@ Vision 配准的帧对齐与质量门（重叠区 NCC 低于 0.7 的帧自动剔
 - **预设与 Lightroom `.xmp` 预设导入** —— 保存/套用命名预设，支持直接导入 Lightroom `.xmp` 预设、悬停实时预览及 **0%–200% 预设强度滑块**。
 - **虚拟副本与命名快照** —— 创建、重命名与删除非破坏性虚拟副本（`⌘'`），以及多版本命名快照管理。
 - **复制 / 同步调整** —— 复制调整到其他照片，或在选中范围内同步；默认不含裁剪与蒙版，每个同步目标先自动存一份恢复快照。
-- **多视图选片与浏览器** —— 支持递归子文件夹扫描、关键词添加与搜索、相机/镜头筛选、星级/颜色标签/淘汰（`X`），以及 **网格看片（`G`）**、**双图同步对比（`C`）**、**2–4 张多图同屏选片（`N`，支持双指缩放/拖动同步与逐卡打分/设为基准）**、**参考锁定视图（`⇧R`，支持外部参考文件与左右/上下分屏）**。
+- **多视图选片、智能挑片与语义搜图** —— 支持递归子文件夹扫描、端侧**智能挑片**（Vision 闭眼检测、焦点锐度评分、连拍聚簇标记 `isBurstBest` 与磁盘缓存）、**双语概念簇语义搜索**与找相似照片排序、关键词搜索、相机/镜头筛选、星级/颜色标签/淘汰（`X`），以及 **网格看片（`G`）**、**双图同步对比（`C`）**、**2–4 张多图同屏选片（`N`，支持双指缩放/拖动同步与逐卡打分/设为基准）**、**参考锁定视图（`⇧R`，支持外部参考文件、参考图色调匹配与左右/上下分屏）**。
+- **原生 AI 修图工坊与 5 槽位模型中心** —— 纯 Swift 零 Python `NativePhotoPlanner`（结合像素统计、意图解析与自动局部蒙版），以及统一管理 `lama`、`sky`、`depth`、`denoise`、`superRes` 5 个端侧 Core ML 槽位。
 - **预览模式** —— 2200px 代理图（快）、全像素模式（整条管线按原图分辨率渲染）、1:1 像素视图（检查锐度）。
 - **前后对比**（`⌘B` / 同几何分割 `⌥⌘B`）与 EDR 感知实时直方图。
 - **元数据保留与 HDR 导出** —— 支持 JPEG / PNG / TIFF / HEIC（含 **Gain-Map HDR JPEG**、**10-bit PQ HEIC** 与 **16-bit Display P3 TIFF/PNG**），保留源图 EXIF / IPTC / GPS，支持移除 GPS 隐私与版权注入；水印仅叠在导出文件上。
 - **批量导出** —— 有界并发批量导出，套用各自旁档与虚拟副本，支持仅导出已标记精选照片。
 - **透明背景导出** —— 用「主体抠图」蒙版导出透明背景抠图（PNG / TIFF）。
-- **中英文实时切换（909 条翻译）** —— 自适应浅/深色界面与 Dock 图标，实时切换简体中文 / English 无需重启。
+- **中英文实时切换（1,015 条翻译）** —— 自适应浅/深色界面与 Dock 图标，实时切换简体中文 / English 无需重启。
 - **更新提示** —— 启动时向官网查一次最新版本号；有新版就在工具栏应用名旁边出现一个小徽标，
   点它打开下载页。请求不带任何关于你或本机的信息，也可以关掉（见「概述」）。
   工具栏「更多」菜单里另有手动「检查更新…」。
@@ -508,6 +522,16 @@ bash Scripts/test_workflow.sh <实拍照片> <实拍纸面照片> [其他照片.
 | `Sources/Phos/MaskAdvancedControls.swift`  | 子蒙版布尔编辑器、天空模型导入、局部曲线编辑器与局部点颜色控件     |
 | `Sources/Phos/RetouchEngine.swift`         | 污点修复（泊松融合）、克隆、PatchMatch、Core ML LaMa 与推荐源点    |
 | `Sources/Phos/RetouchPane.swift`           | 修补检查器面板、模型安装管理和选中斑点参数绑定                     |
+| `Sources/Phos/ColorMatchEngine.swift`      | 参考图 → 全可编辑参数反解引擎（OKLab/OKLCH 坐标下降 + 肤色保护）   |
+| `Sources/Phos/ColorMatchPane.swift`        | 参考图色彩匹配检查器分区与混合强度控件                             |
+| `Sources/Phos/DepthEngine.swift`           | 零模型 Vision 混合单目深度、画布点击采样与可选 `DepthAnythingV2`   |
+| `Sources/Phos/BokehPane.swift`             | 物理光学散景高级面板及 AI 降噪 / 2x 超分开关                       |
+| `Sources/Phos/NeuralDenoiseEngine.swift`   | 线性 YCoCg 保边 RAW 降噪、导出 2x 超分与分块 Core ML 推理          |
+| `Sources/Phos/SmartCullingEngine.swift`    | EAR 闭眼检测、ROI 锐度评分、连拍特征聚类与磁盘索引缓存             |
+| `Sources/Phos/SemanticSearchEngine.swift`  | 120+ 组双语摄影概念语义扩展与视觉相似图排序                        |
+| `Sources/Phos/NativePhotoPlanner.swift`    | 纯 Swift 零 Python AI 修图编排器（图像统计 + 意图 + 局部蒙版）     |
+| `Sources/Phos/AIModelHub.swift`            | 统一 5 槽位 Core ML 模型中心（`lama/sky/depth/denoise/superRes`）  |
+| `Sources/Phos/NativeAISheet.swift`         | 三标签原生 AI 工作台（AI 润色、参考图调色与模型中心）              |
 | `Sources/Phos/PointColorPane.swift`        | 全局 OKLCH 点颜色色板检查器                                        |
 | `Sources/Phos/MultiViewCanvas.swift`       | 网格看片、双图/多图同屏对比、参考视图与交互式修补覆盖层            |
 | `Sources/Phos/MetadataIO.swift`            | ImageIO EXIF/IPTC/GPS 保留、Gain-Map JPEG / 10-bit PQ HEIC 导出    |

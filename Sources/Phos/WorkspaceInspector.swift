@@ -22,7 +22,7 @@ struct WorkspaceInspector: View {
                     .accessibilityLabel(L10n.tr("当前照片 RGB 直方图"))
             }.padding(.horizontal,12).padding(.top,12).padding(.bottom,10)
             HStack(spacing:4) {
-                Button { state.parameterEdits.finishCurrent(); state.showPhotoAI = true } label: {
+                Button { state.parameterEdits.finishCurrent(); state.nativeAITab = .edit; state.showNativeAI = true } label: {
                     Label(L10n.tr("AI 修图"),systemImage:"sparkles").font(.system(size:11))
                 }.buttonStyle(WorkspaceButtonStyle()).disabled(state.source == nil).help(L10n.tr("用本地模型调整照片"))
                 Spacer()

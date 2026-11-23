@@ -279,6 +279,7 @@ struct GroupBox<Content: View>: View {
 
                 GroupBox(title: "颜色分级") {
                     ColorGradePane()
+                    ColorMatchMiniSection()
                 }
 
                 GroupBox(title: "HSL · 混色") {
@@ -311,6 +312,8 @@ struct GroupBox<Content: View>: View {
                         set: { s.set(\.grainRoughness, $0) }
                     ), range: 0...1, defaultValue: 0.5, decimals: 2, step: 0.05) { s.endEdit() }
                     Divider().padding(.vertical, 4)
+                    NeuralDenoiseControls()
+                    Divider().padding(.vertical, 4)
                     RetouchPane()
                 }
 
@@ -327,21 +330,7 @@ struct GroupBox<Content: View>: View {
 
                 GroupBox(title: "焦外散景") {
                     WorkspacePhotoParameter(id: "bokehAmount")
-                    let hasPaintedDepth = s.params.masks.contains {
-                        $0.kind == .depth && $0.enabled
-                    }
-                    Label(L10n.tr(hasPaintedDepth
-                          ? "深度来源：深度涂绘蒙版（白=虚化）"
-                          : (s.hasDisparity
-                             ? "深度来源：人像 disparity 辅助数据"
-                             : "无深度数据：在下方局部调整里新建「深度涂绘」，把背景涂白")),
-                          systemImage: hasPaintedDepth || s.hasDisparity
-                              ? "checkmark.circle.fill" : "info.circle.fill")
-                        .font(.system(size: 9.5))
-                        .foregroundStyle(hasPaintedDepth || s.hasDisparity
-                                         ? Color.green : .secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    BokehAdvancedControls()
                 }
 
                 GroupBox(title: "镜头校正") {

@@ -130,6 +130,7 @@ private struct WorkspaceSheetContent: View {
     @ViewBuilder var body: some View {
         switch route {
         case .photoAI: PhotoAISheet().workspaceGlassPanel()
+        case .nativeAI: NativeAISheet().workspaceGlassPanel()
         case .export: ExportSheet()
         case .batch: BatchSheet()
         case .merge: MergeSheet()

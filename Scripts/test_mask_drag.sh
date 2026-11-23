@@ -16,6 +16,7 @@ swiftc -O -D PHOS_TESTING -sdk "$SDK" -target arm64-apple-macosx15.0 \
     Sources/Phos/MetadataIO.swift Sources/Phos/XMPSidecar.swift \
     Sources/Phos/MetalShaders.swift Sources/Phos/MetalEngine.swift \
     Sources/Phos/MaskEngine.swift Sources/Phos/RetouchEngine.swift \
+    Sources/Phos/DepthEngine.swift Sources/Phos/NeuralDenoiseEngine.swift \
     Tools/MaskDragTest.swift -o "$OUT/test"
 
 "$OUT/test"

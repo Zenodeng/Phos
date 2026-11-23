@@ -7,6 +7,7 @@ enum WorkspaceCommandID: String, CaseIterable {
     case clipping, reject, gridView, compareView, surveyView, referenceView, toggleEDR
     case createVirtualCopy, deleteVirtualCopy, exportXMP, importXMP, exportFolderXMP, toggleAutoSyncXMP
     case retouchTool, pointColorTool
+    case nativeAIWorkspace, colorMatchTool, smartCulling, modelHub
 }
 @MainActor extension WorkspaceWindowModel {
     func enabled(_ command:WorkspaceCommandID) -> Bool {
@@ -25,9 +26,9 @@ enum WorkspaceCommandID: String, CaseIterable {
             return s.current != nil && !s.syncRunning
         case .deleteVirtualCopy:
             return s.current?.isVirtualCopy == true && !s.syncRunning
-        case .gridView,.surveyView,.exportFolderXMP:
+        case .gridView,.surveyView,.exportFolderXMP,.smartCulling:
             return !s.items.isEmpty && !s.syncRunning
-        case .toggleEDR,.toggleAutoSyncXMP:
+        case .toggleEDR,.toggleAutoSyncXMP,.nativeAIWorkspace,.colorMatchTool,.modelHub:
             return true
         case .whiteBalance: return ready && !s.cropMode && !s.previewing && !s.whiteBalanceRunning
         case .autoTone: return ready && !s.autoRunning && !s.previewing && !s.cropMode
@@ -60,7 +61,7 @@ enum WorkspaceCommandID: String, CaseIterable {
             state.whiteBalancePicker = false; state.pointColorPicker = false; state.retouchActive = false; state.showBefore = false; state.splitComparison = false
         case .brush: finishEditing(); state.activateBrush()
         case .overlay: state.showMaskOverlay.toggle()
-        case .whiteBalance: finishEditing(); state.showBefore = false; state.splitComparison = false; state.whiteBalancePicker.toggle()
+        case .whiteBalance: finishEditing(); state.showBefore = false; state.splitComparison = false; state.bokehFocusPicker = false; state.whiteBalancePicker.toggle()
         case .autoTone: finishEditing(); state.runAutoTone()
         case .cancelJob: state.cancelJobs()
         case .clipping: state.showClippingWarning.toggle()
@@ -90,6 +91,16 @@ enum WorkspaceCommandID: String, CaseIterable {
             finishEditing(); session.inspectorVisible = true; state.inspectorUI.category = .color
             state.localPointColorMaskID = nil
             state.pointColorPicker.toggle()
+        case .nativeAIWorkspace:
+            finishEditing(); state.nativeAITab = .edit; state.showNativeAI = true
+        case .colorMatchTool:
+            finishEditing(); state.nativeAITab = .colorMatch; state.showNativeAI = true
+        case .smartCulling:
+            finishEditing()
+            if state.cullingRunning { state.cancelSmartCulling() }
+            else { state.runSmartCulling() }
+        case .modelHub:
+            finishEditing(); state.nativeAITab = .models; state.showNativeAI = true
         }
     }
 }
@@ -159,6 +170,11 @@ struct WorkspaceMenuCommands: Commands {
             Button(L10n.tr("污点修复画笔")) { run(.retouchTool) }.disabled(!available(.retouchTool))
             Button(L10n.tr("点颜色取样")) { run(.pointColorTool) }.disabled(!available(.pointColorTool))
             Button(L10n.tr("淘汰 / 取消淘汰 (X)")) { run(.reject) }.disabled(!available(.reject))
+            Divider()
+            Button(L10n.tr("端侧原生 AI 工作台…")) { run(.nativeAIWorkspace) }.disabled(!available(.nativeAIWorkspace))
+            Button(L10n.tr("参考图智能对色…")) { run(.colorMatchTool) }.disabled(!available(.colorMatchTool))
+            Button(L10n.tr("智能挑片分析")) { run(.smartCulling) }.disabled(!available(.smartCulling))
+            Button(L10n.tr("端侧 Core ML 模型中心…")) { run(.modelHub) }.disabled(!available(.modelHub))
         }
     }
 }

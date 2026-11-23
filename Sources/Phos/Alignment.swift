@@ -315,25 +315,50 @@ extension Engine {
     }
 
     // MARK: - 焦外散景
+    static func resolveBokehDepth(_ img: CIImage, _ p: EditParams, disparityMask: CIImage?) -> CIImage? {
+        let e = img.extent
+        if let dm = p.masks.first(where: { $0.kind == .depth && $0.enabled }),
+           let painted = maskImage(for: dm, extent: e, analyzed: img) {
+            return painted.cropped(to: e)
+        }
+        if let d = disparityMask {
+            return d.cropped(to: e)
+        }
+        if p.bokehAutoDepth {
+            return DepthEngine.estimateDepth(for: img, extent: e)?.cropped(to: e)
+        }
+        return nil
+    }
+
     static func applyBokeh(_ img: CIImage, _ p: EditParams,
                            disparityMask: CIImage?) -> CIImage {
         let e = img.extent
-        // 深度来源：优先用户的「深度涂绘」蒙版，其次 HEIC disparity
-        var depth: CIImage? = nil
-        if let dm = p.masks.first(where: { $0.kind == .depth && $0.enabled }) {
-            depth = maskImage(for: dm, extent: e, analyzed: img)
-        } else if let d = disparityMask {
-            depth = d
+        guard let mask = resolveBokehDepth(img, p, disparityMask: disparityMask) else { return img }
+        let radius = Double(max(e.width, e.height)) * (p.bokehAmount / 100.0) * 0.03
+        if MetalEngine.shared.isAvailable {
+            return MetalOpticalBokehKernel.apply(
+                img, depthMask: mask, maxRadiusPx: radius,
+                focusDepth: p.bokehFocusDepth, focusRange: p.bokehFocusRange,
+                blades: p.bokehBlades, highlightBoost: p.bokehHighlightBoost,
+                catEye: p.bokehCatEye
+            )
         }
-        guard let mask = depth?.cropped(to: e) else { return img }
-
-        let radius = max(e.width, e.height) * CGFloat(p.bokehAmount / 100) * 0.03
         guard let f = CIFilter(name: "CIMaskedVariableBlur") else { return img }
         f.setValue(img, forKey: kCIInputImageKey)
         f.setValue(mask, forKey: "inputMask")
-        f.setValue(radius, forKey: kCIInputRadiusKey)
+        f.setValue(CGFloat(radius), forKey: kCIInputRadiusKey)
         guard let out = f.outputImage else { return img }
         return out.cropped(to: e)
+    }
+
+    static func applyDepthVisualization(_ img: CIImage, _ p: EditParams, disparityMask: CIImage?) -> CIImage {
+        let e = img.extent
+        guard let mask = resolveBokehDepth(img, p, disparityMask: disparityMask)
+                ?? DepthEngine.estimateDepth(for: img, extent: e)?.cropped(to: e),
+              MetalEngine.shared.isAvailable else { return img }
+        return MetalDepthVisualizeKernel.apply(img, depthMask: mask,
+                                               focusDepth: p.bokehFocusDepth,
+                                               focusRange: p.bokehFocusRange)
     }
 
     // MARK: - iPhone 人像 HEIC disparity 深度

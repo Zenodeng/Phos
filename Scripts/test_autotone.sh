@@ -38,6 +38,8 @@ swiftc -O -suppress-warnings -D PHOS_TESTING -sdk "$SDK" \
     Sources/Phos/MetalEngine.swift \
     Sources/Phos/MaskEngine.swift \
     Sources/Phos/RetouchEngine.swift \
+    Sources/Phos/DepthEngine.swift \
+    Sources/Phos/NeuralDenoiseEngine.swift \
     Sources/Phos/AutoTone.swift \
     Sources/Phos/SceneClassifier.swift \
     Tools/AutoToneTest.swift -o "$BUILD/autotone"

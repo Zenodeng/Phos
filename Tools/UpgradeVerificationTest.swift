@@ -1,8 +1,11 @@
 import Foundation
+import AppKit
+import SwiftUI
 import CoreImage
 import CoreGraphics
 import ImageIO
 import UniformTypeIdentifiers
+import Vision
 
 #if PHOS_TESTING
 @main
@@ -16,6 +19,7 @@ struct UpgradeVerificationTest {
             print("FAIL: \(msg)")
             failures += 1
         }
+        fflush(stdout)
     }
 
     static func renderPixel(_ img: CIImage, at pt: CGPoint, working: Bool = false) -> [Float] {
@@ -50,7 +54,7 @@ struct UpgradeVerificationTest {
 
         // 1. Metal Pipeline Compile & Init
         check(MetalEngine.shared.compileError == nil, "Metal shaders compile with zero errors")
-        check(MetalEngine.shared.selfTestAllPipelines(), "All 16 Metal compute pipelines ready")
+        check(MetalEngine.allKernelNames().count == 20 && MetalEngine.shared.selfTestAllPipelines(), "All 20 Metal compute pipelines ready")
 
         // 2. >1.0 Linear HDR Highlight Recovery
         do {
@@ -555,9 +559,253 @@ struct UpgradeVerificationTest {
                   "Extended LensProfileStore loads \(p2Store.profiles.count) (>=70) valid profiles with working LensCorrection")
         }
 
+        // 14. P3 End-to-End Verification (Color Match / Depth + Optical Bokeh / Denoise + 2x SR / Smart Culling + Search / Native AI Hub)
+        do {
+            // 14a. ColorMatchEngine (Reference -> Editable Params)
+            let srcMatch = makeFloatImage(width: 128, height: 128) { x, y in
+                if x < 48 && y < 64 { return [0.08, 0.11, 0.16] }
+                if x >= 48 && x < 88 && y >= 32 && y < 88 { return [0.36, 0.24, 0.18] }
+                if y >= 88 { return [0.18, 0.28, 0.42] }
+                return [0.22, 0.30, 0.20]
+            }
+            let refMatch = makeFloatImage(width: 128, height: 128) { x, y in
+                if x < 48 && y < 64 { return [0.06, 0.14, 0.18] }
+                if x >= 48 && x < 88 && y >= 32 && y < 88 { return [0.58, 0.38, 0.24] }
+                if y >= 88 { return [0.68, 0.50, 0.28] }
+                return [0.42, 0.46, 0.22]
+            }
+            let opts = ColorMatchOptions(matchExposure: true, matchToneCurve: true,
+                                         matchColorGrade: true, matchHSL: true,
+                                         matchFilmTexture: true, protectSkinTones: true, strength: 1.0)
+            let cm = ColorMatchEngine.solve(source: srcMatch, reference: refMatch, base: EditParams(), options: opts)
+            check(cm.initialDeltaE > 1.0 && cm.finalDeltaE < cm.initialDeltaE * 0.75,
+                  "ColorMatchEngine lowers OKLab ΔE from \(String(format: "%.2f", cm.initialDeltaE)) to \(String(format: "%.2f", cm.finalDeltaE))")
+            check(cm.params != EditParams() && !cm.changedGroups.isEmpty && !cm.referencePalette.isEmpty,
+                  "ColorMatchEngine produces non-neutral editable params and reference palette")
+            let blendedZero = ColorMatchEngine.blend(from: EditParams(), to: cm.params, strength: 0.0)
+            let blended150 = ColorMatchEngine.blend(from: EditParams(), to: cm.params, strength: 1.5)
+            check(blendedZero == EditParams() && blended150 != cm.params,
+                  "ColorMatchEngine.blend scales cleanly at 0% (identity) and 150%")
+
+            // 14b. DepthEngine + MetalOpticalBokehKernel + Depth Overlay
+            let bokehSrc = makeFloatImage(width: 128, height: 128) { x, y in
+                // Foreground textured block in bottom-center (makeFloatImage y=0 is top of image)
+                if x >= 40 && x < 88 && y >= 64 && y < 116 {
+                    let stripe: Float = ((x + y) % 4 < 2) ? 0.65 : 0.25
+                    return [stripe, stripe * 0.85, stripe * 0.7]
+                }
+                // HDR specular spot in top-right (makeFloatImage y=26..<30 -> CoreImage y≈98..<102)
+                if x >= 102 && x < 106 && y >= 26 && y < 30 {
+                    return [3.5, 3.5, 2.5]
+                }
+                return [0.06, 0.08, 0.12]
+            }
+            let depthMap = DepthEngine.estimateDepth(for: bokehSrc, extent: bokehSrc.extent)
+            check(depthMap != nil, "DepthEngine.estimateDepth produces a valid depth map")
+            if let depthMap {
+                var minD: Float = 2, maxD: Float = -1
+                for sy in stride(from: 8, to: 128, by: 16) {
+                    for sx in stride(from: 8, to: 128, by: 16) {
+                        let d = renderPixel(depthMap, at: CGPoint(x: sx, y: sy), working: true)[0]
+                        minD = min(minD, d); maxD = max(maxD, d)
+                    }
+                }
+                let midD = DepthEngine.sampleDepth(at: CGPoint(x: 0.5, y: 0.5), in: bokehSrc,
+                                                   disparityMask: depthMap, paintedDepth: nil)
+                check(minD >= 0 && maxD <= 1.001 && (maxD - minD) > 0.05 &&
+                      (midD ?? -1) >= 0 && (midD ?? 2) <= 1,
+                      "DepthEngine values stay in [0,1] with spatial variation (\(String(format: "%.2f..%.2f", minD, maxD)))")
+
+                let stepDepth = makeFloatImage(width: 128, height: 128) { x, _ in
+                    let d: Float = x < 64 ? 0.12 : 0.92
+                    return [d, d, d]
+                }
+                let bokehOut = MetalOpticalBokehKernel.apply(
+                    bokehSrc, depthMask: stepDepth, maxRadiusPx: 18,
+                    focusDepth: 0.12, focusRange: 0.20, blades: 6, highlightBoost: 70, catEye: 50
+                )
+                let bokehAutoOut = MetalOpticalBokehKernel.apply(
+                    bokehSrc, depthMask: depthMap, maxRadiusPx: 18,
+                    focusDepth: 0.12, focusRange: 0.20, blades: 6, highlightBoost: 70, catEye: 50
+                )
+                let haloPx = renderPixel(bokehOut, at: CGPoint(x: 99, y: 100), working: true)
+                let fgSharpPx = renderPixel(bokehOut, at: CGPoint(x: 48, y: 40), working: true)
+                let origFgPx = renderPixel(bokehSrc, at: CGPoint(x: 48, y: 40), working: true)
+                let autoSamplePx = renderPixel(bokehAutoOut, at: CGPoint(x: 99, y: 100), working: true)
+                check(haloPx.allSatisfy(\.isFinite) && haloPx[0] > 0.08 &&
+                      abs(fgSharpPx[0] - origFgPx[0]) < 1e-3 && autoSamplePx.allSatisfy(\.isFinite),
+                      "MetalOpticalBokehKernel spreads HDR specular bokeh (blades=6, catEye=50, halo=\(String(format: "%.3f", haloPx[0]))) while keeping focus sharp")
+
+                var bp = EditParams(); bp.bokehAmount = 60; bp.bokehFocusDepth = 0.12
+                let depthVis = Engine.applyDepthVisualization(bokehSrc, bp, disparityMask: depthMap)
+                let visPx = renderPixel(depthVis, at: CGPoint(x: 20, y: 100), working: true)
+                let origPx = renderPixel(bokehSrc, at: CGPoint(x: 20, y: 100), working: true)
+                check(visPx.allSatisfy(\.isFinite) && abs(visPx[0] - origPx[0]) + abs(visPx[2] - origPx[2]) > 0.05,
+                      "Engine.applyDepthVisualization renders distinct finite depth heatmap overlay")
+            }
+
+            // 14c. NeuralDenoiseEngine (Denoise + 2x Super Resolution)
+            let noisySrc = makeFloatImage(width: 128, height: 128) { x, y in
+                let base: Float = x < 64 ? 0.18 : 0.62
+                let h1 = sin(Float(x * 131 + y * 977))
+                let h2 = cos(Float(x * 313 + y * 571))
+                let nL = h1 * 0.10
+                let nC = h2 * 0.09
+                return [max(0.01, base + nL + nC), max(0.01, base + nL - nC * 0.5), max(0.01, base + nL - nC)]
+            }
+            let denoised = NeuralDenoiseEngine.applyDenoise(noisySrc, amount: 85, detail: 65, refScale: 1.0)
+            func patchStats(_ img: CIImage, xRange: Range<Int>, yRange: Range<Int>) -> (mean: Double, variance: Double) {
+                var vals: [Double] = []
+                for y in stride(from: yRange.lowerBound, to: yRange.upperBound, by: 4) {
+                    for x in stride(from: xRange.lowerBound, to: xRange.upperBound, by: 4) {
+                        let px = renderPixel(img, at: CGPoint(x: x, y: y), working: true)
+                        vals.append(Double(px[0] + px[1] + px[2]) / 3.0)
+                    }
+                }
+                let mean = vals.reduce(0, +) / Double(max(vals.count, 1))
+                let varSum = vals.reduce(0.0) { $0 + ($1 - mean) * ($1 - mean) }
+                return (mean, varSum / Double(max(vals.count, 1)))
+            }
+            let rawLeft = patchStats(noisySrc, xRange: 10..<50, yRange: 16..<112)
+            let denLeft = patchStats(denoised, xRange: 10..<50, yRange: 16..<112)
+            let denRight = patchStats(denoised, xRange: 78..<118, yRange: 16..<112)
+            check(denLeft.variance < rawLeft.variance * 0.60 && (denRight.mean - denLeft.mean) > 0.30,
+                  "NeuralDenoiseEngine cuts flat-patch noise variance >40% while preserving step edge")
+
+            let srOut = NeuralDenoiseEngine.applySuperResolution(noisySrc)
+            var srP = EditParams(); srP.superResolution = true
+            let srPreview = Engine.render(noisySrc, srP, forExport: false)
+            let srExport = Engine.render(noisySrc, srP, forExport: true)
+            check(Int(srOut.extent.width.rounded()) == 256 && Int(srOut.extent.height.rounded()) == 256 &&
+                  Int(srPreview.extent.width.rounded()) == 128 && Int(srExport.extent.width.rounded()) == 256,
+                  "2x Super Resolution doubles export dimensions to 256x256 while keeping preview 1:1 at 128x128")
+
+            // 14d. SmartCullingEngine + SemanticSearchEngine
+            func makeBoardCG(size: Int) -> CGImage {
+                let cs = CGColorSpaceCreateDeviceRGB()
+                let ctx = CGContext(data: nil, width: size, height: size, bitsPerComponent: 8,
+                                    bytesPerRow: size * 4, space: cs,
+                                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+                ctx.setFillColor(red: 0.45, green: 0.45, blue: 0.45, alpha: 1)
+                ctx.fill(CGRect(x: 0, y: 0, width: size, height: size))
+                ctx.setFillColor(red: 0.15, green: 0.25, blue: 0.70, alpha: 1)
+                ctx.fill(CGRect(x: 16, y: 16, width: size - 32, height: size / 2 - 16))
+                // High-frequency crisp bars on upper half
+                ctx.setFillColor(red: 0.92, green: 0.88, blue: 0.75, alpha: 1)
+                for y in stride(from: size / 2, to: size - 16, by: 4) {
+                    for x in stride(from: 16, to: size - 16, by: 4) {
+                        ctx.fill(CGRect(x: x, y: y, width: 2, height: 2))
+                    }
+                }
+                return ctx.makeImage()!
+            }
+            let sharpCG = makeBoardCG(size: 160)
+            let blurredCI = CIImage(cgImage: sharpCG)
+                .clampedToExtent()
+                .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: 5.0])
+                .cropped(to: CGRect(x: 0, y: 0, width: 160, height: 160))
+            let blurryCG = Engine.ctx.createCGImage(blurredCI, from: CGRect(x: 0, y: 0, width: 160, height: 160))!
+
+            let tBurst = Date()
+            let sharpAnalyzed = SmartCullingEngine.analyzeImage(sharpCG, captureDate: tBurst)
+            let blurryAnalyzed = SmartCullingEngine.analyzeImage(blurryCG, captureDate: tBurst.addingTimeInterval(0.4))
+            check(sharpAnalyzed.metrics.sharpnessScore > blurryAnalyzed.metrics.sharpnessScore + 25 &&
+                  blurryAnalyzed.metrics.isBlurry,
+                  "SmartCullingEngine scores sharp (\(String(format: "%.1f", sharpAnalyzed.metrics.sharpnessScore))) over blurry (\(String(format: "%.1f", blurryAnalyzed.metrics.sharpnessScore)))")
+
+            let idSharp = UUID(), idBlurry = UUID()
+            let grouped = SmartCullingEngine.assignBurstGroups(entries: [
+                (id: idSharp, date: tBurst, feature: sharpAnalyzed.feature, metrics: sharpAnalyzed.metrics),
+                (id: idBlurry, date: tBurst.addingTimeInterval(0.4), feature: sharpAnalyzed.feature, metrics: blurryAnalyzed.metrics)
+            ])
+            check(grouped[idSharp]?.burstGroupID != nil &&
+                  grouped[idSharp]?.burstGroupID == grouped[idBlurry]?.burstGroupID &&
+                  grouped[idSharp]?.isBurstBest == true &&
+                  grouped[idBlurry]?.isBurstBest == false,
+                  "SmartCullingEngine burst clustering marks sharpest shot as isBurstBest")
+
+            let expanded = SemanticSearchEngine.expandQuery("夕阳下的猫")
+            let catMetrics = PhotoCullMetrics(semanticTags: ["sunset sky", "domestic cat", "outdoor"])
+            check(expanded.contains("cat") && expanded.contains("sunset") &&
+                  SemanticSearchEngine.matches(metrics: catMetrics, fileName: "IMG_9012.ARW", keywords: [], query: "夕阳下的猫") &&
+                  !SemanticSearchEngine.matches(metrics: catMetrics, fileName: "IMG_9012.ARW", keywords: [], query: "雪山"),
+                  "SemanticSearchEngine bilingual query expansion matches '夕阳下的猫' accurately")
+
+            // 14e. NativePhotoPlanner + AIModelHub + EditParams Backward Compat & Contracts
+            let aiPlan = NativePhotoPlanner.plan(instruction: "日落 电影感 天空更戏剧化", source: srcMatch, base: EditParams())
+            check(aiPlan.params != EditParams() && aiPlan.addedMasks > 0 &&
+                  aiPlan.params.masks.contains(where: { $0.kind == .sky }) && !aiPlan.summary.isEmpty,
+                  "NativePhotoPlanner generates editable params and auto .sky mask without Python")
+
+            let hubSlots = AIModelHub.shared.slots.map(\.slot)
+            check(hubSlots.count == 5 && Set(hubSlots) == Set([.lama, .sky, .depth, .denoise, .superRes]),
+                  "AIModelHub exposes all 5 P2/P3 Core ML model slots")
+
+            let legacyJSON = #"{"exposure":0.75,"bokehAmount":30,"sharpen":0.5}"#.data(using: .utf8)!
+            let decodedLegacy = try JSONDecoder().decode(EditParams.self, from: legacyJSON)
+            check(abs(decodedLegacy.exposure - 0.75) < 1e-6 &&
+                  abs(decodedLegacy.bokehAmount - 30) < 1e-6 &&
+                  abs(decodedLegacy.aiDenoise) < 1e-6 &&
+                  abs(decodedLegacy.aiDenoiseDetail - 50) < 1e-6 &&
+                  decodedLegacy.superResolution == false &&
+                  abs(decodedLegacy.bokehFocusDepth - 0.12) < 1e-6 &&
+                  abs(decodedLegacy.bokehFocusRange - 0.20) < 1e-6 &&
+                  decodedLegacy.bokehBlades == 0 &&
+                  abs(decodedLegacy.bokehHighlightBoost - 35) < 1e-6 &&
+                  abs(decodedLegacy.bokehCatEye - 20) < 1e-6 &&
+                  decodedLegacy.bokehAutoDepth == true,
+                  "EditParams decodes legacy P2 JSON with safe P3 defaults")
+
+            var p3Edited = EditParams()
+            p3Edited.bokehAmount = 55; p3Edited.bokehBlades = 6; p3Edited.bokehCatEye = 75
+            p3Edited.aiDenoise = 65; p3Edited.superResolution = true
+            let resetBokeh = ParameterGroupSchema.reset("焦外散景", in: p3Edited)
+            let resetDetail = ParameterGroupSchema.reset("细节", in: p3Edited)
+            check(ParameterDescriptor.all.count == 45 &&
+                  ParameterGroupSchema.titles.count == 15 &&
+                  resetBokeh.bokehAmount == 0 && resetBokeh.bokehCatEye == 20 && resetBokeh.aiDenoise == 65 &&
+                  resetDetail.aiDenoise == 0 && resetDetail.superResolution == false && resetDetail.bokehAmount == 55,
+                  "45 descriptors / 15 group titles preserved and group resets restore P3 fields cleanly")
+
+            // 14f. PointColorPane 删除 / 清空色样 SwiftUI Binding 越界崩溃回归测试
+            await MainActor.run {
+                _ = NSApplication.shared
+                let uiState = AppState()
+                var pSw = EditParams()
+                pSw.pointColors = [
+                    PointColorSwatch(sampleRGB: [0.9, 0.3, 0.2], name: "Orange"),
+                    PointColorSwatch(sampleRGB: [0.2, 0.4, 0.9], name: "Blue")
+                ]
+                uiState.commit(pSw)
+
+                let hv = NSHostingView(rootView: PointColorPane().environmentObject(uiState).frame(width: 240))
+                hv.frame = NSRect(x: 0, y: 0, width: 240, height: 600)
+                hv.layoutSubtreeIfNeeded()
+                RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+                hv.layoutSubtreeIfNeeded()
+
+                // 删除最后一个色样（2 -> 1）
+                var oneLeft = uiState.params
+                oneLeft.pointColors.removeLast()
+                uiState.commit(oneLeft)
+                RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+                hv.layoutSubtreeIfNeeded()
+
+                // 清空全部色样（1 -> 0）
+                var cleared = uiState.params
+                cleared.pointColors = []
+                uiState.commit(cleared)
+                RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+                hv.layoutSubtreeIfNeeded()
+
+                check(uiState.params.pointColors.isEmpty,
+                      "PointColorPane survives deleting last swatch and clearing swatches without Toggle Binding out-of-bounds crash")
+            }
+        }
+
         print("\n----------------------------------------------")
         if failures == 0 {
-            print("全部 P0/P1/P2 升级自检通过 ✓")
+            print("全部 P0/P1/P2/P3 升级自检通过 ✓")
         } else {
             print("失败 \(failures) 项 ✗")
             exit(1)

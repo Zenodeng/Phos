@@ -2,6 +2,23 @@
 
 本项目遵循语义化版本。日期为发布日（Asia/Shanghai）。
 
+## [4.7.0] — 2026-11-23
+
+### 端侧 AI 与计算摄影跃升（P3）
+- **参考图 → 全可编辑参数反解**：新增 `ColorMatchEngine` 与 `ColorMatchPane`，基于 OKLab/OKLCH 7 分位亮度、三段色彩分级、8 色域 HSL 及坐标下降将任意参考图一键匹配为完全可调的 Phos 全局参数，支持 `0%–150%` 匹配强度滑块与肤色保护。
+- **任意 RAW 单目深度与物理光学散景**：新增 `DepthEngine` 与 `BokehPane`（内置 Vision 显著性 + 人物分割 + 透视梯度零模型估计 + 可选 `DepthAnythingV2.mlmodelc` 模型及 `Scripts/install_depth_model.sh` 安装脚本），支持画布点击采样焦平面深度、深度热力图叠加、圆形及 5–8 边形光圈叶片、`bokeh_optical_apply` 线性 HDR 高光光斑增益与猫眼旋焦。
+- **非破坏性 RAW 域降噪与导出 2x 超分辨率**：新增 `NeuralDenoiseEngine`（YCoCg 线性保边降噪 `raw_denoise_apply` + Lanczos 2x / `super_res_enhance` 结构张量锐化 + 可选 512×512 Hann 窗分块 Core ML `Denoise.mlmodelc` / `SuperRes.mlmodelc`），超分仅在导出时生效以保持预览 `1:1` 像素契约。
+- **端侧智能挑片、连拍聚类与双语语义搜图**：新增 `SmartCullingEngine`（Vision 人脸眼睑 EAR 闭眼检测、焦点锐度评估、连拍特征聚类 `isBurstBest`、OCR/分类磁盘缓存）与 `SemanticSearchEngine`（双语概念词组扩展与视觉相似图排序）。
+- **纯 Swift 零 Python AI 编排与统一模型中心**：新增 `NativePhotoPlanner`（像素统计 + 意图解析 + 自动生成局部蒙版）、5 槽位 `AIModelHub`（`lama`、`sky`、`depth`、`denoise`、`superRes`）与三标签工作台 `NativeAISheet`。
+
+### 稳定性修复与局部面板加固
+- 修复 `PointColorPane` 在删除色样、清空色样、复位或撤销导致 `pointColors` 缩减时，因 `Toggle` / 滑块闭包捕获原始数组下标引发的 SwiftUI `ToggleStateCollectionLocation.update()` 越界崩溃（改为基于稳定 `UUID` 读写绑定）。
+- 加固 `RetouchPane` 选中斑点时“重选源点”按钮的闭包引用（捕获稳定 `UUID` 而非下标）；同步修复 `SmartCullingEngine` 锐度计算 `UInt8` 四邻域求和溢出与 `SemanticSearchEngine` 中文虚词残片误过滤问题。
+
+### 验证
+- 本地化审查：`1015` 条中英 UI 翻译校验通过（`missingDirectLiteralKeys: {}`）。
+- `test_p012_upgrade.sh` 全 14 节通过（含 `20` 个 Metal 计算管线、`ColorMatch` ΔE 15.12 → 4.00、单目深度物理散景、降噪/2x 超分、智能挑片与双语搜图及 `PointColorPane` 色样删除/清空无崩溃回归测试），`test_workspace_r4.sh`（R1–R4 全量工作区检查，含 R3 72 项与 R4 75 项）全绿通过。
+
 ## [4.6.0] — 2026-11-23
 
 ### 蒙版完备化与分割增强

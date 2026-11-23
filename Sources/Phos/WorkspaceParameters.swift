@@ -76,7 +76,8 @@ enum ParameterGroupSchema {
         case "颜色分级": p.gradeShadow = d.gradeShadow; p.gradeMid = d.gradeMid; p.gradeHigh = d.gradeHigh
         case "HSL · 混色": p.hsl = d.hsl; p.pointColors = d.pointColors
         case "黑白": p.mono = d.mono
-        case "细节": p.grainRoughness = d.grainRoughness; p.retouchSpots = d.retouchSpots
+        case "细节": p.grainRoughness = d.grainRoughness; p.retouchSpots = d.retouchSpots; p.aiDenoise = d.aiDenoise; p.aiDenoiseDetail = d.aiDenoiseDetail; p.superResolution = d.superResolution
+        case "焦外散景": p.bokehFocusDepth = d.bokehFocusDepth; p.bokehFocusRange = d.bokehFocusRange; p.bokehBlades = d.bokehBlades; p.bokehHighlightBoost = d.bokehHighlightBoost; p.bokehCatEye = d.bokehCatEye; p.bokehAutoDepth = d.bokehAutoDepth
         case "镜头校正": p.lensCorrection = nil; p.rawEmbeddedLensCorrection = d.rawEmbeddedLensCorrection
         case "校准": p.primRed = d.primRed; p.primGreen = d.primGreen; p.primBlue = d.primBlue
         case "胶片 CLUT": p.clutName = d.clutName

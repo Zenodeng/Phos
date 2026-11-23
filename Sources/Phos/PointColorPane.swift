@@ -6,12 +6,29 @@ struct PointColorPane: View {
     @EnvironmentObject var s: AppState
     @State private var selectedID: UUID?
 
-    private var selectedIndex: Int? {
+    private var selectedSwatch: PointColorSwatch? {
         guard !s.params.pointColors.isEmpty else { return nil }
-        if let selectedID, let idx = s.params.pointColors.firstIndex(where: { $0.id == selectedID }) {
-            return idx
+        if let selectedID, let found = s.params.pointColors.first(where: { $0.id == selectedID }) {
+            return found
         }
-        return s.params.pointColors.count - 1
+        return s.params.pointColors.last
+    }
+
+    private func swatchBinding<T>(for id: UUID, _ kp: WritableKeyPath<PointColorSwatch, T>,
+                                  fallback: T, commitOnSet: Bool = false) -> Binding<T> {
+        Binding(
+            get: { s.params.pointColors.first(where: { $0.id == id })?[keyPath: kp] ?? fallback },
+            set: { v in
+                var arr = s.params.pointColors
+                guard let i = arr.firstIndex(where: { $0.id == id }) else { return }
+                arr[i][keyPath: kp] = v
+                if commitOnSet {
+                    var p = s.params; p.pointColors = arr; s.commit(p)
+                } else {
+                    s.set(\.pointColors, arr)
+                }
+            }
+        )
     }
 
     var body: some View {
@@ -53,10 +70,11 @@ struct PointColorPane: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
+                let activeID = selectedSwatch?.id
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
                         ForEach(s.params.pointColors) { sw in
-                            let isSel = s.params.pointColors[selectedIndex ?? 0].id == sw.id
+                            let isSel = (activeID == sw.id)
                             Button {
                                 selectedID = sw.id
                             } label: {
@@ -80,21 +98,18 @@ struct PointColorPane: View {
                     .padding(.vertical, 2)
                 }
 
-                if let idx = selectedIndex {
+                if let sw = selectedSwatch {
+                    let swatchID = sw.id
                     HStack(spacing: 6) {
-                        Toggle(L10n.tr("启用"), isOn: Binding(
-                            get: { s.params.pointColors[idx].enabled },
-                            set: { v in
-                                var arr = s.params.pointColors
-                                arr[idx].enabled = v
-                                var p = s.params; p.pointColors = arr; s.commit(p)
-                            }
+                        Toggle(L10n.tr("启用"), isOn: swatchBinding(
+                            for: swatchID, \.enabled, fallback: false, commitOnSet: true
                         ))
                         .font(.system(size: 10.5))
                         Spacer()
                         Button {
                             var arr = s.params.pointColors
-                            arr.remove(at: idx)
+                            guard let i = arr.firstIndex(where: { $0.id == swatchID }) else { return }
+                            arr.remove(at: i)
                             selectedID = arr.last?.id
                             var p = s.params; p.pointColors = arr; s.commit(p)
                         } label: {
@@ -105,74 +120,32 @@ struct PointColorPane: View {
                         .help(L10n.tr("删除当前色样"))
                     }
 
-                    SliderRow(label: "色相偏移", value: Binding(
-                        get: { idx < s.params.pointColors.count ? s.params.pointColors[idx].hueShift : 0 },
-                        set: { v in
-                            var arr = s.params.pointColors
-                            guard idx < arr.count else { return }
-                            arr[idx].hueShift = v
-                            s.set(\.pointColors, arr)
-                        }
+                    SliderRow(label: "色相偏移", value: swatchBinding(
+                        for: swatchID, \.hueShift, fallback: 0
                     ), range: -180...180, defaultValue: 0, unit: "°") { s.endEdit() }
 
-                    SliderRow(label: "彩度偏移", value: Binding(
-                        get: { idx < s.params.pointColors.count ? s.params.pointColors[idx].chromaShift : 0 },
-                        set: { v in
-                            var arr = s.params.pointColors
-                            guard idx < arr.count else { return }
-                            arr[idx].chromaShift = v
-                            s.set(\.pointColors, arr)
-                        }
+                    SliderRow(label: "彩度偏移", value: swatchBinding(
+                        for: swatchID, \.chromaShift, fallback: 0
                     ), range: -100...100, defaultValue: 0) { s.endEdit() }
 
-                    SliderRow(label: "明度偏移", value: Binding(
-                        get: { idx < s.params.pointColors.count ? s.params.pointColors[idx].lumaShift : 0 },
-                        set: { v in
-                            var arr = s.params.pointColors
-                            guard idx < arr.count else { return }
-                            arr[idx].lumaShift = v
-                            s.set(\.pointColors, arr)
-                        }
+                    SliderRow(label: "明度偏移", value: swatchBinding(
+                        for: swatchID, \.lumaShift, fallback: 0
                     ), range: -100...100, defaultValue: 0) { s.endEdit() }
 
-                    SliderRow(label: "总范围", value: Binding(
-                        get: { idx < s.params.pointColors.count ? s.params.pointColors[idx].range : 0.4 },
-                        set: { v in
-                            var arr = s.params.pointColors
-                            guard idx < arr.count else { return }
-                            arr[idx].range = v
-                            s.set(\.pointColors, arr)
-                        }
+                    SliderRow(label: "总范围", value: swatchBinding(
+                        for: swatchID, \.range, fallback: 0.4
                     ), range: 0.05...1.0, defaultValue: 0.4, decimals: 2, step: 0.01) { s.endEdit() }
 
-                    SliderRow(label: "色相范围", value: Binding(
-                        get: { idx < s.params.pointColors.count ? s.params.pointColors[idx].hueRange : 0.45 },
-                        set: { v in
-                            var arr = s.params.pointColors
-                            guard idx < arr.count else { return }
-                            arr[idx].hueRange = v
-                            s.set(\.pointColors, arr)
-                        }
+                    SliderRow(label: "色相范围", value: swatchBinding(
+                        for: swatchID, \.hueRange, fallback: 0.45
                     ), range: 0.1...1.0, defaultValue: 0.45, decimals: 2, step: 0.01) { s.endEdit() }
 
-                    SliderRow(label: "彩度范围", value: Binding(
-                        get: { idx < s.params.pointColors.count ? s.params.pointColors[idx].chromaRange : 0.6 },
-                        set: { v in
-                            var arr = s.params.pointColors
-                            guard idx < arr.count else { return }
-                            arr[idx].chromaRange = v
-                            s.set(\.pointColors, arr)
-                        }
+                    SliderRow(label: "彩度范围", value: swatchBinding(
+                        for: swatchID, \.chromaRange, fallback: 0.6
                     ), range: 0.1...1.0, defaultValue: 0.6, decimals: 2, step: 0.01) { s.endEdit() }
 
-                    SliderRow(label: "明度范围", value: Binding(
-                        get: { idx < s.params.pointColors.count ? s.params.pointColors[idx].lumaRange : 0.7 },
-                        set: { v in
-                            var arr = s.params.pointColors
-                            guard idx < arr.count else { return }
-                            arr[idx].lumaRange = v
-                            s.set(\.pointColors, arr)
-                        }
+                    SliderRow(label: "明度范围", value: swatchBinding(
+                        for: swatchID, \.lumaRange, fallback: 0.7
                     ), range: 0.1...1.0, defaultValue: 0.7, decimals: 2, step: 0.01) { s.endEdit() }
                 }
             }

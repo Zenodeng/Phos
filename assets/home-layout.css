@@ -1179,3 +1179,14 @@
   .hero-eyebrow { font-size: 12px; padding: 5px 12px; margin-bottom: 18px; }
   .try-editor > summary { padding: 18px 20px; font-size: 15px; }
 }
+
+/* Optical centering for centered display headings (no punctuation pull) */
+.hero-intro h1,
+.section-heading.is-centered h2,
+.final-cta h2 {
+  hanging-punctuation: first allow-end last;
+  text-wrap: balance;
+}
+.photo-hero {
+  padding-top: clamp(64px, 8vw, 116px);
+}

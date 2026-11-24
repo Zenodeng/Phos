@@ -595,3 +595,21 @@ dialog,
   .resource-links{grid-template-columns:minmax(0,1fr)}
   .resource-link+.resource-link{padding-left:0;border-left:0;border-top:1px solid var(--line)}
 }
+
+/* Compact corner version badge beside nav wordmark */
+.site-nav .wordmark { width:auto; gap:8px; }
+.nav-ver {
+  display:inline-flex;
+  align-items:center;
+  padding:2px 7px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:500;
+  line-height:1.35;
+  letter-spacing:.01em;
+  font-variant-numeric:tabular-nums;
+  color:#d9bf94;
+  background:rgb(201 168 118 / .10);
+  border:1px solid rgb(201 168 118 / .24);
+}
+@media(max-width:460px){ .nav-ver{display:none} }

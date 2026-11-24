@@ -68,7 +68,7 @@
   stroke-linecap:round;
   stroke-linejoin:round}
 .try-editor .tabs button[aria-selected=true]{
-  color:var(--gold);
+  color:var(--accent);
   background:var(--surface)}
 .try-editor .panel .body{
   padding:24px}
@@ -88,7 +88,7 @@
   text-align:right;
   color:var(--muted)}
 .try-editor input[type=range]{
-  accent-color:var(--gold);
+  accent-color:var(--accent);
   width:100%;
   min-width:0;
   cursor:pointer;
@@ -124,7 +124,7 @@
   color:var(--muted);
   margin-top:5px}
 .try-editor .films button[aria-pressed=true]{
-  background:var(--gold)}
+  background:var(--accent)}
 .try-editor .maskrow{
   display:flex;
   align-items:center;
@@ -135,7 +135,7 @@
   border-radius:5px;
   cursor:pointer}
 .try-editor .maskrow[aria-pressed=true]{
-  background:var(--gold)}
+  background:var(--accent)}
 .try-editor .maskrow em{
   color:var(--muted)}
 .try-editor .demo-actions{
@@ -154,7 +154,7 @@
   border-bottom:1px solid currentColor;
   color:inherit}
 .try-editor .text-button:hover{
-  color:var(--gold)}
+  color:var(--accent)}
 .try-editor .curve-access{
   display:grid;
   gap:7px;
@@ -256,7 +256,7 @@
   padding:10px;
   background:var(--raised)}
 .try-editor .maskrow[aria-pressed=true]{
-  background:var(--gold)}
+  background:var(--accent)}
 .try-editor .maskrow em{
   }
 .try-editor .ctrl{

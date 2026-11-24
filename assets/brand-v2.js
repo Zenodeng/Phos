@@ -24,7 +24,7 @@
     ['index.html#studio',text('交互试用','Interactive preview'),text('滑杆 曲线 胶片 画笔 蒙版 直方图','Sliders curves film brush masks histogram')],
     ['index.html#gallery',text('样张与胶片风格','Sample edits and film looks'),text('胶片 浓度 样张 对比 Ektar Fuji T-Max HALD CLUT','Film intensity sample comparison Ektar Fuji T-Max HALD CLUT')],
     ['features.html#screenshots',text('软件工作流截图','Software workflow screenshots'),text('曲线 渐变 导出 放大','Curves gradients export zoom')],
-    ['features.html#design',text('石墨 × 香槟金','Graphite & champagne'),text('设计语言 网格 蒙版 控制点 液态玻璃','Design language grid mask handles Liquid Glass')],
+    ['features.html#design',text('暗房界面与液态玻璃','Darkroom UI & Liquid Glass'),text('设计语言 网格 蒙版 控制点 液态玻璃 无彩色','Design language grid mask handles Liquid Glass achromatic')],
     ['features.html#light',text('明暗、16-bit Metal 与 EDR','Light, 16-bit Metal & EDR'),text('16-bit 线性浮点 Metal EDR HDR AgX 对比中心 高光滚降 Guided Filter 溢出警示 曝光 白平衡 自动影调','16-bit extended linear Metal EDR HDR AgX pivot rolloff Guided Filter clipping J exposure white balance auto tone')],
     ['features.html#color',text('曲线、OKLCH 点颜色与参考图对色','Curves, OKLCH Point Color & Color Match'),text('RGB 曲线 OKLCH HSL 点颜色 吸管 参考图调色 反解参数 肤色保护 颜色分级 黑白 校准','RGB curves OKLCH HSL Point Color eyedropper Reference Color Match skin protection color grading B&W calibration')],
     ['features.html#film',text('胶片、AI 降噪超分与无痕消除','Film, AI Denoise / 2x Super Res & Remove'),text('303 HALD CLUT cube 颗粒粗糙度 暗角 光晕 YCoCg RAW 降噪 2x 超分 LaMa PatchMatch 修复 克隆 消除','303 HALD CLUT cube grain roughness vignette halation YCoCg RAW denoise 2x super resolution LaMa PatchMatch Heal Clone Remove')],

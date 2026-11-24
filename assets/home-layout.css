@@ -14,7 +14,7 @@
   width:min(var(--page-width),calc(100% - var(--page-gutter) - var(--page-gutter)));
   margin-inline:auto}
 .editorial-section{
-  padding-block:clamp(80px,8vw,120px)}
+  padding-block:clamp(92px,9.5vw,140px)}
 .photo-edition .section-heading{
   grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);
   gap:9%;
@@ -62,9 +62,10 @@
 .photo-comparison .compare-viewport{
   position:relative;
   overflow:hidden;
-  aspect-ratio:2.15;
+  aspect-ratio:16 / 10;
   background:var(--raised);
-  border-radius:12px}
+  border-radius:18px;
+  border:1px solid rgb(255 255 255 / .10)}
 .photo-comparison .compare-viewport img{
   position:absolute;
   inset:0;
@@ -96,11 +97,15 @@
 .compare-ready .compare-labels{
   display:flex}
 .compare-labels span{
-  color:var(--ink);
-  background:var(--scrim);
-  padding:6px 10px;
-  border-radius:5px;
-  backdrop-filter:none}
+  color:#f5f5f7;
+  background:rgb(0 0 0 / .54);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  border:1px solid rgb(255 255 255 / .16);
+  padding:5px 11px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:500}
 .compare-divider{
   display:none;
   position:absolute;
@@ -122,12 +127,12 @@
   gap:6px;
   align-items:center;
   justify-content:center;
-  width:44px;
-  height:44px;
+  width:42px;
+  height:42px;
   border-radius:50%;
-  background:var(--ink);
-  color:var(--raised);
-  box-shadow:0 2px 12px var(--shadow)}
+  background:rgb(255 255 255 / .94);
+  color:#000000;
+  box-shadow:0 4px 22px rgb(0 0 0 / .55)}
 .compare-divider i{
   height:14px;
   width:1px;
@@ -162,7 +167,7 @@
   border:0;
   background:transparent}
 .photo-comparison:focus-within{
-  outline:2px solid var(--gold);
+  outline:2px solid var(--accent);
   outline-offset:5px;
   border-radius:12px}
 .photo-comparison.signature-product{
@@ -750,36 +755,38 @@
   }
 
 
-/* On-device AI interactive showcase (3 real-engine before/after demos) */
+/* On-device AI interactive showcase — Apple Pro Darkroom glass cards */
 .ai-demos-section{border-top:1px solid var(--line)}
-.ai-demo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;margin-top:36px}
-.ai-demo-card{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;gap:14px}
-.ai-demo-card .photo-comparison{border-radius:calc(var(--radius) - 4px);overflow:hidden}
-.ai-demo-card .photo-comparison .compare-viewport{aspect-ratio:16 / 10;border-radius:calc(var(--radius) - 4px)}
+.ai-demo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-top:44px}
+.ai-demo-card{display:flex;flex-direction:column;background:linear-gradient(180deg,#151519 0%,#0f0f12 100%);border:1px solid rgb(255 255 255 / .09);box-shadow:inset 0 1px 0 rgb(255 255 255 / .06);border-radius:20px;padding:20px;gap:14px;transition:border-color 220ms ease}
+.ai-demo-card:hover{border-color:rgb(255 255 255 / .18)}
+.ai-demo-card .photo-comparison{border-radius:14px;overflow:hidden}
+.ai-demo-card .photo-comparison .compare-viewport{aspect-ratio:16 / 10;border-radius:14px}
 .ai-demo-card .compare-labels{inset:12px 12px auto}
-.ai-demo-card .compare-labels span{padding:4px 8px;font-size:12px}
-.ai-demo-card .compare-divider>span{width:38px;height:38px}
+.ai-demo-card .compare-labels span{padding:4px 10px;font-size:12px}
+.ai-demo-card .compare-divider>span{width:36px;height:36px}
 .ai-demo-card .compare-actions{margin-top:0}
-.ai-demo-card .compare-actions button{min-height:40px;padding:6px 10px;font-size:13px}
+.ai-demo-card .compare-actions button{min-height:38px;padding:6px 10px;font-size:13px}
 .ai-demo-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.ai-demo-tag{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:500;color:var(--gold);background:color-mix(in srgb,var(--gold) 14%,transparent);border:1px solid color-mix(in srgb,var(--gold) 36%,transparent);white-space:nowrap}
-.ai-demo-card h3{font-size:var(--lead);margin:0;color:var(--ink)}
-.ai-demo-card p{font-size:var(--caption);line-height:1.65;color:var(--muted);margin:0}
-.ai-demo-metrics{margin-top:auto;padding-top:12px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
-.ai-demo-metrics strong{color:var(--ink);font-weight:500}
-.ref-chip{display:inline-flex;align-items:center;gap:8px;padding:4px 10px 4px 4px;border-radius:8px;background:var(--raised);border:1px solid var(--line);font-size:12px;color:var(--muted)}
+.ai-demo-tag{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:500;color:#c8c8d0;background:rgb(255 255 255 / .06);border:1px solid rgb(255 255 255 / .11);white-space:nowrap}
+.ai-demo-card h3{font-size:19px;font-weight:600;letter-spacing:-.02em;margin:0;color:var(--ink)}
+.ai-demo-card p{font-size:13.5px;line-height:1.65;color:var(--muted);margin:0}
+.ai-demo-metrics{margin-top:auto;padding-top:14px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ai-demo-metrics strong{color:var(--ink);font-weight:600}
+.ref-chip{display:inline-flex;align-items:center;gap:8px;padding:3px 10px 3px 3px;border-radius:8px;background:rgb(255 255 255 / .05);border:1px solid rgb(255 255 255 / .10);font-size:12px;color:#c8c8d0}
 .ref-chip img{width:34px;height:24px;object-fit:cover;border-radius:5px;display:block}
 @media(max-width:1100px){.ai-demo-grid{grid-template-columns:minmax(0,1fr);gap:24px}}
 
-/* Objective Phos vs Lightroom comparison table */
+/* Objective Phos vs Lightroom comparison table — Apple comparison matrix */
 .vs-section{border-top:1px solid var(--line)}
-.vs-table-wrap{margin-top:32px;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
-.vs-table{width:100%;min-width:680px;border-collapse:collapse;text-align:left;font-size:var(--caption)}
-.vs-table th,.vs-table td{padding:16px 20px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.6}
-.vs-table thead th{font-size:var(--body);font-weight:600;color:var(--ink);background:var(--raised);white-space:nowrap}
-.vs-table thead th.col-phos{color:var(--gold);border-bottom:2px solid var(--gold)}
+.vs-table-wrap{margin-top:36px;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid rgb(255 255 255 / .09);border-radius:20px;background:linear-gradient(180deg,#141418 0%,#0e0e11 100%);box-shadow:inset 0 1px 0 rgb(255 255 255 / .05)}
+.vs-table{width:100%;min-width:680px;border-collapse:collapse;text-align:left;font-size:14px}
+.vs-table th,.vs-table td{padding:18px 22px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.65}
+.vs-table thead th{font-size:15px;font-weight:600;color:var(--ink);background:rgb(255 255 255 / .03);white-space:nowrap}
+.vs-table thead th.col-phos{color:#ffffff;border-bottom:2px solid var(--accent);background:rgb(41 151 255 / .08)}
 .vs-table tbody tr:last-child th,.vs-table tbody tr:last-child td{border-bottom:0}
-.vs-table tbody th{width:22%;font-weight:500;color:var(--ink);white-space:nowrap}
-.vs-table td.col-phos{width:40%;color:var(--ink);background:color-mix(in srgb,var(--gold) 5%,transparent)}
+.vs-table tbody th{width:22%;font-weight:600;color:var(--ink);white-space:nowrap}
+.vs-table td.col-phos{width:40%;color:#e5e5ea;background:rgb(41 151 255 / .04)}
 .vs-table td.col-lr{width:38%;color:var(--muted)}
-.vs-note{margin-top:18px;font-size:var(--caption);color:var(--muted);line-height:1.65;max-width:78ch}
+.vs-note{margin-top:20px;font-size:14px;color:var(--muted);line-height:1.7;max-width:78ch}
+.vs-note strong{color:var(--ink);font-weight:500}

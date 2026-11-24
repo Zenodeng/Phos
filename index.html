@@ -6,9 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phos — 原生 Mac RAW 照片编辑器</title>
 
-<meta name="description" content="Phos 是为 macOS 而写的免费开源 RAW 照片编辑器。胶片、曲线、九种局部蒙版与批量导出；本机处理，旁档保存，无账号、无订阅。">
+<meta name="description" content="Phos 是为 macOS 而写的免费开源 RAW 照片编辑器：16-bit 线性浮点 Metal/EDR 管线、OKLCH 点颜色、复合布尔蒙版与 8 部位人像分割、零 Python 端侧 AI（参考图对色、单目深度物理散景、LaMa 消除、2x 超分）及 HDR Gain-Map 导出。纯本机处理，无账号、无订阅。">
 
-<meta name="keywords" content="Phos, RAW 修图软件, macOS RAW 编辑器, RAW 照片编辑器, RAW editor macOS, 胶片模拟 LUT, photo editing app, Swift, Core Image, 非破坏性编辑">
+<meta name="keywords" content="Phos, RAW 修图软件, macOS RAW 编辑器, Metal 16-bit, EDR HDR, OKLCH 点颜色, 参考图调色, 光学散景, 复合布尔蒙版, LaMa 消除, Adobe XMP, 胶片模拟 CLUT, Swift, Core ML, 非破坏性编辑">
 
 <link rel="canonical" href="https://zenodeng.com/">
 
@@ -30,7 +30,7 @@
 
 <meta property="og:title" content="Phos — 原生 Mac RAW 照片编辑器">
 
-<meta property="og:description" content="Phos 是为 macOS 而写的免费开源 RAW 照片编辑器。胶片、曲线、九种局部蒙版与批量导出；本机处理，旁档保存，无账号、无订阅。">
+<meta property="og:description" content="16-bit 线性浮点 Metal/EDR 管线、OKLCH 点颜色、复合布尔蒙版与零 Python 端侧 AI（参考图对色、单目深度光学散景、LaMa 消除、RAW 降噪与 2x 超分）。纯本机处理，免费开源无订阅。">
 
 <meta property="og:url" content="https://zenodeng.com/">
 
@@ -50,7 +50,7 @@
   "operatingSystem": "macOS 26.0 or later (Apple silicon)",
   "applicationCategory": "MultimediaApplication",
   "applicationSubCategory": "RAW 照片编辑器 / Photo Editing",
-  "softwareVersion": "4.7.0",
+  "softwareVersion": "4.7.1",
   "fileSize": "8.78MB",
   "isAccessibleForFree": true,
   "offers": {
@@ -59,7 +59,7 @@
     "priceCurrency": "CNY"
   },
   "license": "https://opensource.org/licenses/MIT",
-  "description": "macOS 原生非破坏性 RAW 照片编辑器：RAW 解码、完整影调与色彩调整、胶片 CLUT 模拟、九种局部蒙版、批量同步与导出水印。全部在本机完成，照片不上传、无账号、无订阅。",
+  "description": "macOS 原生非破坏性 RAW 照片编辑器：16-bit 扩展线性浮点 Metal/EDR 管线、AgX 影调与 OKLCH 点颜色、303 种胶片 CLUT、复合布尔蒙版与 8 部位人像分割、零 Python 端侧 AI（参考图反解对色、单目深度物理光学散景、LaMa 消除、RAW 降噪与导出 2x 超分、智能挑片与双语语义搜图）、双向 Adobe XMP 与 82 支内置镜头配置。全部在本机完成，照片不上传、无账号、无订阅。",
   "url": "https://zenodeng.com/",
   "downloadUrl": "https://zenodeng.com/download/Phos-macOS-apple-silicon.dmg",
   "installUrl": "https://zenodeng.com/help.html#install",
@@ -77,14 +77,16 @@
     "url": "https://github.com/Zenodeng"
   },
   "featureList": [
-    "RAW 解码（走 macOS 系统内置解码器）",
-    "完整影调与色彩调整",
-    "胶片 CLUT 模拟",
-    "九种局部蒙版（线性 / 径向渐变、主体与人物识别等）",
-    "批量同步与批量导出",
-    "导出水印",
-    "非破坏性编辑，参数保存在侧车文件",
-    "纯本地处理，照片不上传、无账号、无订阅"
+    "16-bit 扩展线性浮点 Metal 管线（20 个 Compute 内核）与 EDR/HDR 直通预览",
+    "AgX 对比中心/高光滚降、14-stop Guided Filter 保边影调与高光/阴影溢出警示（J）",
+    "OKLCH 空间 HSL、独立点颜色（Point Color）吸管与参考图一键反解可编辑参数对色",
+    "复合布尔蒙版（加/减/交）、自动边缘吸附压感画笔、天空分割与 8 部位人像分割",
+    "任意 RAW 单目深度估计与物理光学散景（多边形光圈叶片、HDR 光斑增益、猫眼旋焦）",
+    "Heal / Clone / Big-LaMa 无痕消除、非破坏性 RAW 域 YCoCg 降噪与导出端 2x 超分辨率",
+    "多视图选片（G 网格 / C 对比 / N 多图同屏 / ⇧R 参考）、智能挑片与双语语义搜图",
+    "双向 Adobe XMP 旁档、Lightroom .xmp 预设导入（0%–200%）、虚拟副本与 82 支内置镜头",
+    "Gain-Map HDR JPEG、10-bit PQ HEIC、16-bit Display P3 TIFF/PNG 与 EXIF/GPS 隐私控制",
+    "零 Python 原生端侧 AI、5 槽位 Core ML 模型中心与可选本地 Qwen3-VL MLX 模式"
   ]
 }
 </script>
@@ -131,7 +133,7 @@
       "name": "和 Lightroom 有什么不一样？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Phos 是本地优先：不订阅、不云同步、不做移动端，专注把 RAW 解码、影调与色彩、胶片 CLUT 模拟、局部蒙版和批量导出做扎实。适合希望照片完全留在自己机器上的个人摄影流程。"
+        "text": "Phos 是纯本机开源方案：不订阅、不建闭源图库、不强制云同步。打开文件夹即可在 16-bit 线性浮点 Metal/EDR 管线上编辑 RAW，支持 OKLCH 点颜色、复合布尔与 8 部位人像蒙版、零 Python 端侧 AI（参考图反解对色、单目深度物理散景、LaMa 消除、2x 超分），还能双向读写 Adobe XMP 旁档并直接导入 Lightroom .xmp 预设。"
       }
     },
     {
@@ -147,7 +149,7 @@
       "name": "支持批量处理吗？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "支持。可以批量导入、把一张照片的调整同步到其他照片，并批量导出（含导出水印）。"
+        "text": "支持。提供网格（G）、双图对比（C）、2–4 图同屏（N）与参考视图（⇧R），配合端侧智能挑片（闭眼/跑焦/连拍检测）、双语语义搜图、虚拟副本、多选同步调整与并发批量导出（含 2x 超分与水印）。"
       }
     },
     {
@@ -163,7 +165,7 @@
       "name": "怎么反馈问题或参与开发？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "到 GitHub 仓库提 Issue 或 Pull Request 都可以。项目用 Swift 编写，基于 Core Image、Vision 与 AppKit。"
+        "text": "到 GitHub 仓库提 Issue 或 Pull Request 都可以。项目用 Swift 编写，基于 Metal、Core Image、Vision、Core ML 与 AppKit。"
       }
     }
   ]
@@ -207,7 +209,7 @@
 
 <div class="hero-purpose">
 
-<p>照片留在本机，调整随时可逆。免费开源，让精修没有订阅负担。</p>
+<p>16-bit 线性浮点 Metal 管线与零 Python 端侧 AI。照片留在本机，调整随时可逆，免费开源无订阅。</p>
 
 <div class="hero-actions"><a class="button primary" href="download/Phos-macOS-apple-silicon.dmg" download="">下载 Mac 版<span class="download-icon" aria-hidden="true"><svg class="download-arrow" viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true"><path d="M12 4v16m-6-6 6 6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a><a class="quiet-link" href="#gallery">看修图样张<span aria-hidden="true">↗</span></a></div>
 
@@ -274,13 +276,13 @@
 
 <h3>先找到这张照片的感觉。</h3>
 
-<p>挑一款胶片，调到刚好的浓度。保留照片自己的颜色，也留一点你的偏好。</p>
+<p>挑一款胶片，或直接导入一张参考图反解为完全可编辑的参数。保留照片自己的颜色，也留一点你的偏好。</p>
 
 <ul class="feature-notes">
 
-<li>胶片 CLUT，浓度可调</li>
+<li>303 种胶片 HALD CLUT 与参考图一键对色（0%–150%，含肤色保护）</li>
 
-<li>支持导入 .cube 与保存命名预设</li></ul>
+<li>支持导入 .cube LUT 与 Lightroom .xmp 预设（0%–200% 强度）</li></ul>
 
 <a class="text-link" href="#gallery">比较三种胶片风格</a></div>
 
@@ -300,7 +302,7 @@
 
 <div>
 
-<p>全局影调、五通道曲线与 HSL 负责整体；九种局部蒙版照顾天空、人物和画面的细节。</p></div>
+<p>16-bit Metal 线性管线、AgX 影调、五通道曲线与 OKLCH 点颜色负责整体；复合布尔蒙版、8 部位人像与天空分割、LaMa 无痕消除及单目深度光学散景照顾每一处细节。</p></div>
 
 </div>
 
@@ -334,15 +336,15 @@
 
 <h3>修好了，就交给下一步。</h3>
 
-<p>一次导出一张，也能处理一组。按交付需要选择格式、色域、尺寸和水印。</p>
+<p>一次导出一张，也能并发处理一组。按交付需要选择 HDR / 广色域格式、2x 超分辨率、元数据隐私与水印。</p>
 
 <ul class="feature-notes">
 
-<li>JPEG / PNG / TIFF / HEIC</li>
+<li>Gain-Map HDR JPEG / 10-bit PQ HEIC / 16-bit Display P3 TIFF &amp; PNG</li>
 
-<li>16 位 TIFF、多色域、批量输出</li>
+<li>导出端 2x 超分辨率、长边缩放与并发批量输出</li>
 
-<li>文字与图片水印</li></ul>
+<li>保留 EXIF/IPTC、可选移除 GPS 位置隐私、文字与图片水印</li></ul>
 
 <a class="text-link" href="features.html#export">了解导出选项</a></div>
 
@@ -812,33 +814,33 @@
 
 <div class="workflow-copy">
 
-<p class="plain-label">可选 · 实验性本地 AI</p>
+<p class="plain-label">端侧本地 AI · 零 Python 开箱即用</p>
 
 <h2>说出想法。<br>先看，再决定。</h2>
 
-<p>用中文描述调整要求，让本地模型给出可编辑的参数与局部蒙版建议。满意了，再应用。</p>
+<p>纯 Swift 原生 AI 工作台随应用直接可用：自然语言生成可编辑滑杆与局部蒙版、任意参考图一键反解调色参数、5 槽位 Core ML 模型中心按需加速消除 / 天空 / 深度 / 降噪 / 超分，也可按需接入本地 Qwen3-VL 大模型。</p>
 
 <ul class="ai-actions-list">
 
 <li>
 
-<h3>“整体提亮 0.2 档。”</h3>
+<h3>纯 Swift 原生 AI 与参考图对色</h3>
 
-<p>把要求转成滑杆建议，继续手动微调。</p></li>
-
-<li>
-
-<h3>“白平衡保持原样。”</h3>
-
-<p>说明想保留的调整，对照预览再决定。</p></li>
+<p>零 Python 依赖，开箱即用。将修图意图或参考片风格反解为完全可调的滑杆与蒙版，支持 0%–150% 匹配强度与肤色保护。</p></li>
 
 <li>
 
-<h3>“只提亮这部分。”</h3>
+<h3>单目深度散景、LaMa 消除与 RAW 降噪超分</h3>
 
-<p>支持局部蒙版建议，先对照效果再写入。</p></li></ul>
+<p>任意 RAW 均可生成单目深度与多边形叶片/猫眼光学散景；内置 PatchMatch + YCoCg 保边降噪 + 2x 超分，也可在模型中心一键启用 Core ML 加速。</p></li>
 
-<p class="ai-footnote">实验性功能，结果需人工核对。约 3.1 GB 底模单独安装；不安装也能正常修图。</p><a class="text-link" href="help.html#ai-model">了解模型安装</a></div>
+<li>
+
+<h3>先看预览，每一步完全可逆</h3>
+
+<p>所有参数建议与可选的 Qwen3-VL（MLX）大模型草稿均先在双图预览中核对，一次应用对应一次撤销，照片绝不离开本机。</p></li></ul>
+
+<p class="ai-footnote">原生 AI、参考图对色、零模型深度与降噪超分全部内置免装；Core ML 加速模型与 Qwen3-VL（约 3.1 GB）均可按需单独安装。</p><a class="text-link" href="help.html#ai-model">了解原生 AI 与模型中心</a></div>
 
 <figure class="ai-story">
 
@@ -946,9 +948,9 @@
 
 <div class="ans">
 
-<p>Phos 是本地优先：不订阅、不云同步、不做移动端，专注把 RAW 解码、影调与色彩、胶片 CLUT 模拟、局部蒙版和批量导出做扎实。</p>
+<p>Phos 是纯本机开源方案：不订阅、不建闭源图库、不强制云同步。打开文件夹即可在 16-bit 线性浮点 Metal/EDR 管线上编辑 RAW，支持 OKLCH 点颜色、复合布尔与 8 部位人像蒙版、零 Python 端侧 AI（参考图反解对色、单目深度物理散景、LaMa 消除、2x 超分）。</p>
 
-<p>适合希望照片完全留在自己机器上的个人摄影流程。</p></div>
+<p>同时支持双向读写 Adobe XMP 旁档并直接导入 Lightroom <code>.xmp</code> 预设（0%–200% 强度），适合希望照片完全留在自己机器上的个人摄影流程。</p></div>
 
         </details></div><div class="faq-column"><details class="rv-stagger">
           
@@ -970,7 +972,7 @@
 
 <div class="ans">
 
-<p>支持。可以批量导入、把一张照片的调整同步到其他照片，并批量导出（含导出水印）。</p></div>
+<p>支持。提供网格（<code>G</code>）、双图对比（<code>C</code>）、2–4 图同屏（<code>N</code>）与参考视图（<code>⇧R</code>），配合端侧智能挑片（闭眼/跑焦/连拍检测）、双语语义搜图、虚拟副本、多选同步调整与并发批量导出（含 2x 超分与水印）。</p></div>
 
         </details><details class="rv-stagger">
           
@@ -992,7 +994,7 @@
 
 <div class="ans">
 
-<p>到 <a href="https://github.com/Zenodeng/Phos">GitHub 仓库</a>提 Issue 或 Pull Request 都可以。项目用 Swift 编写，基于 Core Image、Vision 与 AppKit。</p></div>
+<p>到 <a href="https://github.com/Zenodeng/Phos">GitHub 仓库</a>提 Issue 或 Pull Request 都可以。项目用 Swift 编写，基于 Metal、Core Image、Vision、Core ML 与 AppKit。</p></div>
 
         </details><a class="text-link" href="help.html">完整安装与下载帮助</a></div></div>
 
@@ -1033,7 +1035,7 @@
 <li><a href="download/Phos-macOS-apple-silicon.dmg">下载 Mac 版</a></li>
 <li><a href="help.html#download-help">下载渠道与校验</a></li></ul>
 
-<p>Phos 4.7.0 · 8.78 MB</p>
+<p>Phos 4.7.1 · 8.78 MB</p>
 <p>macOS 26+ · Apple 芯片</p></div>
 
 <div>

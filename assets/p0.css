@@ -386,6 +386,7 @@ html { scrollbar-gutter: stable; }
   color: #18181b;
   font: 500 13px/1 var(--font);
   white-space: nowrap;
+  pointer-events: none;
 }
 .rubber-segment .rubber-thumb-label svg { width: 20px; height: 20px; flex: 0 0 auto; }
 @media (max-width: 760px) {
@@ -403,6 +404,7 @@ html { scrollbar-gutter: stable; }
 .compare-actions.rubber-segment { display: grid; width: 100%; grid-auto-columns: minmax(0, 1fr); }
 .tabs.rubber-segment { display: inline-grid; width: max-content; flex-wrap: nowrap; }
 .gallery-tabs.rubber-segment { display: inline-grid; width: max-content; max-width: 100%; flex-wrap: nowrap; gap: 0; margin-bottom: 28px; }
+.gallery-tabs.rubber-segment .rubber-thumb { pointer-events: none; cursor: default; }
 
 
 /* The demo's tabs are vertical icon tabs (34x71 originally); give the thumb label a column layout. */

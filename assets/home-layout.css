@@ -417,6 +417,9 @@
 .sample-provenance p{
   color:var(--muted);
   max-width:720px}
+.sample-provenance .text-link{
+  white-space:nowrap;
+  flex-shrink:0}
 .text-button{
   text-decoration:underline;
   text-underline-offset:5px;

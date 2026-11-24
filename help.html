@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phos — 安装与下载帮助</title>
 
-<meta name="description" content="下载 Phos 4.7.0，查看 macOS 首次打开步骤、下载渠道、SHA256 校验、可选本地 AI 模型与 Windows 实验版说明。">
+<meta name="description" content="下载 Phos 4.7.1，查看 macOS 首次打开步骤、下载渠道、SHA256 校验、零 Python 原生 AI 与 5 槽位 Core ML 模型中心、可选 MLX 大模型及 Windows 实验版说明。">
 
 <meta name="keywords" content="Phos, RAW 修图软件, macOS RAW 编辑器, RAW 照片编辑器, RAW editor macOS, 胶片模拟 LUT, photo editing app, Swift, Core Image, 非破坏性编辑">
 
@@ -30,7 +30,7 @@
 
 <meta property="og:title" content="Phos — 安装与下载帮助">
 
-<meta property="og:description" content="下载 Phos 4.7.0，查看 macOS 首次打开步骤、下载渠道、SHA256 校验、可选本地 AI 模型与 Windows 实验版说明。">
+<meta property="og:description" content="下载 Phos 4.7.1，查看 macOS 首次打开步骤、下载渠道、SHA256 校验、零 Python 原生 AI 与 5 槽位 Core ML 模型中心、可选 MLX 大模型及 Windows 实验版说明。">
 
 <meta property="og:url" content="https://zenodeng.com/help.html">
 
@@ -217,7 +217,7 @@
 
       
 
-<p class="note">需要 macOS 26.0 或更高版本 · Apple 芯片 · MIT 协议 · 当前版本 v4.7.0（8.78 MB）</p>
+<p class="note">需要 macOS 26.0 或更高版本 · Apple 芯片 · MIT 协议 · 当前版本 v4.7.1（8.78 MB）</p>
       
 
 <div class="channels">
@@ -246,7 +246,7 @@
 
         
 
-<p class="sum">以上是同一个文件，SHA256 完全一致：<code>253fff7a…79be</code>（完整值见 <a href="download/SHA256.txt">SHA256.txt</a>）。下载后可在终端执行 <code>shasum -a 256 下载的文件.dmg</code> 核对。</p>
+<p class="sum">以上是同一个文件，SHA256 完全一致：<code>e302ad14…e50c</code>（完整值见 <a href="download/SHA256.txt">SHA256.txt</a>）。下载后可在终端执行 <code>shasum -a 256 下载的文件.dmg</code> 核对。</p>
         
 
 <p class="sum">习惯用 zip 的话，<a href="download/Phos-macOS-apple-silicon.zip">这里也有一份</a>（内容相同）。</p>
@@ -257,7 +257,24 @@
 <div class="channels" id="ai-model" style="margin-top:40px">
         
 
-<h3>可选：本地 AI 修图模型</h3>
+<h3>一、开箱即用：零 Python 原生 AI 与 5 槽位 Core ML 模型中心</h3>
+
+<p class="sum">从 4.7 起，Phos 的核心端侧 AI 能力<strong>全部内置、零 Python 依赖、安装完即可直接使用</strong>，不下载任何外部权重也能完整体验：</p>
+
+<p class="sum" style="margin-top:12px">
+  · <strong>纯 Swift 原生 AI 修图（NativePhotoPlanner）</strong>：基于画面统计与意图解析生成可编辑参数与局部蒙版，双图预览确认后写入。<br>
+  · <strong>参考图一键对色（Color Match）</strong>：把任意参考片风格反解为完全可调的全局参数，支持 <code>0%–150%</code> 强度与肤色保护。<br>
+  · <strong>任意 RAW 单目深度与光学散景</strong>：内置 Vision 显著性 + 人物 + 透视梯度零模型深度，驱动多边形光圈叶片与猫眼散景。<br>
+  · <strong>零模型消除 / 天空 / 降噪与 2x 超分</strong>：内置 4 层 PatchMatch 消除、地平线+梯度阻断天空分割、Metal YCoCg RAW 保边降噪及导出端 Lanczos+结构张量 2x 超分，以及端侧智能挑片与双语语义搜图。
+</p>
+
+<p class="sum" style="margin-top:14px"><strong>想要进一步提升精度？</strong>打开调整面板顶部的「AI 修图 → 端侧模型中心」，可按需为 5 个独立 Core ML 槽位（<code>LaMa 消除</code>、<code>Core ML 天空分割</code>、<code>DepthAnythingV2 景深</code>、<code>AI RAW 神经降噪</code>、<code>AI 2x 超分辨率</code>）直接导入本地 <code>.mlpackage</code> 或 <code>.mlmodelc</code> 模型，也可在源码仓库运行一键安装脚本：</p>
+
+<pre style="margin: 12px 0px 0px; padding: 14px 16px; border-radius: 10px; overflow-x: auto;"><code style="padding: 0px; word-break: normal; white-space: pre;"># 按需将 Big-LaMa 或 DepthAnythingV2 转换并安装到 Phos Core ML 槽位
+bash Scripts/install_lama_model.sh
+bash Scripts/install_depth_model.sh</code></pre>
+
+<h3 style="margin-top:40px">二、可选进阶：本地多模态大模型（Qwen3-VL-4B / MLX）</h3>
         
 
 <ul>
@@ -268,10 +285,10 @@
 
         
 
-<p class="sum">主程序里已经带了约 1.3 MB 的微调适配器，<strong>打开 AI 面板不需要再下载任何东西</strong>；但要让 AI 真正给出建议，还需要一份约 3.1 GB 的底模和一套 MLX 运行环境。这个 6.7 KB 的小包就是用来准备它们的 —— 它本身不含权重，会按固定版本从 Hugging Face 拉取并逐个文件校验 SHA256。</p>
+<p class="sum">如果你希望用更自由的开放式自然语言让本地视觉大模型给出修图方案，可额外安装约 3.1 GB 的 <code>Qwen3-VL-4B</code> 底模与 MLX 运行环境（主程序已自带约 1.3 MB 微调适配器）。这个 6.7 KB 安装包不含权重，会按固定版本从 Hugging Face 拉取并逐个文件校验 SHA256。</p>
         
 
-<p class="sum" style="margin-top:14px"><strong>不安装也能正常使用全部常规编辑功能。</strong>AI 属实验性，装不装都不影响修图本身。</p>
+<p class="sum" style="margin-top:14px"><strong>完全可选。</strong>不安装 Qwen3-VL 也不影响全部常规修图和上面的零 Python 原生 AI 功能。</p>
 
         
 
@@ -466,7 +483,7 @@ python3.11 install_model.py</code></pre>
 <li><a href="download/Phos-macOS-apple-silicon.dmg">下载 Mac 版</a></li>
 <li><a href="help.html#download-help">下载渠道与校验</a></li></ul>
 
-<p>Phos 4.7.0 · 8.78 MB</p>
+<p>Phos 4.7.1 · 8.78 MB</p>
 <p>macOS 26+ · Apple 芯片</p></div>
 
 <div>

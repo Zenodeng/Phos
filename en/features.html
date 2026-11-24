@@ -6,9 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phos — Features in detail</title>
 
-<meta name="description" content="Explore light, five-channel curves, film LUTs, nine local masks, batch workflows, 16-bit TIFF export and experimental local AI in Phos.">
+<meta name="description" content="Explore Phos 4.7.1: 16-bit extended linear Metal/EDR pipeline, AgX & OKLCH Point Color, 303 film CLUTs, composite boolean & 8-part portrait masks, monocular depth bokeh, LaMa remove, RAW denoise & 2x Super Res, zero-Python AI, bidirectional XMP and HDR export.">
 
-<meta name="keywords" content="Phos, RAW editor, macOS RAW editor, RAW photo editor, film simulation LUT, photo editing app, Swift, Core Image, non-destructive editing">
+<meta name="keywords" content="Phos, RAW editor, macOS RAW editor, Metal 16-bit, EDR HDR, OKLCH Point Color, Boolean Masks, Portrait Segmentation, Monocular Depth Bokeh, LaMa Remove, Adobe XMP, 82 Lens Profiles, Core ML Model Hub, non-destructive editing">
 
 <link rel="canonical" href="https://zenodeng.com/en/features.html">
 
@@ -30,7 +30,7 @@
 
 <meta property="og:title" content="Phos — Features in detail">
 
-<meta property="og:description" content="Explore light, five-channel curves, film LUTs, nine local masks, batch workflows, 16-bit TIFF export and experimental local AI in Phos.">
+<meta property="og:description" content="Explore Phos 4.7.1: 16-bit extended linear Metal/EDR pipeline, OKLCH Point Color, composite boolean & 8-part portrait masks, monocular depth bokeh, zero-Python on-device AI and 5-slot Core ML Model Hub.">
 
 <meta property="og:url" content="https://zenodeng.com/en/features.html">
 
@@ -62,7 +62,7 @@
 <div class="mobile-menu-footer"><a class="language" href="../features.html">简体中文</a><a class="button primary" href="../download/Phos-macOS-apple-silicon.dmg" download="">Download Mac</a></div>
 </dialog>
 
-<noscript><nav class="noscript-nav" aria-label="页面导航"><a href="index.html#workspace">Workspace</a><a href="features.html" aria-current="page">Features</a><a href="index.html#studio">Try editing</a><a href="help.html">Help</a></nav></noscript>
+<noscript><nav class="noscript-nav" aria-label="Page navigation"><a href="index.html#workspace">Workspace</a><a href="features.html" aria-current="page">Features</a><a href="index.html#studio">Try editing</a><a href="help.html">Help</a></nav></noscript>
 
 <main id="main">
 
@@ -80,11 +80,11 @@
 
 <summary>Browse feature chapters<span aria-hidden="true">+</span></summary>
 
-<nav aria-label="Feature contents"><a href="#light">Light &amp; white balance</a><a href="#color">Curves &amp; color</a><a href="#film">Film &amp; texture</a><a href="#masks">Nine local masks</a><a href="#geometry">Crop, geometry &amp; lenses</a><a href="#workflow">Selection &amp; batch editing</a><a href="#export">Export &amp; watermarks</a><a href="#local-ai">Local AI editing</a><a href="#native">Native, bilingual &amp; compatible</a></nav>
+<nav aria-label="Feature contents"><a href="#light">Light, Metal &amp; EDR</a><a href="#color">Curves, Point Color &amp; Match</a><a href="#film">Film, Denoise / 2x &amp; Remove</a><a href="#masks">Composite Masks &amp; AI Seg</a><a href="#geometry">Crop, Lenses &amp; Depth Bokeh</a><a href="#workflow">Multi-View, Culling &amp; XMP</a><a href="#export">HDR Export &amp; Watermarks</a><a href="#local-ai">Zero-Python AI &amp; Model Hub</a><a href="#native">Native Engine, Bilingual &amp; Files</a></nav>
 
 </details>
 
-<nav aria-label="Feature contents"><a href="#light">Light &amp; white balance</a><a href="#color">Curves &amp; color</a><a href="#film">Film &amp; texture</a><a href="#masks">Nine local masks</a><a href="#geometry">Crop, geometry &amp; lenses</a><a href="#workflow">Selection &amp; batch editing</a><a href="#export">Export &amp; watermarks</a><a href="#local-ai">Local AI editing</a><a href="#native">Native, bilingual &amp; compatible</a></nav>
+<nav aria-label="Feature contents"><a href="#light">Light, Metal &amp; EDR</a><a href="#color">Curves, Point Color &amp; Match</a><a href="#film">Film, Denoise / 2x &amp; Remove</a><a href="#masks">Composite Masks &amp; AI Seg</a><a href="#geometry">Crop, Lenses &amp; Depth Bokeh</a><a href="#workflow">Multi-View, Culling &amp; XMP</a><a href="#export">HDR Export &amp; Watermarks</a><a href="#local-ai">Zero-Python AI &amp; Model Hub</a><a href="#native">Native Engine, Bilingual &amp; Files</a></nav>
 
 <a class="text-link" href="index.html#studio">Try the browser preview</a></aside>
 
@@ -92,17 +92,17 @@
 
 <section id="light" class="feature-chapter">
 
-<h2>Light &amp; white balance</h2>
+<h2>Light, 16-bit Metal &amp; EDR</h2>
 
-<p class="chapter-intro">Shape the image one adjustment at a time.</p>
+<p class="chapter-intro">Shape highlights and shadows in a 16-bit extended linear floating-point Metal pipeline without harsh clipping.</p>
 
 <ul>
 
-<li>Temperature, tint and gray-point sampling; exposure, contrast, highlights, shadows, whites and blacks.</li>
+<li>16-bit extended linear GPU pipeline (<code>extendedLinearSRGB</code> / <code>.RGBAh</code>, 20 Metal compute kernels) with an EDR / HDR preview canvas.</li>
 
-<li>Texture, clarity, dehaze, vibrance, saturation and HDR highlight/shadow compression.</li>
+<li>AgX contrast pivot and highlight rolloff, 14-stop Guided Filter edge-preserving tone, bidirectional whites/blacks and <code>J</code> clipping warnings.</li>
 
-<li>Auto tone gives you an editable starting point. Original comparison and undo remain available.</li></ul>
+<li>Temperature, tint and gray-point eyedropper, texture/clarity/dehaze and scene-aware auto tone as an editable starting point.</li></ul>
 
 <figure class="feature-shot"><img src="../images/native-20261031/workspace-a.webp" width="2160" height="1341" loading="lazy" alt="Light adjustment workspace"><button type="button" class="image-zoom" data-zoom="feature-light">Enlarge image</button>
 
@@ -114,7 +114,7 @@
 
 <div>
 
-<p>Exposure, contrast, highlights, shadows, whites and blacks, texture / clarity / dehaze, white-balance gray-point eyedropper, HDR; five-channel tone curve, HSL mixer, color grading, black &amp; white, and calibration.</p></div>
+<p>Full 16-bit half-float extended linear rendering (with automatic CGImage fallback), covering exposure, AgX pivot/rolloff, Guided Filter highlights/shadows/dehaze, bidirectional whites/blacks, white-balance gray-point eyedropper and real-time clipping alerts (<code>J</code>).</p></div>
 
 </details>
 
@@ -122,17 +122,17 @@
 
 <section id="color" class="feature-chapter">
 
-<h2>Curves &amp; color</h2>
+<h2>Curves, OKLCH Point Color &amp; Color Match</h2>
 
-<p class="chapter-intro">Build a look or refine one subtle color.</p>
+<p class="chapter-intro">Build a cohesive look, pinpoint a single hue in OKLCH, or match any reference still into editable sliders.</p>
 
 <ul>
 
-<li>Five curve channels: composite, luminance, R, G and B, with freely editable points.</li>
+<li>Five curve channels (composite, luminance, R, G and B) with an expandable editor, plus shadow, midtone and highlight color grading.</li>
 
-<li>Separate shadow, midtone and highlight grading, with blend and balance.</li>
+<li>Perceptually uniform OKLCH 8-band HSL, dedicated <strong>Point Color</strong> eyedropper swatches (independent hue/chroma/luminance/range), B&amp;W mixing and calibration.</li>
 
-<li>Eight-band HSL, black-and-white channel mixing and RGB primary calibration.</li></ul>
+<li><strong>Reference-to-Editable-Parameters Color Match</strong>: match any reference still into fully editable Phos parameters via OKLab/OKLCH statistics and coordinate descent, with 0–150% strength and skin protection.</li></ul>
 
 <figure class="feature-shot"><img src="../images/workspace-color.webp" width="2160" height="1341" loading="lazy" alt="Curves and color grading"><button type="button" class="image-zoom" data-zoom="feature-color">Enlarge image</button>
 
@@ -156,17 +156,17 @@
 
 <section id="film" class="feature-chapter">
 
-<h2>Film &amp; texture</h2>
+<h2>Film, AI Denoise / 2x Super Res &amp; Remove</h2>
 
-<p class="chapter-intro">Keep the look you want to return to.</p>
+<p class="chapter-intro">Film texture, seamless object removal and non-destructive RAW denoise/super resolution in one GPU pipeline.</p>
 
 <ul>
 
-<li>HALD film LUTs, including Kodak 2383 / 2393 print looks, with continuous strength control.</li>
+<li>303 HALD film CLUTs (including Kodak 2383 / 2393 print looks), <code>.cube</code> import and background scanning, with grain roughness, vignette and halation.</li>
 
-<li>Import .cube LUTs or scan your own HaldCLUT directory.</li>
+<li><strong>Heal, Clone &amp; Remove</strong>: Poisson blending, automatic clean source suggestions and on-canvas dragging; Remove uses built-in 4-level PatchMatch plus optional offline Core ML Big-LaMa (<code>LaMa.mlmodelc</code>).</li>
 
-<li>Grain, grain size, vignette, halation, sharpening and luminance/color noise reduction.</li></ul>
+<li><strong>Non-destructive RAW Denoise &amp; Export 2x Super Res</strong>: Metal linear YCoCg edge-preserving denoise and export-only Lanczos 2x + structure-tensor sharpening (or optional tiled Core ML neural models), preserving the 1:1 preview contract with zero bloated intermediate DNGs.</li></ul>
 
 <details class="technical-note">
 
@@ -174,7 +174,7 @@
 
 <div>
 
-<p>HALD CLUT loading, including Kodak 2383 / 2393 print emulations, 64³ cube resampling, adjustable strength.</p></div>
+<p>HALD CLUT 64³ cube resampling; Retouch supports <code>H</code> to toggle pins, <code>Delete</code> to remove spots and a dual-ring cursor preview; optional Core ML neural denoise &amp; 2x Super Res use seamless 512×512 Hann-window tiling.</p></div>
 
 </details>
 
@@ -182,17 +182,17 @@
 
 <section id="masks" class="feature-chapter">
 
-<h2>Nine local masks</h2>
+<h2>Composite Masks &amp; AI Segmentation</h2>
 
-<p class="chapter-intro">Give each area its own adjustments.</p>
+<p class="chapter-intro">Combine shapes and AI selections with Add, Subtract and Intersect boolean math — each with its own local stack.</p>
 
 <ul>
 
-<li>Linear and radial gradients, brush, color range and luminance range.</li>
+<li>Linear and radial gradients, color range, luminance range and a brush with <strong>Auto Mask edge snapping</strong> and <strong>tablet pen pressure</strong>.</li>
 
-<li>Subject, person, foreground cutout and depth painting, using on-device vision where applicable.</li>
+<li><strong>AI Segmentation</strong>: Subject, Person, Background, Foreground transparent cutout, upgraded zero-model / Core ML Sky segmentation and <strong>8 portrait body sub-parts</strong> (face skin, body skin, eyes, eyebrows, lips, teeth, hair, clothes).</li>
 
-<li>Independent adjustment stacks; invert, duplicate or delete, with directly draggable canvas controls.</li></ul>
+<li><strong>Add / Subtract / Intersect boolean sub-masks</strong> and full-resolution Guided Filter edge refinement; every mask carries full tone sliders, expandable local curves, local OKLCH Point Color and local LUTs.</li></ul>
 
 <figure class="feature-shot"><img src="../images/06-linear-gradient-mask.webp" width="1920" height="1192" loading="lazy" alt="Linear gradient mask example"><button type="button" class="image-zoom" data-zoom="feature-masks">Enlarge image</button>
 
@@ -204,7 +204,7 @@
 
 <div>
 
-<p>Linear and radial gradients, brush, color range, luminance range, Select Subject, Select Person, subject cutout, and depth paint — nine in all. Each mask has its own adjustment stack and can be inverted, duplicated, or deleted.</p></div>
+<p>Every boolean sub-mask can be selected individually, switched between Add/Subtract/Intersect, inverted, toggled and dragged directly on canvas. Sky segmentation uses a zero-model horizon + gradient-blocked BFS engine and supports optional Core ML <code>SkySegmentation</code> weights via the Model Hub.</p></div>
 
 </details>
 
@@ -212,33 +212,33 @@
 
 <section id="geometry" class="feature-chapter">
 
-<h2>Crop, geometry &amp; lenses</h2>
+<h2>Crop, 82 Lens Profiles &amp; Depth Optical Bokeh</h2>
 
-<p class="chapter-intro">Look after the composition and the edges.</p>
+<p class="chapter-intro">Correct composition and optics, then sculpt realistic shallow depth of field on any RAW file.</p>
 
 <ul>
 
-<li>Eight crop handles, aspect ratios, 90-degree rotation, horizontal flip and manual straightening.</li>
+<li>Eight crop handles, aspect ratios, 90° rotation, horizontal flip, auto level and automatic/manual perspective correction with full undo.</li>
 
-<li>Auto level and automatic/manual perspective correction, with undoable crop sessions.</li>
+<li><strong>82 built-in lens profiles</strong> plus external Lensfun XML import, distortion/vignette correction, lateral CA &amp; purple-fringe suppression, before/after comparison and an 8-way reference grid.</li>
 
-<li>Lateral chromatic aberration and purple-fringe suppression; portrait depth or painted depth for bokeh.</li></ul>
+<li><strong>Any-RAW Monocular Depth &amp; Physical Optical Bokeh</strong>: generate depth maps without iPhone portrait metadata (built-in Vision saliency + person + perspective zero-model engine, or optional Core ML <code>DepthAnythingV2</code>), with click-on-canvas focus sampling, depth heatmap, circular &amp; 5–8 polygon blades, linear HDR specular boost and cat-eye vignetting.</li></ul>
 
 </section>
 
 <section id="workflow" class="feature-chapter">
 
-<h2>Selection &amp; batch editing</h2>
+<h2>Multi-View, Smart Culling, Search &amp; XMP</h2>
 
-<p class="chapter-intro">Carry one good edit across a series.</p>
+<p class="chapter-intro">Pick keepers fast from bursts, keep every series consistent and interoperate cleanly with Adobe XMP.</p>
 
 <ul>
 
-<li>A Immersive and B Filmstrip share edit state, with search, ratings and picks.</li>
+<li>A Immersive and B Filmstrip paired with full-canvas <strong>Grid (<code>G</code>), Compare (<code>C</code>), 2–4 Up Survey (<code>N</code>) and Reference (<code>⇧R</code>)</strong> views, synchronized zoom/pan, Virtual Copies, recursive subfolder scanning and camera/lens/keyword filters.</li>
 
-<li>Named presets and snapshots, snapshot recovery, selection sync and batch export.</li>
+<li><strong>On-Device Smart Culling &amp; Bilingual Semantic Search</strong>: automatic EAR eye-closure detection, focus sharpness scoring, burst-best clustering, bilingual natural-language concept search and visual similarity sorting.</li>
 
-<li>Multiple-exposure averaging, exposure fusion and handheld denoise workflows.</li></ul>
+<li><strong>Bidirectional Adobe XMP &amp; Lightroom Presets</strong>: read and write standard XMP sidecars (ratings, picks/rejects, tone, HSL, curves, color grading, crop) with persistent auto-sync; import Lightroom <code>.xmp</code> presets with hover preview and <strong>0–200%</strong> strength scaling, plus snapshots, adjustment sync and multi-exposure compositing.</li></ul>
 
 <figure class="feature-shot"><img src="../images/native-20261031/workspace-b.webp" width="2160" height="1341" loading="lazy" alt="Filmstrip selection workflow"><button type="button" class="image-zoom" data-zoom="feature-workflow">Enlarge image</button>
 
@@ -260,19 +260,19 @@
 
 <section id="export" class="feature-chapter">
 
-<h2>Export &amp; watermarks</h2>
+<h2>HDR / Wide-Gamut Export &amp; Watermarks</h2>
 
-<p class="chapter-intro">Choose how the photograph leaves the editor.</p>
+<p class="chapter-intro">Deliver exact bit depth, HDR dynamic range, metadata privacy and watermarks.</p>
 
 <ul>
 
-<li>JPEG, PNG, TIFF and HEIC output; 8/16-bit TIFF and multiple color spaces.</li>
+<li>Supports <strong>Gain-Map HDR JPEG</strong>, <strong>10-bit Display P3 PQ HEIC</strong>, plus 8/16-bit Display P3, Adobe RGB and sRGB TIFF &amp; PNG.</li>
 
-<li>Long-edge resize, output quality, output sharpening and text/image watermarks.</li>
+<li>Export-only 2x Super Resolution, long-edge resize, output quality, output sharpening and transparent foreground cutout export.</li>
 
-<li>Nine-position watermark placement, opacity and rotation, with a fixed output directory option.</li></ul>
+<li>Preserves EXIF / IPTC / camera metadata with one-click GPS privacy removal, copyright attribution, 9-point text/image watermarks and concurrent batch export.</li></ul>
 
-<figure class="feature-shot"><img src="../images/04-export-dialog.webp" width="1920" height="1192" loading="lazy" alt="Export and watermark settings"><button type="button" class="image-zoom" data-zoom="feature-export">Enlarge image</button>
+<figure class="feature-shot"><img src="../images/en-04-export-dialog.webp" width="1920" height="1192" loading="lazy" alt="Phos English export sheet showing 16-bit Display P3, HDR Gain Map / 10-bit PQ, EXIF/GPS privacy and watermark settings"><button type="button" class="image-zoom" data-zoom="feature-export">Enlarge image</button>
 
 <figcaption>Export and watermark settings</figcaption></figure>
 
@@ -282,7 +282,7 @@
 
 <div>
 
-<p>8-bit and 16-bit TIFF in multiple color spaces, long-edge resizing, text and image watermarks with nine-point placement, pinned export folder.</p></div>
+<p>Single and bounded-concurrent batch export with Gain-Map HDR JPEG, 10-bit PQ HEIC, 16-bit wide-gamut TIFF/PNG, export 2x Super Res, EXIF/IPTC/GPS privacy controls, 9-point text/image watermarks and pinned export directory.</p></div>
 
 </details>
 
@@ -290,17 +290,17 @@
 
 <section id="local-ai" class="feature-chapter">
 
-<h2>Local AI editing</h2>
+<h2>Zero-Python Native AI &amp; 5-Slot Model Hub</h2>
 
-<p class="chapter-intro">Describe your change. Keep control of the parameters.</p>
+<p class="chapter-intro">On-device AI that works out of the box, with optional Core ML acceleration and local VLM support.</p>
 
 <ul>
 
-<li>Global and local-mask suggestions, with side-by-side previews before applying.</li>
+<li><strong>Pure-Swift Native AI Workbench</strong>: built-in <code>NativePhotoPlanner</code> (pixel statistics + intent parsing + local mask generation) and Reference Color Match work with zero Python setup.</li>
 
-<li>Explicitly preserved controls are protected; stale suggestions do not overwrite changed photos or parameters.</li>
+<li><strong>5-Slot Core ML Model Hub</strong>: manage optional weights for <code>LaMa Remove</code>, <code>Sky Segmentation</code>, <code>DepthAnythingV2</code>, <code>AI RAW Denoise</code> and <code>AI 2x Super Res</code> in one place; every slot falls back automatically to high-quality zero-model algorithms.</li>
 
-<li>A separately installed 3.1 GB base model and bundled 1.3 MB adapter. Experimental; judge the preview.</li></ul>
+<li><strong>Optional Qwen3-VL (MLX) Mode</strong>: for open-ended natural-language prompting, optionally install the ~3.1 GB base model alongside the bundled 1.3 MB fine-tuned adapter; every draft previews side by side and stays 100% on your Mac.</li></ul>
 
 <figure class="feature-shot"><img src="../images/ai-preview.webp" width="1440" height="1146" loading="lazy" alt="Local AI suggestion preview"><button type="button" class="image-zoom" data-zoom="feature-local-ai">Enlarge image</button>
 
@@ -312,7 +312,7 @@
 
 <div>
 
-<p>Describe the change in Chinese; the model suggests global slider values and local masks, with a preview before anything is applied. Inference runs on-device — photos are never uploaded. Experimental; the model must be <a href="help.html#ai-model">installed separately</a>.</p></div>
+<p>Native AI Edit, Reference Color Match, zero-model depth/sky, PatchMatch remove, YCoCg RAW denoise and 2x Super Res are ready on first launch. See the <a href="help.html#ai-model">AI &amp; Model Hub guide</a> for Core ML slot setup and the optional Qwen3-VL MLX installer.</p></div>
 
 </details>
 
@@ -408,17 +408,17 @@
 
 <section id="native" class="feature-chapter">
 
-<h2>Native, bilingual &amp; compatible</h2>
+<h2>Native Metal Engine, Bilingual &amp; Files</h2>
 
-<p class="chapter-intro">Work the way your Mac does.</p>
+<p class="chapter-intro">Built natively for Apple silicon to match how your Mac works.</p>
 
 <ul>
 
-<li>Swift, Core Image, Vision and AppKit, with system-following light and dark appearances.</li>
+<li>Swift, Metal (20 compute kernels), Core Image, Vision, Core ML and AppKit, with automatic light/dark appearance and adaptive app icon.</li>
 
-<li>System language, Simplified Chinese and English, switching menus and controls immediately.</li>
+<li>Follow System, Simplified Chinese and English — 1,017 UI translations switch instantly without restarting.</li>
 
-<li>Edits live in sidecars; legacy RawForge sidecars and existing presets stay readable.</li></ul>
+<li>Edits write to <code>.rawforge.json</code> and optional bidirectional Adobe <code>.xmp</code> sidecars, staying backward-compatible with legacy RawForge files while never modifying originals.</li></ul>
 
 <details class="technical-note">
 
@@ -426,11 +426,11 @@
 
 <div>
 
-<p>Mainstream RAW formats such as ARW / CR3 / NEF, plus HEIF / HEIC / HIF, JPEG, PNG, TIFF, and AVIF.</p>
+<p>Mainstream RAW formats such as ARW / CR3 / NEF / RAF / DNG, plus HEIF / HEIC / HIF, JPEG, PNG, TIFF, and AVIF.</p>
 
-<p>Choose Follow System, 简体中文, or English — it switches instantly, no restart. 668 strings cover menus, parameters, forms and messages; tooltips and accessibility labels follow the language too.</p>
+<p>Choose Follow System, 简体中文, or English — it switches instantly, no restart. 1,017 strings cover menus, parameters, forms, the Model Hub and messages; tooltips and accessibility labels follow the language too.</p>
 
-<p class="lead">A non-destructive RAW photo editor built for macOS. Every pixel is processed on your Mac; edits are written to a sidecar file next to the original, and not a single byte of the original is changed. Version 4.0 rebuilt the entire workspace and added optional on-device AI editing.</p></div>
+<p class="lead">A non-destructive RAW photo editor built for macOS 26+ on Apple silicon. The 16-bit extended linear Metal pipeline and on-device AI run entirely on your Mac; edits live in sidecar files next to your originals, leaving every original byte untouched.</p></div>
 
 </details>
 
@@ -626,7 +626,7 @@
 <div class="gallery-panel" id="gallery-panel-4" role="tabpanel" aria-labelledby="gallery-tab-4" hidden="">
 
 <figure class="legacy-wrap">
-          <img class="shot" src="../images/04-export-dialog.webp" width="1920" height="1192" loading="lazy" alt="Phos export sheet: format and bit depth, color space, long-edge resizing, watermark overlays, and export folder settings">
+          <img class="shot" src="../images/en-04-export-dialog.webp" width="1920" height="1192" loading="lazy" alt="Phos English export sheet: 16-bit Display P3, HDR Gain Map / 10-bit PQ, long-edge resize, EXIF/GPS privacy and watermark controls">
           
 
 <figcaption>
@@ -636,7 +636,7 @@
 
             
 
-<div class="d">8-bit and 16-bit TIFF output in multiple color spaces, long-edge resizing, text and image watermarks with nine-point placement, and a pinned export folder.</div>
+<div class="d">Gain-Map HDR JPEG, 10-bit PQ HEIC and 8/16-bit wide-gamut TIFF/PNG output, export-only 2x Super Resolution, long-edge resize, EXIF/IPTC with GPS privacy strip, 9-point text/image watermarks and a pinned export folder.</div>
 
           </figcaption>
         </figure>
@@ -657,7 +657,7 @@
 <li><a href="../download/Phos-macOS-apple-silicon.dmg">Download for Mac</a></li>
 <li><a href="help.html#download-help">Mirrors and checksums</a></li></ul>
 
-<p>Phos 4.7.0 · 8.78 MB</p>
+<p>Phos 4.7.1 · 8.78 MB</p>
 <p>macOS 26+ · Apple silicon</p></div>
 
 <div>

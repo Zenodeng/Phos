@@ -1,8 +1,8 @@
 {
-  "capturedAt": "2026-10-31 (export.webp updated 2026-11-23)",
+  "capturedAt": "2026-10-31 (export.webp & en-export.webp updated 2026-11-24)",
   "app": "Phos",
-  "version": "4.7.0",
-  "capture": "Native Phos dark-mode workspace & sanitized v4.7.0 ExportSheet capture",
+  "version": "4.7.1",
+  "capture": "Native Phos dark-mode workspace & sanitized v4.7.1 ZH/EN ExportSheet captures",
   "photoSourceManifest": "../photo-edits/manifest.json",
   "files": [
     {
@@ -19,6 +19,11 @@
       "file": "export.webp",
       "bytes": 43566,
       "sha256": "a4eb3ae5973a5f511d3d009d0027f0028407da98942687edb66ca801bef2201f"
+    },
+    {
+      "file": "en-export.webp",
+      "bytes": 59596,
+      "sha256": "1f1403f892911a4f964a810d91ef9b0971498b515cd9c7701481177eadbe8538"
     }
   ]
 }

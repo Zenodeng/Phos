@@ -20,26 +20,26 @@
   }
   // One keyboard-searchable directory. Search stays entirely in this page.
   const catalog=[
-    ['index.html#workspace','A / B '+text('双布局工作区','workspace'),text('沉浸编辑 连续选片 列表 胶片','Immersive editing filmstrip selection')],
+    ['index.html#workspace','A / B '+text('双布局工作区','workspace'),text('沉浸编辑 连续选片 列表 胶片 多视图 网格 对比 参考视图','Immersive editing filmstrip selection grid compare survey reference')],
     ['index.html#studio',text('交互试用','Interactive preview'),text('滑杆 曲线 胶片 画笔 蒙版 直方图','Sliders curves film brush masks histogram')],
-    ['index.html#gallery',text('样张与胶片风格','Sample edits and film looks'),text('胶片 浓度 样张 对比 Ektar Fuji T-Max','Film intensity sample comparison Ektar Fuji T-Max')],
+    ['index.html#gallery',text('样张与胶片风格','Sample edits and film looks'),text('胶片 浓度 样张 对比 Ektar Fuji T-Max HALD CLUT','Film intensity sample comparison Ektar Fuji T-Max HALD CLUT')],
     ['features.html#screenshots',text('软件工作流截图','Software workflow screenshots'),text('曲线 渐变 导出 放大','Curves gradients export zoom')],
-    ['features.html#design',text('石墨 × 香槟金','Graphite & champagne'),text('设计语言 网格 蒙版 控制点','Design language grid mask handles')],
-    ['features.html#light',text('明暗与白平衡','Light & white balance'),text('曝光 对比 高光 阴影 色温 色调 自动影调 HDR','Exposure contrast highlights shadows temperature tint auto tone HDR')],
-    ['features.html#color',text('曲线与色彩','Curves & color'),text('RGB HSL 颜色分级 黑白 校准','RGB HSL color grading black and white calibration')],
-    ['features.html#film',text('胶片与质感','Film & texture'),text('LUT CLUT cube 颗粒 暗角 光晕 锐化 降噪','LUT CLUT cube grain vignette halation sharpening denoise')],
-    ['features.html#masks',text('九种局部蒙版','Nine local masks'),text('线性 径向 画笔 范围 主体 人物 抠图 深度','Linear radial brush range subject person cutout depth')],
-    ['features.html#geometry',text('裁剪、几何与镜头','Crop, geometry & lenses'),text('画幅 旋转 拉直 自动水平 透视 色差 紫边','Aspect rotation straighten auto level perspective chromatic aberration')],
-    ['features.html#workflow',text('选片、预设与批量','Selection, presets & batch'),text('评分 标记 同步 快照 合成','Ratings picks sync snapshots merge')],
-    ['features.html#export',text('导出与水印','Export & watermarks'),text('TIFF JPEG PNG HEIC 位深 色域 缩放','TIFF JPEG PNG HEIC bit depth color space resize')],
-    ['features.html#local-ai',text('本地 AI 修图','Local AI editing'),text('自然语言 预览 撤销 Qwen 微调','Natural language preview undo Qwen adapter')],
-    ['features.html#native',text('原生与中英文界面','Native & bilingual'),text('Swift Core Image Vision English 外观 旁档','Swift Core Image Vision Chinese appearance sidecars')],
-    ['help.html#install',text('安装与首次打开','Install & first launch'),text('macOS 公证 安全性 放行','macOS notarization security allow')],
+    ['features.html#design',text('石墨 × 香槟金','Graphite & champagne'),text('设计语言 网格 蒙版 控制点 液态玻璃','Design language grid mask handles Liquid Glass')],
+    ['features.html#light',text('明暗、16-bit Metal 与 EDR','Light, 16-bit Metal & EDR'),text('16-bit 线性浮点 Metal EDR HDR AgX 对比中心 高光滚降 Guided Filter 溢出警示 曝光 白平衡 自动影调','16-bit extended linear Metal EDR HDR AgX pivot rolloff Guided Filter clipping J exposure white balance auto tone')],
+    ['features.html#color',text('曲线、OKLCH 点颜色与参考图对色','Curves, OKLCH Point Color & Color Match'),text('RGB 曲线 OKLCH HSL 点颜色 吸管 参考图调色 反解参数 肤色保护 颜色分级 黑白 校准','RGB curves OKLCH HSL Point Color eyedropper Reference Color Match skin protection color grading B&W calibration')],
+    ['features.html#film',text('胶片、AI 降噪超分与无痕消除','Film, AI Denoise / 2x Super Res & Remove'),text('303 HALD CLUT cube 颗粒粗糙度 暗角 光晕 YCoCg RAW 降噪 2x 超分 LaMa PatchMatch 修复 克隆 消除','303 HALD CLUT cube grain roughness vignette halation YCoCg RAW denoise 2x super resolution LaMa PatchMatch Heal Clone Remove')],
+    ['features.html#masks',text('复合布尔蒙版与 AI 分割','Composite Boolean Masks & AI Segmentation'),text('加 减 交 布尔蒙版 自动边缘吸附 压感 8 部位人像 天空分割 Guided Filter 局部曲线 局部点颜色 抠图','Add Subtract Intersect boolean masks Auto Mask pen pressure 8 portrait parts sky segmentation Guided Filter local curve local Point Color cutout')],
+    ['features.html#geometry',text('裁剪、镜头校正与单目深度散景','Crop, 82 Lens Profiles & Depth Optical Bokeh'),text('82 支内置镜头 Lensfun 自动透视 8 等分网格 单目深度 DepthAnythingV2 物理散景 多边形叶片 HDR 光斑 猫眼旋焦','82 lens profiles Lensfun auto perspective 8-grid monocular depth DepthAnythingV2 optical bokeh polygon blades HDR specular cat-eye')],
+    ['features.html#workflow',text('多视图选片、智能挑片、搜图与 XMP','Multi-View, Smart Culling, Search & XMP'),text('网格 G 对比 C 多图 N 参考 ⇧R 智能挑片 闭眼 跑焦 连拍 双语语义搜图 相似图 虚拟副本 Adobe XMP LR 预设 200%','Grid G Compare C Survey N Reference Smart Culling eye closure sharpness burst bilingual semantic search similar virtual copies Adobe XMP Lightroom presets')],
+    ['features.html#export',text('广色域 / HDR 导出与 2x 超分','HDR / Wide-Gamut Export & 2x Super Res'),text('Gain-Map HDR JPEG 10-bit PQ HEIC 16-bit Display P3 TIFF PNG 导出 2x 超分 EXIF IPTC 移除 GPS 水印','Gain-Map HDR JPEG 10-bit PQ HEIC 16-bit Display P3 TIFF PNG export 2x super resolution EXIF IPTC strip GPS watermark')],
+    ['features.html#local-ai',text('零 Python 原生 AI 与 5 槽位模型中心','Zero-Python Native AI & 5-Slot Model Hub'),text('零 Python NativePhotoPlanner 参考图对色 Core ML 模型中心 LaMa Sky Depth Denoise SuperRes 可选 Qwen3-VL MLX','Zero-Python NativePhotoPlanner Color Match Core ML Model Hub LaMa Sky Depth Denoise SuperRes optional Qwen3-VL MLX')],
+    ['features.html#native',text('原生 Metal 引擎、双语与文件兼容','Native Metal Engine, Bilingual & Files'),text('20 个 Metal 计算内核 Swift Core Image Vision 1017 条双语翻译 双向 XMP rawforge.json 旁档','20 Metal compute kernels Swift Core Image Vision 1017 bilingual strings bidirectional XMP rawforge.json sidecars')],
+    ['help.html#install',text('安装与首次打开','Install & first launch'),text('macOS 公证 安全性 放行 Gatekeeper xattr','macOS notarization security allow Gatekeeper xattr')],
     ['help.html#download-help',text('下载渠道与校验','Mirrors & verification'),'DMG ZIP SHA256 GitHub Cloudflare jsDelivr'],
-    ['help.html#ai-model',text('安装可选模型','Install the optional model'),'Python MLX Hugging Face hf-mirror Qwen'],
+    ['help.html#ai-model',text('零 Python 原生 AI 与可选模型','Native AI & Optional Models'),text('模型中心 Core ML install_lama_model install_depth_model LaMa DepthAnythingV2 Python MLX Qwen3-VL hf-mirror','Model Hub Core ML install_lama_model install_depth_model LaMa DepthAnythingV2 Python MLX Qwen3-VL hf-mirror')],
     ['help.html#windows',text('Windows 实验版','Experimental Windows build'),'Windows 11 x64 SmartScreen'],
     ['index.html#motion-settings',text('网页动效设置','Website motion settings'),text('动画 减少动态 关闭 开启','Animation reduce disable enable')],
-    ['index.html#faq',text('常见问题','Frequently asked questions'),text('价格 隐私 格式 相机 系统要求 iPad','Price privacy formats camera requirements iPad')]
+    ['index.html#faq',text('常见问题','Frequently asked questions'),text('价格 隐私 格式 Lightroom 对比 相机 系统要求 AI 模型','Price privacy formats Lightroom comparison camera requirements AI models')]
   ];
   const command=attachDialog(document.createElement('dialog'));command.className='command-dialog';command.setAttribute('aria-label',text('搜索 Phos 功能与帮助','Search Phos features and help'));
   const header=document.createElement('div');header.className='command-header';
@@ -96,7 +96,7 @@
   }
   // Only the native application performs Vision inference. The web entry opens its guide.
   const nativeDialog=attachDialog(document.createElement('dialog'));nativeDialog.className='native-info-dialog';nativeDialog.setAttribute('aria-label',text('本地主体与人物选择','Native subject and person selection'));
-  nativeDialog.append(closeButton(nativeDialog));const nativeHeading=document.createElement('h2'),nativeCopy=document.createElement('p'),nativeLink=document.createElement('a');nativeHeading.textContent=text('在 Phos 中选择主体。','Select your subject in Phos.');nativeCopy.textContent=text('主体、人物与抠图由 Mac 上的 Vision 完成。网页保留这个功能入口用于介绍，不在浏览器运行原生模型。应用里的蒙版仍可继续反转、复制和调整。','Subject, person and foreground masks use Vision on your Mac. This web entry introduces the feature; it does not run the native model in your browser. Native masks can still be inverted, duplicated and adjusted.');nativeLink.className='text-link';nativeLink.href='features.html#masks';nativeLink.textContent=text('查看九种蒙版的完整说明','Read about all nine mask types');nativeDialog.append(nativeHeading,nativeCopy,nativeLink);
+  nativeDialog.append(closeButton(nativeDialog));const nativeHeading=document.createElement('h2'),nativeCopy=document.createElement('p'),nativeLink=document.createElement('a');nativeHeading.textContent=text('在 Phos 中使用 AI 分割与复合蒙版。','Use AI segmentation and composite masks in Phos.');nativeCopy.textContent=text('主体、天空、8 部位人像、前景抠图与单目深度均在 Mac 上以 Vision / Metal / Core ML 本地完成，支持加/减/交布尔组合与 Guided Filter 边缘精修。网页仅保留交互入口示意。','Subject, sky, 8-part portrait, foreground cutout and monocular depth masks run locally on your Mac via Vision, Metal and Core ML, with Add/Subtract/Intersect boolean ops and Guided Filter edge refinement. This web entry is an overview only.');nativeLink.className='text-link';nativeLink.href='features.html#masks';nativeLink.textContent=text('查看复合蒙版与 AI 分割的完整说明','Read about composite masks & AI segmentation');nativeDialog.append(nativeHeading,nativeCopy,nativeLink);
   document.querySelectorAll('.maskrow').forEach(row=>row.addEventListener('click',()=>{
     mode=row.dataset.mask;paintTools.hidden=!['brush','depth'].includes(mode);updateEffects();
     const hints={brush:text('在照片上拖动，试着刷亮或压暗局部；网页为画笔效果示意。可用下方按钮添加中心笔画。','Paint on the photograph to illustrate a local light or dark adjustment. Use the button for a keyboard alternative.'),range:text('点照片取样，预览相近颜色的范围。羽化滑杆在这里控制容差；网页为颜色范围示意。','Click the photo to sample a color and preview similar colors. Feather controls tolerance in this browser illustration.'),ai:text('主体、人物与抠图在应用内由本地 Vision 计算。','Subject, person and cutout selections use on-device Vision in the app.'),depth:text('在照片上涂抹，预览该区域的虚化。原生应用还可读取人像深度数据。','Paint to illustrate blur in that area. The native application can also read portrait depth data.')};

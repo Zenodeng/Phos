@@ -6,9 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phos — Native RAW Photo Editor for macOS</title>
 
-<meta name="description" content="Phos is a free, open-source RAW photo editor for macOS. Film looks, curves, nine local masks and batch export. On-device processing, reversible edits, no account or subscription.">
+<meta name="description" content="Phos is a free, open-source macOS RAW photo editor with a 16-bit extended linear Metal/EDR pipeline, OKLCH Point Color, composite boolean & 8-part portrait masks, zero-Python on-device AI (Reference Color Match, monocular depth optical bokeh, LaMa remove, 2x Super Res) and HDR Gain-Map export.">
 
-<meta name="keywords" content="Phos, RAW editor, macOS RAW editor, RAW photo editor, film simulation LUT, photo editing app, Swift, Core Image, non-destructive editing">
+<meta name="keywords" content="Phos, RAW editor, macOS RAW editor, Metal 16-bit, EDR HDR, OKLCH Point Color, Reference Color Match, Optical Bokeh, Boolean Masks, LaMa Remove, Adobe XMP, film CLUT, Swift, Core ML, non-destructive editing">
 
 <link rel="canonical" href="https://zenodeng.com/en/">
 
@@ -30,7 +30,7 @@
 
 <meta property="og:title" content="Phos — Native RAW Photo Editor for macOS">
 
-<meta property="og:description" content="Phos is a free, open-source RAW photo editor for macOS. Film looks, curves, nine local masks and batch export. On-device processing, reversible edits, no account or subscription.">
+<meta property="og:description" content="16-bit extended linear Metal/EDR pipeline, OKLCH Point Color, composite boolean masks and zero-Python on-device AI (Reference Color Match, monocular depth optical bokeh, LaMa remove, RAW denoise & 2x Super Res). Fully local, free and open source.">
 
 <meta property="og:url" content="https://zenodeng.com/en/">
 
@@ -50,16 +50,16 @@
   "operatingSystem": "macOS 26.0 or later (Apple silicon)",
   "applicationCategory": "MultimediaApplication",
   "applicationSubCategory": "RAW Photo Editor",
-  "softwareVersion": "4.7.0",
+  "softwareVersion": "4.7.1",
   "fileSize": "8.78MB",
   "isAccessibleForFree": true,
   "offers": {
     "@type": "Offer",
     "price": "0",
-    "priceCurrency": "CNY"
+    "priceCurrency": "USD"
   },
   "license": "https://opensource.org/licenses/MIT",
-  "description": "A native, non-destructive RAW photo editor for macOS: RAW decoding, complete tonal and color controls, film CLUT emulation, nine local masks, batch sync, and watermarked export. Everything runs on-device — no network, no account, no subscription.",
+  "description": "A native, non-destructive RAW photo editor for macOS: 16-bit extended linear Metal/EDR pipeline, AgX toning & OKLCH Point Color, 303 film CLUTs, composite boolean & 8-part portrait masks, zero-Python on-device AI (Reference Color Match, monocular depth optical bokeh, LaMa remove, RAW denoise & export 2x Super Res, Smart Culling & bilingual semantic search), bidirectional Adobe XMP and 82 built-in lens profiles. Everything runs on-device — no account, no subscription.",
   "url": "https://zenodeng.com/en/",
   "downloadUrl": "https://zenodeng.com/download/Phos-macOS-apple-silicon.dmg",
   "installUrl": "https://zenodeng.com/en/help.html#install",
@@ -77,14 +77,16 @@
     "url": "https://github.com/Zenodeng"
   },
   "featureList": [
-    "RAW decoding (via macOS built-in decoders)",
-    "Complete tonal and color adjustments",
-    "Film CLUT emulation",
-    "Nine local masks (linear / radial gradients, subject and person selection, and more)",
-    "Batch sync and batch export",
-    "Export watermarks",
-    "Non-destructive editing with parameters stored in sidecar files",
-    "Fully local processing — no network, no account, no subscription"
+    "16-bit extended linear floating-point Metal pipeline (20 compute kernels) & EDR/HDR preview",
+    "AgX contrast pivot/rolloff, 14-stop Guided Filter toning & clipping warnings (J)",
+    "OKLCH HSL, Point Color eyedropper & Reference-to-Editable-Parameters Color Match (0–150%)",
+    "Composite boolean masks (Add/Subtract/Intersect), Auto Mask pressure brush, sky & 8-part portrait segmentation",
+    "Any-RAW monocular depth & physical optical bokeh (5–8 polygon blades, HDR specular boost, cat-eye)",
+    "Heal / Clone / Big-LaMa Remove, non-destructive RAW-domain YCoCg denoise & export 2x Super Resolution",
+    "Multi-view culling (Grid G / Compare C / Survey N / Reference ⇧R), Smart Culling & bilingual semantic search",
+    "Bidirectional Adobe XMP sidecars, Lightroom .xmp preset import (0–200%), Virtual Copies & 82 lens profiles",
+    "Gain-Map HDR JPEG, 10-bit PQ HEIC, 16-bit Display P3 TIFF/PNG & EXIF/GPS privacy controls",
+    "Zero-Python Native AI workbench, 5-slot Core ML Model Hub & optional local Qwen3-VL MLX mode"
   ]
 }
 </script>
@@ -131,7 +133,7 @@
       "name": "How is it different from Lightroom?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Phos is local-first: no subscription, no cloud sync, no mobile app, with a focus on doing RAW decoding, tone and color, film CLUT emulation, local masks, and batch export really well.It’s built for personal photography workflows where photos stay entirely on your own machine."
+        "text": "Phos is local-first and open source: no subscription, no locked catalog, no forced cloud sync. Open any folder on a 16-bit extended linear Metal/EDR pipeline with OKLCH Point Color, composite boolean & 8-part portrait masks, zero-Python on-device AI (Reference Color Match, monocular depth bokeh, LaMa remove, 2x Super Res), bidirectional Adobe XMP sidecars and Lightroom .xmp preset import."
       }
     },
     {
@@ -147,7 +149,7 @@
       "name": "Does it support batch processing?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. Batch import, syncing one photo’s adjustments to others, and batch export (including watermarks)."
+        "text": "Yes. Grid (G), Compare (C), 2–4 Up Survey (N) and Reference (⇧R) views pair with on-device Smart Culling (eye-closure, sharpness, burst best), bilingual semantic search, Virtual Copies, multi-select adjustment sync and bounded-concurrent batch export (including 2x Super Res and watermarks)."
       }
     },
     {
@@ -163,7 +165,7 @@
       "name": "How can I report issues or contribute?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "File an Issue or a Pull Request at the  GitHub repository. The project is written in Swift, built on Core Image, Vision, and AppKit."
+        "text": "File an Issue or a Pull Request at the GitHub repository. The project is written in Swift, built on Metal, Core Image, Vision, Core ML, and AppKit."
       }
     }
   ]
@@ -195,7 +197,7 @@
 <div class="mobile-menu-footer"><a class="language" href="../">简体中文</a><a class="button primary" href="../download/Phos-macOS-apple-silicon.dmg" download="">Download Mac</a></div>
 </dialog>
 
-<noscript><nav class="noscript-nav" aria-label="页面导航"><a href="index.html#workspace">Workspace</a><a href="features.html">Features</a><a href="index.html#studio">Try editing</a><a href="help.html">Help</a></nav></noscript>
+<noscript><nav class="noscript-nav" aria-label="Page navigation"><a href="index.html#workspace">Workspace</a><a href="features.html">Features</a><a href="index.html#studio">Try editing</a><a href="help.html">Help</a></nav></noscript>
 
 <main id="main">
 
@@ -207,7 +209,7 @@
 
 <div class="hero-purpose">
 
-<p>Keep your photos on your Mac and every adjustment reversible. Free and open source, with no subscription.</p>
+<p>A 16-bit extended linear Metal pipeline with zero-Python on-device AI. Keep your photos on your Mac and every adjustment reversible — free and open source.</p>
 
 <div class="hero-actions"><a class="button primary" href="../download/Phos-macOS-apple-silicon.dmg" download="">Download Mac<span class="download-icon" aria-hidden="true"><svg class="download-arrow" viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true"><path d="M12 4v16m-6-6 6 6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a><a class="quiet-link" href="#gallery">See the edits<span aria-hidden="true">↗</span></a></div>
 
@@ -274,13 +276,13 @@
 
 <h3>Start with the feeling.</h3>
 
-<p>Pick a film look and dial its intensity. Keep the character of the photograph, with a little of your own.</p>
+<p>Pick a film look or match any reference still into fully editable parameters. Keep the character of the photograph, with a little of your own.</p>
 
 <ul class="feature-notes">
 
-<li>Film CLUTs with adjustable intensity</li>
+<li>303 film HALD CLUTs &amp; Reference Color Match (0–150% with skin protection)</li>
 
-<li>Import .cube files and save named presets</li></ul>
+<li>Import .cube LUTs and Lightroom .xmp presets (0–200% strength)</li></ul>
 
 <a class="text-link" href="#gallery">Compare three film looks</a></div>
 
@@ -300,7 +302,7 @@
 
 <div>
 
-<p>Tone, five-channel curves and HSL shape the whole image. Nine local mask types let you work on the parts that need attention.</p></div>
+<p>16-bit linear Metal toning, AgX rolloff, five-channel curves and OKLCH Point Color shape the whole image; composite boolean masks, 8-part portrait &amp; sky segmentation, LaMa remove and monocular depth bokeh refine every detail.</p></div>
 
 </div>
 
@@ -328,21 +330,21 @@
 
 <article id="finish-export" class="workflow-export page-width">
 
-<figure class="feature-shot export-shot"><img src="../images/native-20261031/export.webp" width="880" height="1436" loading="lazy" alt="Phos export options for file format, dimensions and watermark"><button class="image-zoom" type="button" data-zoom="export-real">Enlarge export settings</button></figure>
+<figure class="feature-shot export-shot"><img src="../images/native-20261031/en-export.webp" width="880" height="1436" loading="lazy" alt="Phos English export sheet showing format, 16-bit Display P3, HDR Gain Map / 10-bit PQ, EXIF/GPS privacy and watermark settings"><button class="image-zoom" type="button" data-zoom="export-real">Enlarge export settings</button></figure>
 
 <div class="workflow-copy">
 
 <h3>Finished. Ready for what’s next.</h3>
 
-<p>Export one image or a whole selection. Choose the format, colour space, size and watermark for the way your work will be used.</p>
+<p>Export one image or a whole selection concurrently. Choose HDR / wide-gamut formats, export 2x Super Resolution, metadata privacy and watermarks.</p>
 
 <ul class="feature-notes">
 
-<li>JPEG / PNG / TIFF / HEIC</li>
+<li>Gain-Map HDR JPEG / 10-bit PQ HEIC / 16-bit Display P3 TIFF &amp; PNG</li>
 
-<li>16-bit TIFF, colour spaces and batch export</li>
+<li>Export-only 2x Super Resolution, long-edge resize and concurrent batch output</li>
 
-<li>Text and image watermarks</li></ul>
+<li>Keep EXIF/IPTC, optional GPS privacy strip, text and image watermarks</li></ul>
 
 <a class="text-link" href="features.html#export">Explore export options</a></div>
 
@@ -812,33 +814,33 @@
 
 <div class="workflow-copy">
 
-<p class="plain-label">Optional · Experimental local AI</p>
+<p class="plain-label">On-Device Local AI · Zero-Python Out of the Box</p>
 
 <h2>Say what you want.<br>Preview. Then decide.</h2>
 
-<p>Describe an adjustment and let a local model suggest editable parameters and local masks. Apply the result when you are happy with the preview.</p>
+<p>The pure-Swift Native AI workbench ships ready to use: turn requests or reference photos into fully editable sliders and local masks, accelerate remove / sky / depth / denoise / 2x super res through a 5-slot Core ML Model Hub, or optionally add a local Qwen3-VL MLX model.</p>
 
 <ul class="ai-actions-list">
 
 <li>
 
-<h3>“Brighten the image by 0.2 stops.”</h3>
+<h3>Pure-Swift Native AI &amp; Reference Color Match</h3>
 
-<p>Turn the request into slider suggestions you can refine.</p></li>
-
-<li>
-
-<h3>“Keep the white balance.”</h3>
-
-<p>Describe what should stay unchanged, then review the preview.</p></li>
+<p>Zero Python required. Convert editing intent or any reference still into editable Phos parameters with 0–150% match strength and skin protection.</p></li>
 
 <li>
 
-<h3>“Brighten just this area.”</h3>
+<h3>Monocular Depth Bokeh, LaMa Remove &amp; 2x Super Res</h3>
 
-<p>Preview local-mask suggestions before applying them.</p></li></ul>
+<p>Estimate depth on any RAW for polygon-blade &amp; cat-eye optical bokeh; built-in PatchMatch, YCoCg RAW denoise and 2x Super Res upgrade seamlessly via the Model Hub.</p></li>
 
-<p class="ai-footnote">Experimental: review each result. The approximately 3.1 GB base model installs separately. Standard editing works without it.</p><a class="text-link" href="help.html#ai-model">Model installation</a></div>
+<li>
+
+<h3>Preview first, one-step undo</h3>
+
+<p>Every native plan and optional Qwen3-VL (MLX) draft shows a side-by-side preview before applying. One apply equals one undo, and photos never leave your Mac.</p></li></ul>
+
+<p class="ai-footnote">Native AI, Color Match, zero-model depth, PatchMatch remove, RAW denoise and 2x Super Res are built in; Core ML slots and Qwen3-VL (~3.1 GB) install separately on demand.</p><a class="text-link" href="help.html#ai-model">Native AI &amp; Model Hub guide</a></div>
 
 <figure class="ai-story">
 
@@ -946,9 +948,9 @@
 
 <div class="ans">
 
-<p>Phos is local-first: no subscription, no cloud sync, no mobile app, with a focus on doing RAW decoding, tone and color, film CLUT emulation, local masks, and batch export really well.</p>
+<p>Phos is local-first and open source: no subscription, no locked catalog, no forced cloud sync. Open any folder on a 16-bit extended linear Metal/EDR pipeline with OKLCH Point Color, composite boolean &amp; 8-part portrait masks, and zero-Python on-device AI (Reference Color Match, monocular depth bokeh, LaMa remove, 2x Super Res).</p>
 
-<p>It’s built for personal photography workflows where photos stay entirely on your own machine.</p></div>
+<p>It also reads and writes bidirectional Adobe XMP sidecars and imports Lightroom <code>.xmp</code> presets (0–200% strength), built for personal workflows where photos stay entirely on your Mac.</p></div>
 
         </details></div><div class="faq-column"><details class="rv-stagger">
           
@@ -970,7 +972,7 @@
 
 <div class="ans">
 
-<p>Yes. Batch import, syncing one photo’s adjustments to others, and batch export (including watermarks).</p></div>
+<p>Yes. Grid (<code>G</code>), Compare (<code>C</code>), 2–4 Up Survey (<code>N</code>) and Reference (<code>⇧R</code>) views pair with on-device Smart Culling (eye-closure, sharpness, burst best), bilingual semantic search, Virtual Copies, multi-select adjustment sync and bounded-concurrent batch export (including 2x Super Res and watermarks).</p></div>
 
         </details><details class="rv-stagger">
           
@@ -992,7 +994,7 @@
 
 <div class="ans">
 
-<p>File an Issue or a Pull Request at the  <a href="https://github.com/Zenodeng/Phos">GitHub repository</a>. The project is written in Swift, built on Core Image, Vision, and AppKit.</p></div>
+<p>File an Issue or a Pull Request at the <a href="https://github.com/Zenodeng/Phos">GitHub repository</a>. The project is written in Swift, built on Metal, Core Image, Vision, Core ML, and AppKit.</p></div>
 
         </details><a class="text-link" href="help.html">Full installation &amp; download help</a></div></div>
 
@@ -1033,7 +1035,7 @@
 <li><a href="../download/Phos-macOS-apple-silicon.dmg">Download for Mac</a></li>
 <li><a href="help.html#download-help">Mirrors and checksums</a></li></ul>
 
-<p>Phos 4.7.0 · 8.78 MB</p>
+<p>Phos 4.7.1 · 8.78 MB</p>
 <p>macOS 26+ · Apple silicon</p></div>
 
 <div>

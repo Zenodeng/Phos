@@ -23,6 +23,21 @@ struct MaskAdvancedControls: View {
          .faceSkin, .bodySkin, .eyes, .eyebrows, .lips, .teeth, .hair, .clothes]
     }
 
+    private func combinableItems(for op: MaskBoolOp) -> [MaskPopupMenuItem] {
+        combinableKinds.map { kind in
+            MaskPopupMenuItem(title: L10n.tr(kind.label), systemImage: kind.icon) {
+                var x = mask
+                var comp = MaskComponent(op: op, kind: kind)
+                if kind == .luminanceRange {
+                    comp.lumLow = 0.0; comp.lumHigh = 0.55
+                }
+                x.components.append(comp)
+                s.updateMask(x)
+                s.selectedMaskComponentID = comp.id
+            }
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             if hasVisionMask {
@@ -34,6 +49,9 @@ struct MaskAdvancedControls: View {
                 ))
                 .toggleStyle(.checkbox)
                 .font(.system(size: 11))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             if hasSkyMask {
@@ -45,30 +63,19 @@ struct MaskAdvancedControls: View {
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-                Spacer()
+                    .truncationMode(.tail)
+                Spacer(minLength: 4)
                 ForEach(MaskBoolOp.allCases, id: \.self) { op in
-                    Menu {
-                        ForEach(combinableKinds, id: \.self) { kind in
-                            Button {
-                                var x = mask
-                                var comp = MaskComponent(op: op, kind: kind)
-                                if kind == .luminanceRange {
-                                    comp.lumLow = 0.0; comp.lumHigh = 0.55
-                                }
-                                x.components.append(comp)
-                                s.updateMask(x)
-                                s.selectedMaskComponentID = comp.id
-                            } label: {
-                                Label(L10n.tr(kind.label), systemImage: kind.icon)
-                            }
+                    MaskPopupMenuButton(items: combinableItems(for: op), compact: false) {
+                        HStack(spacing: 2) {
+                            Image(systemName: op.symbol)
+                                .font(.system(size: 10.5, weight: .medium))
+                                .frame(width: 14, height: 14)
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 6.5, weight: .semibold))
+                                .foregroundStyle(.secondary)
                         }
-                    } label: {
-                        Image(systemName: op.symbol)
-                            .font(.system(size: 11, weight: .medium))
-                            .frame(width: 20, height: 18)
                     }
-                    .menuStyle(.borderlessButton)
-                    .fixedSize()
                     .help(L10n.tr(op.label))
                     .accessibilityLabel(L10n.tr(op.label))
                 }
@@ -104,24 +111,22 @@ private struct MaskComponentRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 4) {
-                Menu {
-                    ForEach(MaskBoolOp.allCases, id: \.self) { op in
-                        Button {
+                MaskPopupMenuButton(
+                    items: MaskBoolOp.allCases.map { op in
+                        MaskPopupMenuItem(title: L10n.tr(op.label), systemImage: op.symbol) {
                             var c = comp; c.op = op
                             writeComp(c, commit: true)
-                        } label: {
-                            Label(L10n.tr(op.label), systemImage: op.symbol)
                         }
-                    }
-                } label: {
+                    },
+                    compact: true
+                ) {
                     Image(systemName: comp.op.symbol)
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(WorkspaceTokens.accent)
                         .frame(width: 14, height: 14)
                 }
-                .menuStyle(.borderlessButton)
-                .frame(width: 16, height: 16)
                 .help(L10n.tr("切换布尔运算"))
+                .accessibilityLabel(L10n.tr("切换布尔运算"))
 
                 Button {
                     s.selectedMaskComponentID = isSelected ? nil : comp.id
@@ -322,8 +327,8 @@ private struct MaskSkyModelRow: View {
                     .font(.system(size: 9))
                     .foregroundStyle(skyInstalled ? .green : .secondary)
                 Text(L10n.tr(skyInstalled ? "Core ML 天空模型已就绪" : "内置零模型天空分割"))
-                    .font(.system(size: 9.5)).foregroundStyle(.secondary).lineLimit(1)
-                Spacer()
+                    .font(.system(size: 9.5)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.tail)
+                Spacer(minLength: 4)
                 if skyInstalled {
                     Button(L10n.tr("移除")) {
                         do {
@@ -580,5 +585,90 @@ private struct MaskLocalPointColorSection: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - 原生 NSMenu 图标菜单按钮（规避 macOS BorderlessButtonMenuStyle 将单图标 Menu 标签退化为符号名字符串）
+
+private struct MaskPopupMenuItem {
+    let title: String
+    let systemImage: String
+    let action: () -> Void
+}
+
+private final class MaskMenuActionTarget: NSObject {
+    private let actions: [() -> Void]
+    init(actions: [() -> Void]) { self.actions = actions }
+    @objc func invoke(_ sender: NSMenuItem) {
+        let idx = sender.tag
+        guard idx >= 0, idx < actions.count else { return }
+        actions[idx]()
+    }
+}
+
+private final class MaskMenuAnchorBox: ObservableObject {
+    weak var view: NSView?
+}
+
+private struct MaskMenuAnchor: NSViewRepresentable {
+    let box: MaskMenuAnchorBox
+
+    final class AnchorView: NSView {
+        override var isFlipped: Bool { true }
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    }
+
+    func makeNSView(context: Context) -> AnchorView {
+        let v = AnchorView()
+        box.view = v
+        return v
+    }
+
+    func updateNSView(_ nsView: AnchorView, context: Context) {
+        box.view = nsView
+    }
+}
+
+private struct MaskPopupMenuButton<LabelView: View>: View {
+    let items: [MaskPopupMenuItem]
+    var compact: Bool = false
+    @ViewBuilder let label: () -> LabelView
+    @StateObject private var anchorBox = MaskMenuAnchorBox()
+
+    var body: some View {
+        Button {
+            popUp()
+        } label: {
+            label()
+                .foregroundStyle(compact ? WorkspaceTokens.accent : WorkspaceTokens.primaryText)
+                .padding(.horizontal, compact ? 3 : 5)
+                .padding(.vertical, compact ? 2 : 3)
+                .background {
+                    if !compact {
+                        Color.clear.modifier(WorkspaceGlassDecoration(radius: 6))
+                    }
+                }
+                .contentShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+        .background(MaskMenuAnchor(box: anchorBox))
+    }
+
+    private func popUp() {
+        guard let view = anchorBox.view else { return }
+        let menu = NSMenu()
+        let target = MaskMenuActionTarget(actions: items.map(\.action))
+        for (idx, entry) in items.enumerated() {
+            let item = NSMenuItem(title: entry.title, action: #selector(MaskMenuActionTarget.invoke(_:)), keyEquivalent: "")
+            item.target = target
+            item.tag = idx
+            if let img = NSImage(systemSymbolName: entry.systemImage, accessibilityDescription: entry.title) {
+                item.image = img.withSymbolConfiguration(.init(pointSize: 12, weight: .regular))
+            }
+            menu.addItem(item)
+        }
+        withExtendedLifetime(target) {
+            _ = menu.popUp(positioning: nil, at: NSPoint(x: 0, y: view.bounds.height + 4), in: view)
+        }
     }
 }

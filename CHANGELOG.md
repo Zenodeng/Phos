@@ -2,6 +2,14 @@
 
 本项目遵循语义化版本。日期为发布日（Asia/Shanghai）。
 
+## [4.7.1] — 2026-11-24
+
+### 界面与本地化热修复
+- **修复蒙版布尔子蒙版按钮退化与左侧裁切**：在 `MaskAdvancedControls.swift` 新增原生 `NSMenu` 图标菜单按钮 `MaskPopupMenuButton`，替换「布尔子蒙版」添加组及子蒙版行运算符切换处的 SwiftUI `.menuStyle(.borderlessButton)` 纯图标菜单，根治 macOS 26/27 下将 SF Symbol 名称渲染为纯文本（`plus.square` / `minus.square` / `square.on.square`）并撑破检视器的问题。
+- **加固右侧检视器左对齐宽度约束**：在 `Inspector.swift`（`GroupBox`、`InspectorPane` 滚动视口、`MaskPane` 蒙版卡片）与 `WorkflowViews.swift`（`MaskEditingControls`）锁定左对齐与单行/紧凑宽度，防止窄栏（`248pt`）下子行溢出裁切左侧标签与复选框。
+- **清理双重下拉箭头**：移除 `Inspector.swift`（`AutoToneRow`）与 `MultiViewCanvas.swift`（参考视图菜单）在 `.menuStyle(.borderlessButton)` 内部冗余手写的 `chevron.down`。
+- **补齐中英文词条**：在 `Resources/Localization/en.json` 新增 `"减去": "Subtract"` 与 `"交叉": "Intersect"`，重新生成 `LocalizationCatalog.swift`（共 `1,017` 条翻译全校验通过）。
+
 ## [4.7.0] — 2026-11-23
 
 ### 端侧 AI 与计算摄影跃升（P3）

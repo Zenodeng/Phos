@@ -97,11 +97,9 @@ private struct AutoToneRow: View {
                             Button(L10n.tr(scene.label)) { s.runAutoTone(forcedScene: scene) }
                         }
                     } label: {
-                        HStack(spacing: 3) {
-                            Text(L10n.tr(guess.scene.label)).font(.system(size: 11, weight: .medium))
-                            Image(systemName: "chevron.down").font(.system(size: 8, weight: .semibold))
-                        }
-                        .foregroundStyle(StudioStyle.accent)
+                        Text(L10n.tr(guess.scene.label))
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(StudioStyle.accent)
                     }
                     .menuStyle(.borderlessButton).fixedSize()
                     .disabled(s.autoRunning)
@@ -178,7 +176,7 @@ struct GroupBox<Content: View>: View {
                         .buttonStyle(WorkspaceButtonStyle()).disabled(!modified).opacity(modified ? 1 : 0.35)
                         .help(L10n.tr("复位"+title)).accessibilityLabel(L10n.tr("复位"+title))
                 }.frame(height:34)
-                if ui.isExpanded(title) { VStack(spacing:0) { content }.padding(.bottom,10) }
+                if ui.isExpanded(title) { VStack(spacing:0) { content }.frame(maxWidth: .infinity, alignment: .leading).padding(.bottom,10) }
             }.padding(.horizontal,12)
                 .overlay(alignment:.bottom) { WorkspaceTokens.hairline.frame(height:0.5).padding(.horizontal,12) }
         }
@@ -411,7 +409,7 @@ struct GroupBox<Content: View>: View {
             .environment(\.inspectorCategory, category)
             .disabled(s.source == nil)
             .padding(.bottom, 16)
-            .frame(width: viewport.size.width)
+            .frame(width: viewport.size.width, alignment: .leading)
         }
         }
         
@@ -1178,6 +1176,7 @@ struct MaskPane: View {
                         }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(8)
                 .background(
                     RoundedRectangle(cornerRadius: 7, style: .continuous)

@@ -777,12 +777,9 @@ struct ReferenceCanvasView: View {
                         }
                     }
                 } label: {
-                    HStack(spacing: 4) {
-                        Text(s.referencePhotoURL?.lastPathComponent ?? L10n.tr("尚未锁定参考图"))
-                            .font(.system(size: 11)).lineLimit(1).truncationMode(.middle)
-                        Image(systemName: "chevron.down").font(.system(size: 8.5))
-                    }
-                    .foregroundStyle(.secondary)
+                    Text(s.referencePhotoURL?.lastPathComponent ?? L10n.tr("尚未锁定参考图"))
+                        .font(.system(size: 11)).lineLimit(1).truncationMode(.middle)
+                        .foregroundStyle(.secondary)
                 }
                 .menuStyle(.borderlessButton)
 

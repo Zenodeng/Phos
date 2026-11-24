@@ -1013,5 +1013,7 @@
   "未安装时自动使用地平线+梯度阻断零模型分割": "Falls back to built-in horizon + gradient-blocked BFS segmentation when uninstalled",
   "未安装时自动使用 Vision 显著性+人物混合单目深度": "Falls back to built-in Vision saliency + person monocular depth when uninstalled",
   "未安装时使用 Metal 线性 YCoCg 保边 RAW 降噪": "Uses Metal linear YCoCg edge-preserving RAW denoise when uninstalled",
-  "未安装时使用 Lanczos 2x + Metal 结构张量锐化": "Uses Lanczos 2x + Metal structure-tensor sharpening when uninstalled"
+  "未安装时使用 Lanczos 2x + Metal 结构张量锐化": "Uses Lanczos 2x + Metal structure-tensor sharpening when uninstalled",
+  "减去": "Subtract",
+  "交叉": "Intersect"
 }

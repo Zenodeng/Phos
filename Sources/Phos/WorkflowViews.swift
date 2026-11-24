@@ -123,14 +123,16 @@ struct MaskEditingControls: View {
     @EnvironmentObject var s: AppState
     var body: some View {
         VStack(spacing: 8) {
-            HStack {
-                Toggle(L10n.tr("显示选区"), isOn: $s.showMaskOverlay).toggleStyle(.checkbox)
-                Spacer()
+            HStack(spacing: 4) {
+                Toggle(L10n.tr("显示选区"), isOn: $s.showMaskOverlay)
+                    .toggleStyle(.checkbox)
+                    .lineLimit(1)
+                Spacer(minLength: 4)
                 Picker(L10n.tr("蒙版工具"), selection: $s.maskTool) {
                     ForEach(MaskTool.allCases, id: \.self) { tool in
                         Image(systemName: tool.symbol).tag(tool).help(L10n.tr(tool.label)).accessibilityLabel(L10n.tr(tool.label))
                     }
-                }.labelsHidden().pickerStyle(.segmented).frame(width: 112)
+                }.labelsHidden().pickerStyle(.segmented).frame(width: 96)
             }
             if s.maskTool != .position {
                 SliderRow(label: "笔刷", value: $s.brushRadius, range: 0.005...0.3, defaultValue:0.05, photoScoped:false)

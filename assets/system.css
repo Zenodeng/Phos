@@ -496,3 +496,23 @@ dialog::backdrop { background:var(--scrim); }
 .nav-sculpture{filter:none}
 .button>span.download-icon{display:flex;align-items:center;justify-content:center;box-sizing:content-box;width:24px;height:32px;padding:0 0 0 16px;flex-shrink:0;font-size:0;line-height:0;align-self:center}
 .download-icon .download-arrow{display:block;width:24px;height:24px;max-width:none;flex-shrink:0}
+
+
+/* Changelog page timeline */
+.changelog-main{width:min(var(--page-width),calc(100% - var(--page-gutter) - var(--page-gutter)));margin:0 auto;padding:0 0 96px}
+.changelog-list{display:grid;gap:28px;margin-top:24px}
+.release-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:28px 32px;transition:border-color 180ms ease}
+.release-card.is-latest{border-color:color-mix(in srgb,var(--gold) 45%,var(--line))}
+.release-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:12px 20px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.release-title{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.release-title h2{font-size:var(--title);margin:0;letter-spacing:-0.015em}
+.release-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:color-mix(in srgb,var(--gold) 18%,transparent);color:var(--gold);border:1px solid color-mix(in srgb,var(--gold) 45%,transparent)}
+.release-badge.is-muted{background:var(--raised);color:var(--muted);border-color:var(--line)}
+.release-meta{display:flex;flex-wrap:wrap;align-items:center;gap:16px;font-size:var(--caption);color:var(--muted)}
+.release-meta a{color:var(--ink);text-decoration:underline;text-underline-offset:4px}
+.release-summary{margin:18px 0 0;font-size:var(--lead);color:var(--ink)}
+.release-items{margin:16px 0 0;padding-left:20px;display:grid;gap:10px;color:var(--muted)}
+.release-items li{font-size:var(--body);line-height:1.65}
+.release-items strong{color:var(--ink);font-weight:500}
+.changelog-footer-note{margin-top:36px;padding:24px 28px;border:1px solid var(--line);border-radius:var(--radius);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;color:var(--muted);font-size:var(--body)}
+@media(max-width:760px){.release-card{padding:22px 20px}.release-head{flex-direction:column;align-items:flex-start}}

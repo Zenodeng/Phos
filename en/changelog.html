@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="phos" class="system-page"><head>
+
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phos — Changelog &amp; Release History</title>
+
+<meta name="description" content="Release history for Phos macOS RAW photo editor from 4.0 workspace redesign to 4.7.1: 16-bit extended linear Metal/EDR pipeline, composite boolean masks, zero-Python on-device AI, monocular depth optical bokeh and bidirectional XMP.">
+
+<meta name="keywords" content="Phos changelog, Phos release notes, Phos 4.7.1, macOS RAW editor updates, Metal 16-bit, on-device AI photo editing">
+
+<link rel="canonical" href="https://zenodeng.com/en/changelog.html">
+
+<link rel="alternate" hreflang="zh-CN" href="https://zenodeng.com/changelog.html">
+
+<link rel="alternate" hreflang="en" href="https://zenodeng.com/en/changelog.html">
+
+<link rel="alternate" hreflang="x-default" href="https://zenodeng.com/changelog.html">
+
+<meta name="google-site-verification" content="VpFD-mee9gLzbt9L78dK2LwITVrWsh_sOPfUTFIICrg">
+
+<meta name="theme-color" content="#0c0d10">
+
+<meta property="og:type" content="website">
+
+<meta property="og:locale" content="en_US">
+
+<meta property="og:locale:alternate" content="zh_CN">
+
+<meta property="og:title" content="Phos — Changelog &amp; Release History">
+
+<meta property="og:description" content="Every Phos milestone from 4.0 to 4.7.1: 16-bit Metal/EDR pipeline, OKLCH Point Color, composite boolean masks, zero-Python on-device AI and 5-slot Core ML Model Hub.">
+
+<meta property="og:url" content="https://zenodeng.com/en/changelog.html">
+
+<meta property="og:image" content="https://zenodeng.com/images/og-phos.jpg">
+<meta name="twitter:image" content="https://zenodeng.com/images/og-phos.jpg">
+
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="../images/phos-icon-dark.png" type="image/png">
+
+<link rel="stylesheet" href="../assets/system.css">
+
+<link rel="stylesheet" href="../assets/motion.css"><link rel="stylesheet" href="../assets/p0.css"><link rel="stylesheet" href="../assets/kinetic-light.css"></head>
+
+<body class="changelog-page"><a class="skip" href="#main">Skip to content</a>
+
+<nav class="site-nav" aria-label="Main navigation"><a class="wordmark" href="./" aria-label="Phos"><span class="wordmark-text" translate="no">Phos</span></a>
+<div class="nav-links"><a href="index.html#workspace">Workspace</a><a href="features.html">Features</a><a href="index.html#studio">Try editing</a><a href="help.html">Help</a></div>
+
+<div class="nav-actions"><button class="command-trigger" type="button" aria-haspopup="dialog"><span>Search</span><kbd>⌘ K</kbd></button><a class="language" href="../changelog.html" aria-label="切换到简体中文">中文</a><a class="nav-download" href="../download/Phos-macOS-apple-silicon.dmg" download="">Download Mac</a><button class="menu-toggle" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="mobile-menu" hidden="">Menu<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 6h14M3 14h14"></path></svg></button></div>
+</nav>
+
+<dialog class="mobile-menu" id="mobile-menu" aria-labelledby="mobile-menu-title">
+<div class="mobile-menu-header">
+<h2 id="mobile-menu-title">Explore Phos</h2><button class="dialog-close menu-close" type="button">Close</button></div>
+
+<nav aria-label="Mobile navigation"><a href="index.html#workspace">Workspace</a><a href="features.html">Features</a><a href="index.html#studio">Try editing</a><a href="help.html">Help</a></nav>
+
+<div class="mobile-menu-footer"><a class="language" href="../changelog.html">简体中文</a><a class="button primary" href="../download/Phos-macOS-apple-silicon.dmg" download="">Download Mac</a></div>
+</dialog>
+
+<noscript><nav class="noscript-nav" aria-label="Page navigation"><a href="index.html#workspace">Workspace</a><a href="features.html">Features</a><a href="index.html#studio">Try editing</a><a href="help.html">Help</a></nav></noscript>
+
+<main id="main">
+
+<header id="top" class="reading-hero">
+
+<h1>Every release,<br>grounded in real editing.</h1>
+
+<p>A public, verifiable history of Phos from the 4.0 workspace rebuild through 4.7.1’s 16-bit Metal pipeline and zero-Python on-device AI.</p><a class="button primary" href="../download/Phos-macOS-apple-silicon.dmg" download="">Download v4.7.1<span class="download-icon" aria-hidden="true"><svg class="download-arrow" viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true"><path d="M12 4v16m-6-6 6 6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a><p class="help-back"><a class="text-link" href="help.html#download-help">Mirrors &amp; SHA256 verification</a></p></header>
+
+<div class="changelog-main">
+
+<div class="changelog-list">
+
+<article id="v4.7.1" class="release-card is-latest">
+<div class="release-head">
+<div class="release-title"><h2>v4.7.1</h2><span class="release-badge">Latest · Hotfix</span></div>
+<div class="release-meta"><time datetime="2026-11-24">2026-11-24</time><a href="https://github.com/Zenodeng/Phos/releases/tag/v4.7.1" target="_blank" rel="noopener">GitHub Release ↗</a></div>
+</div>
+<p class="release-summary">Fixed macOS 26/27 icon-menu text fallback in Boolean Sub-Masks and hardened right-inspector leading-edge layout.</p>
+<ul class="release-items">
+<li><strong>Native NSMenu icon triggers for Boolean Sub-Masks</strong>: replaced icon-only SwiftUI <code>.borderlessButton</code> menus in the mask panel with a lightweight native <code>NSMenu</code> trigger, preventing SF Symbol names (<code>plus.square</code>, <code>minus.square</code>, <code>square.on.square</code>) from rendering as literal text and overflowing the inspector.</li>
+<li><strong>Strict leading-aligned inspector widths</strong>: enforced leading alignment and compact sizing across <code>GroupBox</code>, <code>InspectorPane</code>, <code>MaskPane</code> and <code>MaskEditingControls</code> so 248–304pt widths never clip on the left.</li>
+<li><strong>Polish &amp; localization</strong>: removed duplicate chevrons in Auto Tone scene and Reference view menus; added missing English strings for Subtract/Intersect (<strong>1,017</strong> validated UI translations total).</li>
+</ul>
+</article>
+
+<article id="v4.7.0" class="release-card">
+<div class="release-head">
+<div class="release-title"><h2>v4.7.0</h2><span class="release-badge">On-Device AI Milestone</span></div>
+<div class="release-meta"><time datetime="2026-11-23">2026-11-23</time><a href="https://github.com/Zenodeng/Phos/releases/tag/v4.7.0" target="_blank" rel="noopener">GitHub Release ↗</a></div>
+</div>
+<p class="release-summary">Zero-Python on-device AI suite: Reference Color Match, any-RAW monocular depth optical bokeh, RAW denoise &amp; export 2x Super Res, Smart Culling and 5-slot Model Hub.</p>
+<ul class="release-items">
+<li><strong>Reference-to-Editable-Parameters Color Match</strong>: solves any reference still into editable Phos sliders via OKLab/OKLCH 7-quantile luminance, 3-way color grading, 8-band HSL and coordinate descent, with 0–150% strength and skin protection.</li>
+<li><strong>Any-RAW Monocular Depth &amp; Physical Optical Bokeh</strong>: built-in Vision saliency + person + perspective zero-model depth plus optional Core ML <code>DepthAnythingV2</code>, click-on-canvas focus sampling, depth heatmap, 5–8 polygon blades, linear HDR specular boost and cat-eye vignetting.</li>
+<li><strong>Non-Destructive RAW Denoise &amp; Export 2x Super Res</strong>: Metal linear YCoCg edge-preserving denoise and export-only Lanczos 2x + structure-tensor sharpening (or tiled Core ML models) with zero bloated DNG copies and a preserved 1:1 preview contract.</li>
+<li><strong>Smart Culling, Burst Clustering &amp; Bilingual Semantic Search</strong>: EAR eye-closure detection, focus sharpness scoring, burst-best picks and visual similarity sorting.</li>
+<li><strong>Pure-Swift Native AI Workbench &amp; 5-Slot Model Hub</strong>: bundled <code>NativePhotoPlanner</code> and unified Core ML Hub (<code>lama</code>, <code>sky</code>, <code>depth</code>, <code>denoise</code>, <code>superRes</code>); fixed a SwiftUI out-of-bounds crash when removing Point Color swatches.</li>
+</ul>
+</article>
+
+<article id="v4.6.0" class="release-card">
+<div class="release-head">
+<div class="release-title"><h2>v4.6.0</h2><span class="release-badge is-muted">Masks, Multi-View &amp; XMP</span></div>
+<div class="release-meta"><time datetime="2026-11-23">2026-11-23</time><a href="https://github.com/Zenodeng/Phos/releases/tag/v4.6.0" target="_blank" rel="noopener">GitHub Release ↗</a></div>
+</div>
+<p class="release-summary">Added 8-part portrait segmentation, Auto Mask pressure brush, full multi-view culling, bidirectional Adobe XMP and 82 lens profiles.</p>
+<ul class="release-items">
+<li><strong>Complete masking</strong>: added body skin, eyebrows and clothes segmentation plus upgraded zero-model / Core ML sky segmentation; added Auto Mask edge snapping &amp; tablet pen pressure; interactive Add/Subtract/Intersect sub-masks, local Tint/Whites/Blacks, expandable local Curve Editor and local OKLCH Point Color.</li>
+<li><strong>Interactive retouching</strong>: clean source suggestion, on-canvas spot and source handle dragging, dual-ring hover brush preview and <code>H</code> / <code>Delete</code> shortcuts.</li>
+<li><strong>Multi-view &amp; browser</strong>: Grid (<code>G</code>), Compare (<code>C</code>), 2–4 Up Survey (<code>N</code>) and Reference (<code>⇧R</code>) views; recursive subfolder scanning, keywords and camera/lens filters.</li>
+<li><strong>XMP &amp; 82 lens profiles</strong>: full bidirectional Adobe XMP sidecars with persistent auto-sync, Lightroom <code>.xmp</code> preset import with 0–200% strength scaling, and 82 built-in lens profiles.</li>
+</ul>
+</article>
+
+<article id="v4.5.0" class="release-card">
+<div class="release-head">
+<div class="release-title"><h2>v4.5.0</h2><span class="release-badge is-muted">16-bit Metal Engine</span></div>
+<div class="release-meta"><time datetime="2026-11-22">2026-11-22</time><a href="https://github.com/Zenodeng/Phos/releases/tag/v4.5.0" target="_blank" rel="noopener">GitHub Release ↗</a></div>
+</div>
+<p class="release-summary">Moved the core rendering pipeline to 16-bit extended linear floating-point Metal with EDR/HDR preview, OKLCH Point Color, LaMa remove and HDR export.</p>
+<ul class="release-items">
+<li><strong>16-bit Metal / EDR pipeline</strong>: switched to <code>extendedLinearSRGB</code> / <code>.RGBAh</code> GPU compute kernels with EDR preview canvas and <code>J</code> highlight/shadow clipping alerts.</li>
+<li><strong>Pro tone &amp; color</strong>: added AgX contrast pivot/rolloff, 14-stop Guided Filter toning, bidirectional whites/blacks, OKLCH HSL, dedicated Point Color swatches and grain roughness.</li>
+<li><strong>Retouch &amp; metadata export</strong>: added Heal (Poisson), Clone and Remove (4-level PatchMatch + optional Core ML Big-LaMa); EXIF/IPTC preservation, GPS privacy strip, Gain-Map HDR JPEG, 10-bit PQ HEIC and 16-bit Display P3 export.</li>
+</ul>
+</article>
+
+<article id="v4.4.0" class="release-card">
+<div class="release-head">
+<div class="release-title"><h2>v4.4.0</h2><span class="release-badge is-muted">Lens UI &amp; Async LUTs</span></div>
+<div class="release-meta"><time datetime="2026-10-31">2026-10-31</time><a href="https://github.com/Zenodeng/Phos/releases/tag/v4.4.0" target="_blank" rel="noopener">GitHub Release ↗</a></div>
+</div>
+<p class="release-summary">Added before/after lens comparison and an 8-way reference grid, moved LUT directory scanning off the main thread, and migrated updates to zenodeng.com.</p>
+<ul class="release-items">
+<li><strong>Lens correction workflow</strong>: instant before/after bypass toggle, 8-way straightness grid, explicit profile provenance and bundled starter profiles.</li>
+<li><strong>Background LUT scanning</strong>: scanning film LUT directories runs asynchronously with live status without blocking UI interaction.</li>
+</ul>
+</article>
+
+<article id="v4.3.0" class="release-card">
+<div class="release-head">
+<div class="release-title"><h2>v4.3.0 / v4.2.0</h2><span class="release-badge is-muted">Bilingual &amp; Liquid Glass</span></div>
+<div class="release-meta"><time datetime="2026-10-22">2026-10-21 – 10-22</time><a href="https://github.com/Zenodeng/Phos/releases/tag/v4.3.0" target="_blank" rel="noopener">GitHub Release ↗</a></div>
+</div>
+<p class="release-summary">Instant Follow-System / Chinese / English language switching, native macOS 26 Liquid Glass workspace surfaces, full-edge crop dragging and Vision Auto Level.</p>
+<ul class="release-items">
+<li><strong>Instant bilingual UI</strong>: switch languages without restarting or losing edit state, undo history, presets or snapshots.</li>
+<li><strong>Native glass &amp; crop precision</strong>: unified native glass chrome with Reduce Transparency fallback, full-edge crop drag zones and on-device Vision horizon leveling.</li>
+</ul>
+</article>
+
+<article id="v4.0.0" class="release-card">
+<div class="release-head">
+<div class="release-title"><h2>v4.1.0 / v4.0.0</h2><span class="release-badge is-muted">Workspace &amp; Optional VLM</span></div>
+<div class="release-meta"><time datetime="2026-10-18">2026-10-17 – 10-18</time><a href="https://github.com/Zenodeng/Phos/releases/tag/v4.1.0" target="_blank" rel="noopener">GitHub Release ↗</a></div>
+</div>
+<p class="release-summary">Rebuilt the main window around A Immersive / B Filmstrip layouts and introduced optional local Qwen3-VL MLX editing with a bundled 1.3 MB fine-tuned adapter.</p>
+<ul class="release-items">
+<li><strong>A / B dual layouts</strong>: one shared edit state and undo stack across list editing and bottom filmstrip culling, with adaptive light/dark icons.</li>
+<li><strong>Optional local VLM</strong>: localhost-only <code>127.0.0.1</code> MLX inference with per-file SHA256 verification and mainland China mirror helper script.</li>
+</ul>
+</article>
+
+</div>
+
+<aside class="changelog-footer-note">
+<span>Earlier 3.x releases and detailed verification logs live in <code>CHANGELOG.md</code> on GitHub.</span>
+<a class="text-link" href="https://github.com/Zenodeng/Phos/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Read full CHANGELOG.md ↗</a>
+</aside>
+
+</div>
+
+</main>
+
+<footer class="site-footer">
+<div class="footer-inner"><a href="#top" class="footer-wordmark" aria-label="Phos"><img src="../images/phos-sculpture.svg" width="1300" height="446" alt="Phos" loading="lazy"></a>
+<p class="footer-intro">Native Mac editing. Your photos stay local.</p>
+<div class="footer-columns">
+<div>
+<h3>Product</h3>
+<ul>
+<li><a href="../download/Phos-macOS-apple-silicon.dmg">Download for Mac</a></li>
+<li><a href="help.html#download-help">Mirrors and checksums</a></li>
+<li><a href="changelog.html" aria-current="page">Changelog</a></li></ul>
+
+<p>Phos 4.7.1 · 8.78 MB</p>
+<p>macOS 26+ · Apple silicon</p></div>
+
+<div>
+<h3>Features</h3>
+<ul>
+<li><a href="features.html#light">Light and colour</a></li>
+<li><a href="features.html#masks">Local masks</a></li>
+<li><a href="features.html#workflow">Workspace and batch</a></li>
+<li><a href="features.html#export">Export and watermarks</a></li></ul>
+</div>
+
+<div>
+<h3>Support</h3>
+<ul>
+<li><a href="help.html">Installation help</a></li>
+<li><a href="help.html#ai-model">Native AI &amp; Model Hub</a></li>
+<li><a href="https://github.com/Zenodeng/Phos/issues">Report an issue</a></li>
+<li><a href="https://github.com/Zenodeng/Phos/releases">Releases</a></li></ul>
+</div>
+
+<div>
+<h3>Open source and credits</h3>
+<ul>
+<li><a href="https://github.com/Zenodeng/Phos">GitHub</a></li>
+<li><a href="https://github.com/Zenodeng/Phos/blob/main/LICENSE">MIT License</a></li>
+<li><a href="index.html#compare">Phos vs Lightroom</a></li>
+<li><a href="../changelog.html">简体中文</a></li></ul>
+</div>
+</div>
+
+<div class="footer-bottom">
+<p>Free and open source. No account or subscription.</p>
+<p>Version checks use the network. Photo processing and AI inference stay on your Mac.</p><p class="motion-explanation" id="motion-settings">Motion follows your system’s Reduce Motion setting.</p></div>
+</div>
+</footer>
+
+<script src="../assets/brand-v2.js" defer=""></script>
+<script src="../assets/navigation.js" defer=""></script>
+<script src="../assets/motion.js" defer=""></script>
+<script src="../assets/kinetic-light.js" defer=""></script></body></html>

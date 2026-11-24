@@ -860,6 +860,98 @@
 
 </section>
 
+<section id="ai-demos" class="ai-demos-section editorial-section page-width">
+
+<div class="section-heading">
+
+<h2>Three on-device AI tools,<br>rendered by the real engine.</h2>
+
+<p>Every pair below was rendered offline on Apple silicon directly by Phos v4.7.1’s Swift, Metal and Core ML engines — no synthetic filters. Drag any divider or tap the buttons to inspect.</p></div>
+
+<div class="ai-demo-grid">
+
+<article class="ai-demo-card">
+
+<div class="ai-demo-head">
+
+<h3>Content-Aware Remove</h3><span class="ai-demo-tag">LaMa · Core ML</span></div>
+
+<div class="photo-comparison" data-compare="ai-remove" data-split="50">
+
+<div class="compare-viewport"><img class="compare-after" src="../images/ai-demos/remove-after.webp" width="1280" height="800" alt="Alpine lake mirror after Phos on-device LaMa removes the tourist boat, distant boat and moored wooden boat" loading="lazy" decoding="async">
+
+<div class="compare-before"><img src="../images/ai-demos/remove-before.webp" width="1280" height="800" alt="" loading="lazy" decoding="async"></div>
+
+<div class="compare-labels" aria-hidden="true"><span>Before</span><span>Removed</span></div>
+
+<span class="compare-divider" aria-hidden="true"><span><svg viewBox="0 0 32 24" width="32" height="24" fill="none" aria-hidden="true"><path d="m9 7-4 5 4 5M23 7l4 5-4 5M16 5v14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span><input class="compare-range" type="range" min="0" max="100" value="50" step="1" aria-label="LaMa Content-Aware Remove before/after comparison, percentage of original image"></div>
+
+</div>
+
+<div class="compare-actions" role="group" aria-label="Content-Aware Remove view mode" data-for="ai-remove"><button type="button" data-show="100" aria-pressed="false">Before</button><button type="button" data-show="50" aria-pressed="true">Compare</button><button type="button" data-show="0" aria-pressed="false">After</button></div>
+
+<p>Three strokes cleanly erase the blue-canopy tourist boat, distant skiff and foreground moored boat with its shadow, reconstructing ripples and forest reflections. Built-in PatchMatch works even with zero models installed.</p>
+
+<div class="ai-demo-metrics"><span><strong>3 strokes</strong> · On-device</span><span>Elapsed <strong>1.54 s</strong></span></div>
+
+</article>
+
+<article class="ai-demo-card">
+
+<div class="ai-demo-head">
+
+<h3>Reference Color Match</h3><span class="ai-demo-tag">Zero-Model · Editable</span></div>
+
+<div class="photo-comparison" data-compare="ai-match" data-split="50">
+
+<div class="compare-viewport"><img class="compare-after" src="../images/ai-demos/colormatch-after.webp" width="1280" height="800" alt="Overcast Dolomites lake matched to a warm golden film still using Phos Reference Color Match" loading="lazy" decoding="async">
+
+<div class="compare-before"><img src="../images/ai-demos/colormatch-before.webp" width="1280" height="800" alt="" loading="lazy" decoding="async"></div>
+
+<div class="compare-labels" aria-hidden="true"><span>Before</span><span>Matched</span></div>
+
+<span class="compare-divider" aria-hidden="true"><span><svg viewBox="0 0 32 24" width="32" height="24" fill="none" aria-hidden="true"><path d="m9 7-4 5 4 5M23 7l4 5-4 5M16 5v14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span><input class="compare-range" type="range" min="0" max="100" value="50" step="1" aria-label="Reference Color Match before/after comparison, percentage of original image"></div>
+
+</div>
+
+<div class="compare-actions" role="group" aria-label="Reference Color Match view mode" data-for="ai-match"><button type="button" data-show="100" aria-pressed="false">Before</button><button type="button" data-show="50" aria-pressed="true">Compare</button><button type="button" data-show="0" aria-pressed="false">After</button></div>
+
+<p>Solves a separate warm-graded mountain lake still in OKLab into 6 real, editable slider panels — White Balance (+28 temp), Basic, Vibrance, Curves, Color Grading and HSL — shown at 68% match strength.</p>
+
+<div class="ai-demo-metrics"><span class="ref-chip"><img src="../images/ai-demos/colormatch-ref.webp" width="240" height="180" alt="Warm golden film reference still" loading="lazy" decoding="async"><span>Reference</span></span><span>ΔE <strong>8.23 → 5.36</strong> · <strong>22 ms</strong></span></div>
+
+</article>
+
+<article class="ai-demo-card">
+
+<div class="ai-demo-head">
+
+<h3>Monocular Depth Bokeh</h3><span class="ai-demo-tag">Any RAW · 7 Blades</span></div>
+
+<div class="photo-comparison" data-compare="ai-bokeh" data-split="50">
+
+<div class="compare-viewport"><img class="compare-after" src="../images/ai-demos/bokeh-after.webp" width="1280" height="800" alt="Phos monocular depth estimation focusing on the foreground wooden boats while softly defocusing distant Dolomites peaks" loading="lazy" decoding="async">
+
+<div class="compare-before"><img src="../images/ai-demos/bokeh-before.webp" width="1280" height="800" alt="" loading="lazy" decoding="async"></div>
+
+<div class="compare-labels" aria-hidden="true"><span>Original</span><span>Optical Bokeh</span></div>
+
+<span class="compare-divider" aria-hidden="true"><span><svg viewBox="0 0 32 24" width="32" height="24" fill="none" aria-hidden="true"><path d="m9 7-4 5 4 5M23 7l4 5-4 5M16 5v14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span><input class="compare-range" type="range" min="0" max="100" value="50" step="1" aria-label="Monocular Depth Bokeh before/after comparison, percentage of original image"></div>
+
+</div>
+
+<div class="compare-actions" role="group" aria-label="Monocular Depth Bokeh view mode" data-for="ai-bokeh"><button type="button" data-show="100" aria-pressed="false">Original</button><button type="button" data-show="50" aria-pressed="true">Compare</button><button type="button" data-show="0" aria-pressed="false">Bokeh</button></div>
+
+<p>No dual-lens depth map required: estimates depth from any DSLR or mirrorless frame, locks focus onto the foreground wooden boats, and renders progressive 7-blade polygon bokeh with cat’s-eye falloff on distant peaks.</p>
+
+<div class="ai-demo-metrics"><span>Depth <strong>171 ms</strong> · Built-in</span><span>Blur <strong>70</strong> · Cat’s-eye <strong>36</strong></span></div>
+
+</article>
+
+</div>
+
+</section>
+
 <section class="learn-section editorial-section page-width">
 
 <div class="section-heading">
@@ -868,7 +960,65 @@
 
 <p>From a curve to a final export, go further where you need to.</p></div>
 
-<div class="resource-links"><a class="resource-link" href="features.html"><span><strong>Full feature guide</strong><small>Curves, masks and the complete workspace</small></span><span aria-hidden="true">↗</span></a><a class="resource-link" href="help.html"><span><strong>Installation and downloads</strong><small>Download options, first launch and optional model</small></span><span aria-hidden="true">↗</span></a></div>
+<div class="resource-links"><a class="resource-link" href="features.html"><span><strong>Full feature guide</strong><small>16-bit Metal, composite masks &amp; full workspace</small></span><span aria-hidden="true">↗</span></a><a class="resource-link" href="changelog.html"><span><strong>Release changelog</strong><small>Public history from 4.0 to 4.7.1</small></span><span aria-hidden="true">↗</span></a><a class="resource-link" href="help.html"><span><strong>Installation and downloads</strong><small>Mirrors, first launch &amp; AI Model Hub</small></span><span aria-hidden="true">↗</span></a></div>
+
+</section>
+
+<section class="vs-section editorial-section page-width" id="compare">
+
+<div class="section-heading">
+
+<h2>Phos vs Lightroom Classic.<br>An honest comparison.</h2>
+
+<p>Both are serious RAW tools, built around different trade-offs. Here is where each one fits best.</p></div>
+
+<div class="vs-table-wrap" role="region" aria-label="Objective comparison between Phos and Lightroom Classic" tabindex="0">
+
+<table class="vs-table">
+<thead>
+<tr>
+<th scope="col">Dimension</th>
+<th scope="col" class="col-phos">Phos (v4.7.1)</th>
+<th scope="col">Adobe Lightroom Classic</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th scope="row">Pricing &amp; License</th>
+<td class="col-phos"><strong>Free &amp; open source (MIT)</strong>. No account, no subscription, no paid tier.</td>
+<td class="col-lr">Paid monthly/annual subscription requiring an Adobe account and periodic online check-ins.</td>
+</tr>
+<tr>
+<th scope="row">Files &amp; Privacy</th>
+<td class="col-phos"><strong>Folder-based</strong> with sidecars (<code>.rawforge.json</code> + bidirectional Adobe <code>.xmp</code>). No locked catalog; photos never leave your Mac.</td>
+<td class="col-lr">Centralized catalog database built for very large multi-drive commercial archives and optional cloud sync.</td>
+</tr>
+<tr>
+<th scope="row">Color &amp; Tone Engine</th>
+<td class="col-phos">16-bit extended linear Metal (20 compute kernels), EDR/HDR preview, AgX rolloff, OKLCH Point Color, 303 film CLUTs and LR <code>.xmp</code> preset import (0–200%).</td>
+<td class="col-lr">Mature Camera Raw engine with broader commercial camera profiles, Print/Book modules and third-party plugin ecosystem.</td>
+</tr>
+<tr>
+<th scope="row">Masks &amp; On-Device AI</th>
+<td class="col-phos"><strong>Zero-Python out of the box</strong>: boolean sub-masks, 8-part portrait &amp; sky segmentation, Reference Color Match, any-RAW monocular depth bokeh, LaMa remove, RAW denoise &amp; 2x Super Res (5-slot Core ML Hub).</td>
+<td class="col-lr">Polished commercial Adobe AI Denoise, Generative Remove (cloud-assisted) and fine portrait masking ready out of the box.</td>
+</tr>
+<tr>
+<th scope="row">Culling &amp; Footprint</th>
+<td class="col-phos">8.8 MB native Swift/AppKit app; Grid/Compare/2–4 Up Survey/Reference views, Smart Culling (eyes, sharpness, bursts) and bilingual semantic search.</td>
+<td class="col-lr">Built for tens-of-thousands-photo DAM catalogs, live camera tethering and complex smart collections / publish services.</td>
+</tr>
+<tr>
+<th scope="row">Platforms &amp; Signing</th>
+<td class="col-phos"><strong>Focused on macOS 26+ Apple silicon</strong> (separate experimental Windows port, no iPad app yet). Ad-hoc signed — requires one-time macOS approval.</td>
+<td class="col-lr">Full ecosystem across macOS, Windows, iPad, iPhone and Web, with official notarized builds.</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+
+<p class="vs-note">If you rely on cross-platform cloud sync, camera tethering or massive commercial catalogs, Lightroom Classic remains the established standard. If you want a <strong>fast, subscription-free, folder-based Apple-silicon RAW studio with 16-bit Metal rendering and on-device AI</strong>, Phos is built for that workflow.</p>
 
 </section>
 
@@ -1033,7 +1183,8 @@
 <h3>Product</h3>
 <ul>
 <li><a href="../download/Phos-macOS-apple-silicon.dmg">Download for Mac</a></li>
-<li><a href="help.html#download-help">Mirrors and checksums</a></li></ul>
+<li><a href="help.html#download-help">Mirrors and checksums</a></li>
+<li><a href="changelog.html">Changelog</a></li></ul>
 
 <p>Phos 4.7.1 · 8.78 MB</p>
 <p>macOS 26+ · Apple silicon</p></div>

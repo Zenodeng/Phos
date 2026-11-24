@@ -860,6 +860,98 @@
 
 </section>
 
+<section id="ai-demos" class="ai-demos-section editorial-section page-width">
+
+<div class="section-heading">
+
+<h2>三项端侧 AI 能力，<br>真实引擎直接实测。</h2>
+
+<p>以下三组前后对比均由 Phos v4.7.1 原生 Swift / Metal / Core ML 引擎在本机离线实测输出，非滤镜模拟。拖动滑杆或点击按钮切换查看。</p></div>
+
+<div class="ai-demo-grid">
+
+<article class="ai-demo-card">
+
+<div class="ai-demo-head">
+
+<h3>内容感知消除</h3><span class="ai-demo-tag">LaMa · Core ML</span></div>
+
+<div class="photo-comparison" data-compare="ai-remove" data-split="50">
+
+<div class="compare-viewport"><img class="compare-after" src="images/ai-demos/remove-after.webp" width="1280" height="800" alt="使用 Phos 本地 LaMa 内容感知消除抹去湖面游船与停泊木船后的纯净倒影" loading="lazy" decoding="async">
+
+<div class="compare-before"><img src="images/ai-demos/remove-before.webp" width="1280" height="800" alt="" loading="lazy" decoding="async"></div>
+
+<div class="compare-labels" aria-hidden="true"><span>消除前</span><span>消除后</span></div>
+
+<span class="compare-divider" aria-hidden="true"><span><svg viewBox="0 0 32 24" width="32" height="24" fill="none" aria-hidden="true"><path d="m9 7-4 5 4 5M23 7l4 5-4 5M16 5v14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span><input class="compare-range" type="range" min="0" max="100" value="50" step="1" aria-label="LaMa 内容感知消除前后对比，消除前画面占比"></div>
+
+</div>
+
+<div class="compare-actions" role="group" aria-label="内容感知消除显示方式" data-for="ai-remove"><button type="button" data-show="100" aria-pressed="false">原图</button><button type="button" data-show="50" aria-pressed="true">对比</button><button type="button" data-show="0" aria-pressed="false">消除后</button></div>
+
+<p>三处涂抹一次性移除湖心蓝棚游船、远处小舟与前景独立木船及水面倒影，自动延续湖波与山林倒影纹理。未装 Core ML 时仍内置零依赖 PatchMatch 回退。</p>
+
+<div class="ai-demo-metrics"><span><strong>3 处涂抹</strong> · 离线推理</span><span>耗时 <strong>1.54 s</strong></span></div>
+
+</article>
+
+<article class="ai-demo-card">
+
+<div class="ai-demo-head">
+
+<h3>参考图一键追色</h3><span class="ai-demo-tag">零模型 · 可编辑</span></div>
+
+<div class="photo-comparison" data-compare="ai-match" data-split="50">
+
+<div class="compare-viewport"><img class="compare-after" src="images/ai-demos/colormatch-after.webp" width="1280" height="800" alt="阴天多洛米蒂山湖经 Phos 参考图一键追色转为冷暖对比胶片色调后的效果" loading="lazy" decoding="async">
+
+<div class="compare-before"><img src="images/ai-demos/colormatch-before.webp" width="1280" height="800" alt="" loading="lazy" decoding="async"></div>
+
+<div class="compare-labels" aria-hidden="true"><span>追色前</span><span>追色后</span></div>
+
+<span class="compare-divider" aria-hidden="true"><span><svg viewBox="0 0 32 24" width="32" height="24" fill="none" aria-hidden="true"><path d="m9 7-4 5 4 5M23 7l4 5-4 5M16 5v14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span><input class="compare-range" type="range" min="0" max="100" value="50" step="1" aria-label="参考图一键追色前后对比，追色前画面占比"></div>
+
+</div>
+
+<div class="compare-actions" role="group" aria-label="参考图一键追色显示方式" data-for="ai-match"><button type="button" data-show="100" aria-pressed="false">原图</button><button type="button" data-show="50" aria-pressed="true">对比</button><button type="button" data-show="0" aria-pressed="false">追色后</button></div>
+
+<p>读取另一张暖金雪山湖景作参考图，在 OKLab 空间直接反解出白平衡（色温 +28）、基本、饱和度、曲线、颜色分级与 HSL 共 6 组真实滑杆，强度 68% 仍可二次微调。</p>
+
+<div class="ai-demo-metrics"><span class="ref-chip"><img src="images/ai-demos/colormatch-ref.webp" width="240" height="180" alt="暖金胶片调色参考图" loading="lazy" decoding="async"><span>参考图</span></span><span>ΔE <strong>8.23 → 5.36</strong> · <strong>22 ms</strong></span></div>
+
+</article>
+
+<article class="ai-demo-card">
+
+<div class="ai-demo-head">
+
+<h3>单目深度光学散景</h3><span class="ai-demo-tag">任意 RAW · 7 叶片</span></div>
+
+<div class="photo-comparison" data-compare="ai-bokeh" data-split="50">
+
+<div class="compare-viewport"><img class="compare-after" src="images/ai-demos/bokeh-after.webp" width="1280" height="800" alt="Phos 单目估深并将焦平面锁定在前景木船，远景多洛米蒂雪峰呈现七边形光圈虚化" loading="lazy" decoding="async">
+
+<div class="compare-before"><img src="images/ai-demos/bokeh-before.webp" width="1280" height="800" alt="" loading="lazy" decoding="async"></div>
+
+<div class="compare-labels" aria-hidden="true"><span>全清晰</span><span>光学散景</span></div>
+
+<span class="compare-divider" aria-hidden="true"><span><svg viewBox="0 0 32 24" width="32" height="24" fill="none" aria-hidden="true"><path d="m9 7-4 5 4 5M23 7l4 5-4 5M16 5v14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span><input class="compare-range" type="range" min="0" max="100" value="50" step="1" aria-label="单目深度光学散景前后对比，全清晰画面占比"></div>
+
+</div>
+
+<div class="compare-actions" role="group" aria-label="单目深度光学散景显示方式" data-for="ai-bokeh"><button type="button" data-show="100" aria-pressed="false">全清晰</button><button type="button" data-show="50" aria-pressed="true">对比</button><button type="button" data-show="0" aria-pressed="false">散景后</button></div>
+
+<p>无需双摄或人像模式深度数据：对任意单反 / 无反照片实时单目估深，点击前景木船锁焦，背景多洛米蒂峭壁与云峰呈现渐进 7 叶片光圈虚化与口径蚀。</p>
+
+<div class="ai-demo-metrics"><span>估深 <strong>171 ms</strong> · 零模型内置</span><span>虚化 <strong>70</strong> · 口径蚀 <strong>36</strong></span></div>
+
+</article>
+
+</div>
+
+</section>
+
 <section class="learn-section editorial-section page-width">
 
 <div class="section-heading">
@@ -868,7 +960,65 @@
 
 <p>从一根曲线到一次导出，按你的需要继续深入。</p></div>
 
-<div class="resource-links"><a class="resource-link" href="features.html"><span><strong>完整功能指南</strong><small>曲线、蒙版与完整工作区</small></span><span aria-hidden="true">↗</span></a><a class="resource-link" href="help.html"><span><strong>安装与下载帮助</strong><small>下载渠道、首次打开与可选模型</small></span><span aria-hidden="true">↗</span></a></div>
+<div class="resource-links"><a class="resource-link" href="features.html"><span><strong>完整功能指南</strong><small>16-bit Metal、复合蒙版与完整工作区</small></span><span aria-hidden="true">↗</span></a><a class="resource-link" href="changelog.html"><span><strong>版本更新日志</strong><small>从 4.0 到 4.7.1 的全部公开迭代</small></span><span aria-hidden="true">↗</span></a><a class="resource-link" href="help.html"><span><strong>安装与下载帮助</strong><small>下载渠道、首次打开与 AI 模型中心</small></span><span aria-hidden="true">↗</span></a></div>
+
+</section>
+
+<section class="vs-section editorial-section page-width" id="compare">
+
+<div class="section-heading">
+
+<h2>Phos 与 Lightroom Classic，<br>客观看看怎么选。</h2>
+
+<p>不拉踩，也把边界说清楚。两款工具面向的工作方式并不相同。</p></div>
+
+<div class="vs-table-wrap" role="region" aria-label="Phos 与 Lightroom Classic 客观对比表" tabindex="0">
+
+<table class="vs-table">
+<thead>
+<tr>
+<th scope="col">对比维度</th>
+<th scope="col" class="col-phos">Phos（v4.7.1）</th>
+<th scope="col">Adobe Lightroom Classic</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th scope="row">价格与授权</th>
+<td class="col-phos"><strong>免费开源（MIT）</strong>，无账号、无订阅、无内购。</td>
+<td class="col-lr">付费月/年订阅制，需 Adobe 账号定期联网校验。</td>
+</tr>
+<tr>
+<th scope="row">文件与隐私</th>
+<td class="col-phos"><strong>直接打开文件夹</strong>，旁档（<code>.rawforge.json</code> + 双向 Adobe <code>.xmp</code>）存原图旁，无闭源目录、照片绝不上传。</td>
+<td class="col-lr">以集中式 Catalog 图库管理为核心，适合超大规模多硬盘商业归档与云端同步。</td>
+</tr>
+<tr>
+<th scope="row">渲染与调色管线</th>
+<td class="col-phos">16-bit 扩展线性浮点 Metal（20 个 Compute 内核）、EDR/HDR 预览、AgX 滚降、OKLCH 点颜色、303 种胶片 CLUT 与 LR <code>.xmp</code> 预设导入（0%–200%）。</td>
+<td class="col-lr">成熟 Camera Raw 引擎，具备更丰富的商业相机配置文件、打印/画册模块与第三方插件生态。</td>
+</tr>
+<tr>
+<th scope="row">蒙版与端侧 AI</th>
+<td class="col-phos"><strong>零 Python 开箱即用</strong>：复合布尔蒙版、8 部位人像与天空分割、参考图一键反解可调参数、任意 RAW 单目深度物理散景、LaMa 消除、RAW 降噪与 2x 超分（5 槽位 Core ML 模型中心）。</td>
+<td class="col-lr">内置强大的 Adobe AI 降噪、生成式移除（部分依赖云端算力额度）与人像精细蒙版，商业模型开箱精调成熟。</td>
+</tr>
+<tr>
+<th scope="row">选片与效率</th>
+<td class="col-phos">8.8 MB 轻量原生 Swift/AppKit，冷启动快；网格/对比/2–4 图同屏/参考视图、智能挑片（闭眼/跑焦/连拍）与双语语义搜图。</td>
+<td class="col-lr">适合万张级商业片库管理、联机拍摄（Tethering）与复杂智能收藏夹/发布服务。</td>
+</tr>
+<tr>
+<th scope="row">平台与签名</th>
+<td class="col-phos"><strong>专注 macOS 26+ Apple 芯片</strong>（Windows 仅有独立实验版，暂无 iPad 版）；免费本地签名，首次打开需手动放行一次。</td>
+<td class="col-lr">完整覆盖 macOS、Windows、iPad、iPhone 与网页端，具备官方公证签名。</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+
+<p class="vs-note">如果你的重心是跨平台云同步、联机拍摄或数万张商业图库归档，Lightroom Classic 仍是成熟选择；如果你在 Apple 芯片 Mac 上寻找一款<strong>轻量、无订阅、照片完全留在本地、同时具备 16-bit Metal 与端侧 AI</strong> 的 RAW 修图工作台，Phos 正为此而写。</p>
 
 </section>
 
@@ -1033,7 +1183,8 @@
 <h3>产品</h3>
 <ul>
 <li><a href="download/Phos-macOS-apple-silicon.dmg">下载 Mac 版</a></li>
-<li><a href="help.html#download-help">下载渠道与校验</a></li></ul>
+<li><a href="help.html#download-help">下载渠道与校验</a></li>
+<li><a href="changelog.html">更新日志</a></li></ul>
 
 <p>Phos 4.7.1 · 8.78 MB</p>
 <p>macOS 26+ · Apple 芯片</p></div>

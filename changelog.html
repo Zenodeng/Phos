@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="phos" class="system-page"><head>
+
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phos — 更新日志与版本演进</title>
+
+<meta name="description" content="查看 Phos macOS RAW 照片编辑器从 4.0 工作区重构到 4.7.1 的完整版本更新日志：16-bit 线性浮点 Metal/EDR、复合布尔蒙版、零 Python 端侧 AI、单目深度物理散景与双向 XMP。">
+
+<meta name="keywords" content="Phos 更新日志, Phos Changelog, Phos 4.7.1, macOS RAW 编辑器更新, Metal 16-bit, 端侧 AI 修图">
+
+<link rel="canonical" href="https://zenodeng.com/changelog.html">
+
+<link rel="alternate" hreflang="zh-CN" href="https://zenodeng.com/changelog.html">
+
+<link rel="alternate" hreflang="en" href="https://zenodeng.com/en/changelog.html">
+
+<link rel="alternate" hreflang="x-default" href="https://zenodeng.com/changelog.html">
+
+<meta name="google-site-verification" content="VpFD-mee9gLzbt9L78dK2LwITVrWsh_sOPfUTFIICrg">
+
+<meta name="theme-color" content="#0c0d10">
+
+<meta property="og:type" content="website">
+
+<meta property="og:locale" content="zh_CN">
+
+<meta property="og:locale:alternate" content="en_US">
+
+<meta property="og:title" content="Phos — 更新日志与版本演进">
+
+<meta property="og:description" content="Phos 从 4.0 到 4.7.1 的完整版本演进：16-bit Metal/EDR 管线、OKLCH 点颜色、复合布尔蒙版、零 Python 端侧 AI 与 5 槽位 Core ML 模型中心。">
+
+<meta property="og:url" content="https://zenodeng.com/changelog.html">
+
+<meta property="og:image" content="https://zenodeng.com/images/og-phos.jpg">
+<meta name="twitter:image" content="https://zenodeng.com/images/og-phos.jpg">
+
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="images/phos-icon-dark.png" type="image/png">
+
+<link rel="stylesheet" href="assets/system.css">
+
+<link rel="stylesheet" href="assets/motion.css"><link rel="stylesheet" href="assets/p0.css"><link rel="stylesheet" href="assets/kinetic-light.css"></head>
+
+<body class="changelog-page"><a class="skip" href="#main">跳到正文</a>
+
+<nav class="site-nav" aria-label="主导航"><a class="wordmark" href="./" aria-label="Phos"><span class="wordmark-text" translate="no">Phos</span></a>
+<div class="nav-links"><a href="index.html#workspace">工作区</a><a href="features.html">完整功能</a><a href="index.html#studio">试着修图</a><a href="help.html">安装帮助</a></div>
+
+<div class="nav-actions"><button class="command-trigger" type="button" aria-haspopup="dialog"><span>搜索</span><kbd>⌘ K</kbd></button><a class="language" href="en/changelog.html" aria-label="Switch to English">EN</a><a class="nav-download" href="download/Phos-macOS-apple-silicon.dmg" download="">下载 Mac 版</a><button class="menu-toggle" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="mobile-menu" hidden="">菜单<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 6h14M3 14h14"></path></svg></button></div>
+</nav>
+
+<dialog class="mobile-menu" id="mobile-menu" aria-labelledby="mobile-menu-title">
+<div class="mobile-menu-header">
+<h2 id="mobile-menu-title">浏览 Phos</h2><button class="dialog-close menu-close" type="button">关闭</button></div>
+
+<nav aria-label="移动端导航"><a href="index.html#workspace">工作区</a><a href="features.html">完整功能</a><a href="index.html#studio">试着修图</a><a href="help.html">安装帮助</a></nav>
+
+<div class="mobile-menu-footer"><a class="language" href="en/changelog.html">English</a><a class="button primary" href="download/Phos-macOS-apple-silicon.dmg" download="">下载 Mac 版</a></div>
+</dialog>
+
+<noscript><nav class="noscript-nav" aria-label="页面导航"><a href="index.html#workspace">工作区</a><a href="features.html">完整功能</a><a href="index.html#studio">试着修图</a><a href="help.html">安装帮助</a></nav></noscript>
+
+<main id="main">
+
+<header id="top" class="reading-hero">
+
+<h1>每一次迭代，<br>都落在真实修图上。</h1>
+
+<p>记录 Phos 从 4.0 工作区重构到 4.7.1 端侧 AI 与 Metal 16-bit 管线的真实改动，公开可追溯。</p><a class="button primary" href="download/Phos-macOS-apple-silicon.dmg" download="">下载 v4.7.1<span class="download-icon" aria-hidden="true"><svg class="download-arrow" viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true"><path d="M12 4v16m-6-6 6 6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a><p class="help-back"><a class="text-link" href="help.html#download-help">下载渠道与 SHA256 校验</a></p></header>
+
+<div class="changelog-main">
+
+<div class="changelog-list">
+
+<article id="v4.7.1" class="release-card is-latest">
+<div class="release-head">
+<div class="release-title"><h2>v4.7.1</h2><span class="release-badge">当前最新 · 热修复</span></div>
+<div class="release-meta"><time datetime="2026-11-24">2026-11-24</time><a href="https://github.com/Zenodeng/Phos/releases/tag/v4.7.1" target="_blank" rel="noopener">GitHub Release ↗</a></div>
+</div>
+<p class="release-summary">修复蒙版布尔子蒙版菜单在 macOS 26/27 下的符号名退化与右侧检视器左边界裁切问题。</p>
+<ul class="release-items">
+<li><strong>蒙版布尔菜单改用原生 NSMenu 图标按钮</strong>：替换「布尔子蒙版」添加组及子蒙版行运算切换处的 SwiftUI <code>.borderlessButton</code> 纯图标菜单，根治退化渲染为符号名文本（<code>plus.square</code> / <code>minus.square</code> / <code>square.on.square</code>）并撑破检视器的问题。</li>
+<li><strong>加固检视器左对齐宽度约束</strong>：在 <code>GroupBox</code>、<code>InspectorPane</code> 滚动视口、<code>MaskPane</code> 与 <code>MaskEditingControls</code> 锁定左对齐与紧凑宽度，确保 248pt–304pt 宽窄面板均无裁切。</li>
+<li><strong>细节清理与翻译补齐</strong>：移除自动影调场景与参考视图菜单内的冗余双重下拉箭头；补齐「减去 / Subtract」「交叉 / Intersect」，中英 UI 词条增至 <strong>1,017 条</strong>并全校验通过。</li>
+</ul>
+</article>
+
+<article id="v4.7.0" class="release-card">
+<div class="release-head">
+<div class="release-title"><h2>v4.7.0</h2><span class="release-badge">端侧 AI 跃升</span></div>
+<div class="release-meta"><time datetime="2026-11-23">2026-11-23</time><a href="https://github.com/Zenodeng/Phos/releases/tag/v4.7.0" target="_blank" rel="noopener">GitHub Release ↗</a></div>
+</div>
+<p class="release-summary">零 Python 端侧 AI 全家桶落地：参考图反解可调参数、任意 RAW 单目深度光学散景、RAW 域降噪与 2x 超分、智能挑片与 5 槽位模型中心。</p>
+<ul class="release-items">
+<li><strong>参考图 → 全可编辑参数反解</strong>：基于 OKLab/OKLCH 7 分位亮度、三段色彩分级、8 色域 HSL 与坐标下降，一键把任意参考片反解为可调 Phos 参数，支持 0%–150% 强度与肤色保护。</li>
+<li><strong>任意 RAW 单目深度与物理光学散景</strong>：内置 Vision 显著性 + 人物 + 透视梯度零模型深度与可选 Core ML <code>DepthAnythingV2</code>，支持画布点击采样焦平面、深度热力图、5–8 边形光圈叶片、线性 HDR 高光光斑增益与猫眼旋焦。</li>
+<li><strong>非破坏性 RAW 域降噪与导出 2x 超分</strong>：Metal 线性 YCoCg 保边降噪搭配导出端 Lanczos 2x + 结构张量锐化（或可选分块 Core ML 权重），保持预览 1:1 像素契约且零中间 DNG。</li>
+<li><strong>端侧智能挑片、连拍聚类与双语语义搜图</strong>：Vision 眼睑 EAR 闭眼检测、焦点锐度评分、连拍最佳帧聚类与视觉相似图排序。</li>
+<li><strong>纯 Swift 原生 AI 工坊与 5 槽位模型中心</strong>：内置 <code>NativePhotoPlanner</code> 与统一 Core ML 模型中心（<code>lama</code> / <code>sky</code> / <code>depth</code> / <code>denoise</code> / <code>superRes</code>）；同步修复 <code>PointColorPane</code> 删除色样时的 SwiftUI 越界崩溃。</li>
+</ul>
+</article>
+
+<article id="v4.6.0" class="release-card">
+<div class="release-head">
+<div class="release-title"><h2>v4.6.0</h2><span class="release-badge is-muted">蒙版、选片与 XMP</span></div>
+<div class="release-meta"><time datetime="2026-11-23">2026-11-23</time><a href="https://github.com/Zenodeng/Phos/releases/tag/v4.6.0" target="_blank" rel="noopener">GitHub Release ↗</a></div>
+</div>
+<p class="release-summary">补齐人像 8 部位分割、画笔自动边缘吸附、全画布多视图选片、双向 Adobe XMP 与 82 支内置镜头配置。</p>
+<ul class="release-items">
+<li><strong>蒙版完备化</strong>：新增身体皮肤、眉毛、衣服分割，升级零模型与 Core ML 天空分割；画笔新增 Auto Mask 自动边缘吸附与数位板压感；布尔子蒙版支持单独点击选中、切换加/减/交与画布拖动，局部面板新增色调/白黑、可展开曲线编辑器与局部点颜色。</li>
+<li><strong>修补画布交互</strong>：自动干净源点推荐、画布直接拖动修补中心与源点手柄、双环悬停画笔预览及 <code>H</code> / <code>Delete</code> 快捷键。</li>
+<li><strong>多视图选片</strong>：新增网格（<code>G</code>）、双图对比（<code>C</code>）、2–4 图同屏（<code>N</code>）与参考视图（<code>⇧R</code>），图库支持递归子目录、关键词与相机/镜头筛选。</li>
+<li><strong>XMP 与 82 支镜头</strong>：完整双向 Adobe XMP 旁档（支持持久化自动同步）、Lightroom <code>.xmp</code> 预设导入与 0%–200% 强度滑块；内置镜头数据库扩展至 82 组配置。</li>
+</ul>
+</article>
+
+<article id="v4.5.0" class="release-card">
+<div class="release-head">
+<div class="release-title"><h2>v4.5.0</h2><span class="release-badge is-muted">16-bit Metal 引擎</span></div>
+<div class="release-meta"><time datetime="2026-11-22">2026-11-22</time><a href="https://github.com/Zenodeng/Phos/releases/tag/v4.5.0" target="_blank" rel="noopener">GitHub Release ↗</a></div>
+</div>
+<p class="release-summary">底层全面升级为 16-bit 扩展线性浮点 Metal 计算管线与 EDR/HDR 预览，引入 OKLCH 点颜色、LaMa 消除与 HDR 导出。</p>
+<ul class="release-items">
+<li><strong>16-bit Metal / EDR 管线</strong>：切换至 <code>extendedLinearSRGB</code> / <code>.RGBAh</code> 线性浮点管线与 EDR 直通预览画布，加入 <code>J</code> 键高光/阴影溢出警示。</li>
+<li><strong>专业影调与色彩</strong>：新增 AgX 对比中心与高光滚降、Guided Filter 14-stop 保边影调、双向黑白场、OKLCH 空间 HSL、独立点颜色吸管与银盐颗粒粗糙度。</li>
+<li><strong>无痕修补与元数据导出</strong>：引入 Heal（泊松融合）、Clone、Remove（4 层 PatchMatch + 可选 Core ML Big-LaMa）；支持 EXIF/IPTC 保留、移除 GPS 隐私及 Gain-Map HDR JPEG / 10-bit PQ HEIC / 16-bit Display P3 导出。</li>
+</ul>
+</article>
+
+<article id="v4.4.0" class="release-card">
+<div class="release-head">
+<div class="release-title"><h2>v4.4.0</h2><span class="release-badge is-muted">镜头校正与后台 LUT</span></div>
+<div class="release-meta"><time datetime="2026-10-31">2026-10-31</time><a href="https://github.com/Zenodeng/Phos/releases/tag/v4.4.0" target="_blank" rel="noopener">GitHub Release ↗</a></div>
+</div>
+<p class="release-summary">镜头校正支持校正前后实时对比与 8 等分参考网格，LUT 扫描移至后台，官网与更新清单迁至 zenodeng.com。</p>
+<ul class="release-items">
+<li><strong>镜头校正体验</strong>：新增「校正前后」一键对比与 8 等分直线网格，明确标注配置来源与缺失标定项，随包内置首批镜头配置文件。</li>
+<li><strong>后台 LUT 扫描</strong>：将胶片 LUT 目录遍历移入后台线程，切换面板与刷新不再阻塞主线程交互。</li>
+</ul>
+</article>
+
+<article id="v4.3.0" class="release-card">
+<div class="release-head">
+<div class="release-title"><h2>v4.3.0 / v4.2.0</h2><span class="release-badge is-muted">双语与液态玻璃工作区</span></div>
+<div class="release-meta"><time datetime="2026-10-22">2026-10-21 – 10-22</time><a href="https://github.com/Zenodeng/Phos/releases/tag/v4.3.0" target="_blank" rel="noopener">GitHub Release ↗</a></div>
+</div>
+<p class="release-summary">支持跟随系统 / 简体中文 / English 即时切换，统一 macOS 26 原生液态玻璃工作区与四边整段可拖裁剪、Vision 自动水平。</p>
+<ul class="release-items">
+<li><strong>即时双语切换</strong>：无需重启、不重建编辑状态或历史，菜单、参数与无障碍标签即时跟随语言切换。</li>
+<li><strong>原生玻璃与交互打磨</strong>：A/B 侧栏与胶片条全面接入原生玻璃（减少透明度时自动回退实色），裁剪框四边整段可拖并加入本地 Vision 自动水平拉直。</li>
+</ul>
+</article>
+
+<article id="v4.0.0" class="release-card">
+<div class="release-head">
+<div class="release-title"><h2>v4.1.0 / v4.0.0</h2><span class="release-badge is-muted">新工作区与本地 VLM</span></div>
+<div class="release-meta"><time datetime="2026-10-18">2026-10-17 – 10-18</time><a href="https://github.com/Zenodeng/Phos/releases/tag/v4.1.0" target="_blank" rel="noopener">GitHub Release ↗</a></div>
+</div>
+<p class="release-summary">重构主窗口为 A 沉浸编辑 / B 连续选片双布局，并上线带 P2 微调适配器（1.3 MB）的可选本地 Qwen3-VL MLX 修图模式。</p>
+<ul class="release-items">
+<li><strong>A / B 双布局工作区</strong>：列表精修与底部胶片条选片共享同一份编辑状态与撤销栈，支持浅色 / 深色双外观图标。</li>
+<li><strong>可选本地多模态模型</strong>：接入本机 <code>127.0.0.1</code> MLX 推理与 SHA256 文件完整性校验，并随安装包提供国内镜像脚本 <code>国内网络安装.command</code>。</li>
+</ul>
+</article>
+
+</div>
+
+<aside class="changelog-footer-note">
+<span>更早的 3.x 与完整技术验证记录保存在 GitHub 仓库的 <code>CHANGELOG.md</code>。</span>
+<a class="text-link" href="https://github.com/Zenodeng/Phos/blob/main/CHANGELOG.md" target="_blank" rel="noopener">阅读完整 CHANGELOG.md ↗</a>
+</aside>
+
+</div>
+
+</main>
+
+<footer class="site-footer">
+<div class="footer-inner"><a href="#top" class="footer-wordmark" aria-label="Phos"><img src="images/phos-sculpture.svg" width="1300" height="446" alt="Phos" loading="lazy"></a>
+<p class="footer-intro">原生 Mac 修图。照片不上传。</p>
+<div class="footer-columns">
+<div>
+<h3>产品</h3>
+<ul>
+<li><a href="download/Phos-macOS-apple-silicon.dmg">下载 Mac 版</a></li>
+<li><a href="help.html#download-help">下载渠道与校验</a></li>
+<li><a href="changelog.html" aria-current="page">更新日志</a></li></ul>
+
+<p>Phos 4.7.1 · 8.78 MB</p>
+<p>macOS 26+ · Apple 芯片</p></div>
+
+<div>
+<h3>功能</h3>
+<ul>
+<li><a href="features.html#light">明暗与色彩</a></li>
+<li><a href="features.html#masks">局部蒙版</a></li>
+<li><a href="features.html#workflow">工作区与批量</a></li>
+<li><a href="features.html#export">导出与水印</a></li></ul>
+</div>
+
+<div>
+<h3>支持</h3>
+<ul>
+<li><a href="help.html">安装帮助</a></li>
+<li><a href="help.html#ai-model">本地 AI 与模型中心</a></li>
+<li><a href="https://github.com/Zenodeng/Phos/issues">反馈问题</a></li>
+<li><a href="https://github.com/Zenodeng/Phos/releases">Releases</a></li></ul>
+</div>
+
+<div>
+<h3>开源与来源</h3>
+<ul>
+<li><a href="https://github.com/Zenodeng/Phos">GitHub</a></li>
+<li><a href="https://github.com/Zenodeng/Phos/blob/main/LICENSE">MIT 协议</a></li>
+<li><a href="index.html#compare">Phos vs Lightroom</a></li>
+<li><a href="en/changelog.html">English</a></li></ul>
+</div>
+</div>
+
+<div class="footer-bottom">
+<p>免费开源，无需账号和订阅。</p>
+<p>联网只用于检查版本；照片处理和 AI 推理都在你的 Mac 上完成。</p><p class="motion-explanation" id="motion-settings">动效跟随系统「减弱动态效果」设置。</p></div>
+</div>
+</footer>
+
+<script src="assets/brand-v2.js" defer=""></script>
+<script src="assets/navigation.js" defer=""></script>
+<script src="assets/motion.js" defer=""></script>
+<script src="assets/kinetic-light.js" defer=""></script></body></html>

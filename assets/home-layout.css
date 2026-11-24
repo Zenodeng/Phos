@@ -748,3 +748,38 @@
 }
 .photo-edition .hero-intro h1 .hero-brand-text{
   }
+
+
+/* On-device AI interactive showcase (3 real-engine before/after demos) */
+.ai-demos-section{border-top:1px solid var(--line)}
+.ai-demo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;margin-top:36px}
+.ai-demo-card{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;gap:14px}
+.ai-demo-card .photo-comparison{border-radius:calc(var(--radius) - 4px);overflow:hidden}
+.ai-demo-card .photo-comparison .compare-viewport{aspect-ratio:16 / 10;border-radius:calc(var(--radius) - 4px)}
+.ai-demo-card .compare-labels{inset:12px 12px auto}
+.ai-demo-card .compare-labels span{padding:4px 8px;font-size:12px}
+.ai-demo-card .compare-divider>span{width:38px;height:38px}
+.ai-demo-card .compare-actions{margin-top:0}
+.ai-demo-card .compare-actions button{min-height:40px;padding:6px 10px;font-size:13px}
+.ai-demo-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ai-demo-tag{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:500;color:var(--gold);background:color-mix(in srgb,var(--gold) 14%,transparent);border:1px solid color-mix(in srgb,var(--gold) 36%,transparent);white-space:nowrap}
+.ai-demo-card h3{font-size:var(--lead);margin:0;color:var(--ink)}
+.ai-demo-card p{font-size:var(--caption);line-height:1.65;color:var(--muted);margin:0}
+.ai-demo-metrics{margin-top:auto;padding-top:12px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ai-demo-metrics strong{color:var(--ink);font-weight:500}
+.ref-chip{display:inline-flex;align-items:center;gap:8px;padding:4px 10px 4px 4px;border-radius:8px;background:var(--raised);border:1px solid var(--line);font-size:12px;color:var(--muted)}
+.ref-chip img{width:34px;height:24px;object-fit:cover;border-radius:5px;display:block}
+@media(max-width:1100px){.ai-demo-grid{grid-template-columns:minmax(0,1fr);gap:24px}}
+
+/* Objective Phos vs Lightroom comparison table */
+.vs-section{border-top:1px solid var(--line)}
+.vs-table-wrap{margin-top:32px;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+.vs-table{width:100%;min-width:680px;border-collapse:collapse;text-align:left;font-size:var(--caption)}
+.vs-table th,.vs-table td{padding:16px 20px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.6}
+.vs-table thead th{font-size:var(--body);font-weight:600;color:var(--ink);background:var(--raised);white-space:nowrap}
+.vs-table thead th.col-phos{color:var(--gold);border-bottom:2px solid var(--gold)}
+.vs-table tbody tr:last-child th,.vs-table tbody tr:last-child td{border-bottom:0}
+.vs-table tbody th{width:22%;font-weight:500;color:var(--ink);white-space:nowrap}
+.vs-table td.col-phos{width:40%;color:var(--ink);background:color-mix(in srgb,var(--gold) 5%,transparent)}
+.vs-table td.col-lr{width:38%;color:var(--muted)}
+.vs-note{margin-top:18px;font-size:var(--caption);color:var(--muted);line-height:1.65;max-width:78ch}

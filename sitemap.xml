@@ -50,4 +50,22 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://zenodeng.com/en/features.html" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://zenodeng.com/features.html" />
   </url>
+  <url>
+    <loc>https://zenodeng.com/changelog.html</loc>
+    <lastmod>2026-11-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://zenodeng.com/changelog.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://zenodeng.com/en/changelog.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zenodeng.com/changelog.html" />
+  </url>
+  <url>
+    <loc>https://zenodeng.com/en/changelog.html</loc>
+    <lastmod>2026-11-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://zenodeng.com/changelog.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://zenodeng.com/en/changelog.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zenodeng.com/changelog.html" />
+  </url>
 </urlset>

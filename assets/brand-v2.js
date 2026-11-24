@@ -68,7 +68,8 @@
   function setZoom(original){zoom.classList.toggle('is-actual-size',original);fit.setAttribute('aria-pressed',String(!original));actual.setAttribute('aria-pressed',String(original));zoomHint.hidden=!original;}
   fit.addEventListener('click',()=>setZoom(false));actual.addEventListener('click',()=>setZoom(true));setZoom(false);
   document.querySelectorAll('[data-zoom]').forEach(button=>button.addEventListener('click',()=>{
-    const frame=button.closest('.gallery-panel, .feature-shot, .workspace-figure'),image=frame.querySelector('img.active')||frame.querySelector('img');
+    const frame=button.closest('.gallery-panel, .feature-shot, .workspace-figure, .bento-media'),image=frame&&(frame.querySelector('img.active')||frame.querySelector('img'));
+    if(!image)return;
     zoomImg.width=image.naturalWidth||Number(image.getAttribute('width'));zoomImg.height=image.naturalHeight||Number(image.getAttribute('height'));zoomImg.src=image.src;zoomImg.alt=image.alt;setZoom(false);openDialog(zoom);
   }));
   const galleryTabs=[...document.querySelectorAll('[data-gallery]')];galleryTabs.forEach((button,i)=>{

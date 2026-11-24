@@ -1,28 +1,20 @@
-/* Seam Light — ultra-subtle cool-silver glass hairline on photo frames (zero warm gold tint). */
+/* Seam Light — ultra-subtle software-matched hairline on hero & workspace photo frames. */
 :root {
-  --seam-silver: rgb(255 255 255 / .26);
+  --seam-silver: rgb(201 168 118 / .30);
   --seam-graphite: rgb(255 255 255 / .12);
   --seam-ease: cubic-bezier(.16, 1, .3, 1);
 }
 
 [data-seam] {
   --seam-line: var(--seam-silver);
-  --seam-rest: .18;
-  --seam-active: .34;
-  --seam-x: 50%;
-  --seam-y: 50%;
+  --seam-rest: .16;
+  --seam-active: .32;
   position: relative;
   isolation: isolate;
 }
 
-[data-seam][data-tone="dark"] {
-  --seam-line: var(--seam-graphite);
-  --seam-active: .22;
-}
-
-[data-seam][data-strength="quiet"] {
-  --seam-active: .26;
-}
+[data-seam][data-tone="dark"] { --seam-line: var(--seam-graphite); --seam-active: .20; }
+[data-seam][data-strength="quiet"] { --seam-active: .24; }
 
 [data-seam]::before {
   content: "";
@@ -32,18 +24,11 @@
   opacity: var(--seam-rest);
   transition: opacity 420ms var(--seam-ease) !important;
 }
-
-[data-seam][data-edge="all"]::before {
-  inset: 0;
-  border: 1px solid var(--seam-line);
-  border-radius: inherit;
-}
-
+[data-seam][data-edge="all"]::before { inset: 0; border: 1px solid var(--seam-line); border-radius: inherit; }
 [data-seam].is-lit::before { opacity: var(--seam-active); }
 [data-seam].is-hovering::before,
-[data-seam].is-focus-seam::before { opacity: calc(var(--seam-active) + .12); }
-
-[data-seam] .seam-divider.is-charged { background: #ffffff; }
+[data-seam].is-focus-seam::before { opacity: calc(var(--seam-active) + .14); }
+[data-seam] .seam-divider.is-charged { background: #f5f5f7; }
 
 @media (prefers-reduced-motion: reduce) {
   [data-seam]::before { transition: none !important; }

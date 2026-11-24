@@ -315,26 +315,25 @@ html { scrollbar-gutter: stable; }
 .text-link:hover,
 .text-button:hover,
 .recipe-link:hover {
-  color: #5eb2ff;
+  color: var(--accent-light);
   text-decoration: underline !important;
   text-underline-offset: 4px;
 }
 .jump-link::before { display: none !important; }
 .jump-link:hover,
-.jump-link:focus-visible { color: #5eb2ff; }
+.jump-link:focus-visible { color: var(--accent-light); }
 
 /* Arrows */
 .ui-arrow-down { overflow: visible; }
 .ui-arrow-up-right { display: block; width: 16px; height: 16px; overflow: visible; }
 .ui-arrow-wrap { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; flex: 0 0 auto; }
 
-/* Asymmetric editorial gallery rhythm on wide screens */
-@media (min-width: 1201px) {
+/* Balanced 3-column editorial gallery */
+@media (min-width: 1101px) {
   .look-grid {
-    grid-template-columns: minmax(0, 1.22fr) minmax(0, .89fr) minmax(0, .89fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 24px;
   }
-  .look-card:first-child .compare-viewport { aspect-ratio: 1.2; }
 }
 
 picture { display: contents; }

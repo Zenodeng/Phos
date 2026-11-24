@@ -1,19 +1,164 @@
-/* Kinetic Light — Apple Pro restrained scroll reveal & hairline progress (no muddy cursor spotlight). */
-:root{--kinetic-x:50%;--kinetic-y:40%;--kinetic-progress:0;--kinetic-ease:cubic-bezier(.16,1,.3,1)}
-html{scroll-behavior:smooth}
-body{--cursor-glow:0;position:relative}
-body::after{content:"";position:fixed;left:0;top:0;width:100%;height:1.5px;z-index:100;pointer-events:none;transform:scaleX(var(--kinetic-progress));transform-origin:left;background:linear-gradient(90deg,rgb(255 255 255 / .28),rgb(255 255 255 / .82))}
-[data-kinetic-reveal]{opacity:0;transform:translateY(22px);transition:opacity 680ms var(--kinetic-ease),transform 680ms var(--kinetic-ease)}
-[data-kinetic-reveal].is-visible{opacity:1;transform:none}
-[data-kinetic-reveal][data-delay="1"]{transition-delay:70ms}[data-kinetic-reveal][data-delay="2"]{transition-delay:140ms}[data-kinetic-reveal][data-delay="3"]{transition-delay:210ms}
-.kinetic-section{position:relative}
-.kinetic-photo{transition:transform 520ms var(--kinetic-ease),box-shadow 420ms var(--kinetic-ease)}
-@media(hover:hover) and (pointer:fine){
- .kinetic-photo:hover{transform:translateY(-2px);box-shadow:0 24px 64px rgb(0 0 0 / .48)}
+/* Apple-Grade Scroll-Driven Choreography & Liquid Glass Micro-Interactions */
+:root {
+  --apple-ease: cubic-bezier(.22, 1, .36, 1);
+  --apple-spring: cubic-bezier(.16, 1, .3, 1);
+  --kinetic-progress: 0;
 }
-.kinetic-marquee{overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}
-.kinetic-marquee-track{display:flex;width:max-content;animation:kinetic-marquee 28s linear infinite}
-.kinetic-marquee-track>*{margin-right:3rem}
-@keyframes kinetic-marquee{to{transform:translateX(-50%)}}
-@media(max-width:760px){.kinetic-marquee-track{animation-duration:38s}}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.kinetic-photo{transform:none!important;transition:none!important}.kinetic-marquee-track{animation:none}[data-kinetic-reveal]{opacity:1;transform:none;transition:none}body::after{transform:none;opacity:.3}}
+
+html { scroll-behavior: smooth; }
+body { position: relative; }
+
+/* Hairline scroll progress — software-matched champagne gold #C9A876 */
+body::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 1.5px;
+  z-index: 120;
+  pointer-events: none;
+  transform: scaleX(var(--kinetic-progress));
+  transform-origin: left;
+  background: linear-gradient(90deg, rgb(201 168 118 / .35), #dfc394 70%, #f5e6ca);
+  opacity: .9;
+}
+
+/* Dynamic frosted header: seamless transparent at top, Liquid Glass when scrolled */
+.site-nav {
+  background: rgb(0 0 0 / 0) !important;
+  border-bottom-color: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transition: background-color 320ms var(--apple-ease),
+              border-color 320ms var(--apple-ease),
+              backdrop-filter 320ms var(--apple-ease);
+}
+.site-nav.is-scrolled {
+  background: rgb(8 8 10 / .78) !important;
+  border-bottom-color: rgb(255 255 255 / .09) !important;
+  backdrop-filter: saturate(180%) blur(24px) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(24px) !important;
+}
+
+/* Hero initial choreographed entrance */
+@keyframes apple-hero-rise {
+  from { opacity: 0; transform: translateY(20px) scale(.985); }
+  to { opacity: 1; transform: none; }
+}
+html[data-apple-motion="on"] .hero-eyebrow { animation: apple-hero-rise 680ms var(--apple-spring) 40ms both; }
+html[data-apple-motion="on"] .hero-intro h1 { animation: apple-hero-rise 780ms var(--apple-spring) 110ms both; }
+html[data-apple-motion="on"] .hero-lead { animation: apple-hero-rise 780ms var(--apple-spring) 190ms both; }
+html[data-apple-motion="on"] .hero-actions { animation: apple-hero-rise 780ms var(--apple-spring) 260ms both; }
+html[data-apple-motion="on"] .hero-meta { animation: apple-hero-rise 780ms var(--apple-spring) 320ms both; }
+html[data-apple-motion="on"] .hero-photo-story { animation: apple-hero-rise 900ms var(--apple-spring) 340ms both; }
+
+/* Scroll-scrubbed containers (GPU transform/opacity only) */
+.hero-intro-scrub { will-change: transform, opacity; }
+.hero-stage-scrub {
+  will-change: transform;
+  transform: scale(var(--hero-stage-scale, 1));
+  transform-origin: center top;
+  transition: border-radius 240ms var(--apple-ease);
+}
+[data-apple-stage] {
+  will-change: transform, opacity;
+  transform: translate3d(0, var(--stage-y, 0px), 0) scale(var(--stage-scale, 1));
+  opacity: var(--stage-opacity, 1);
+}
+
+/* Staggered Apple Spring Reveal */
+[data-apple-reveal] {
+  opacity: 0;
+  transform: translate3d(0, 26px, 0) scale(.985);
+  transition: opacity 760ms var(--apple-ease), transform 820ms var(--apple-spring);
+}
+[data-apple-reveal].is-visible {
+  opacity: 1;
+  transform: none;
+}
+[data-apple-reveal][data-delay="1"] { transition-delay: 75ms; }
+[data-apple-reveal][data-delay="2"] { transition-delay: 150ms; }
+[data-apple-reveal][data-delay="3"] { transition-delay: 225ms; }
+[data-apple-reveal][data-delay="4"] { transition-delay: 300ms; }
+
+/* Liquid Glass 1px Specular Border Tracking on Bento / Spec / AI / Look / Release Cards */
+.glass-specular {
+  position: relative;
+  overflow: hidden;
+}
+.glass-specular::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: radial-gradient(
+    360px circle at var(--mx, 50%) var(--my, -20%),
+    rgb(223 195 148 / .58),
+    rgb(255 255 255 / .18) 38%,
+    transparent 70%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: var(--spec-op, 0);
+  transition: opacity 360ms var(--apple-ease);
+  pointer-events: none;
+  z-index: 4;
+}
+.glass-specular::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    420px circle at var(--mx, 50%) var(--my, -20%),
+    rgb(201 168 118 / .06),
+    transparent 62%
+  );
+  opacity: var(--spec-op, 0);
+  transition: opacity 360ms var(--apple-ease);
+  pointer-events: none;
+  z-index: 0;
+}
+.glass-specular > * { position: relative; z-index: 1; }
+
+/* Workspace A/B cross-dissolve + gentle zoom */
+.workspace-shot {
+  opacity: 0;
+  transform: scale(.985);
+  transition: opacity 420ms var(--apple-ease), transform 540ms var(--apple-spring);
+  will-change: opacity, transform;
+}
+.workspace-shot.active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Gentle tactile photo hover */
+@media (hover: hover) and (pointer: fine) {
+  .bento-media img {
+    transition: transform 640ms var(--apple-spring);
+  }
+  .bento-card:hover .bento-media img {
+    transform: scale(1.024);
+  }
+}
+
+/* Reduced motion & mobile safety */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  body::after { transform: none; opacity: .25; }
+  html[data-apple-motion="on"] .hero-eyebrow,
+  html[data-apple-motion="on"] .hero-intro h1,
+  html[data-apple-motion="on"] .hero-lead,
+  html[data-apple-motion="on"] .hero-actions,
+  html[data-apple-motion="on"] .hero-meta,
+  html[data-apple-motion="on"] .hero-photo-story { animation: none !important; }
+  [data-apple-reveal] { opacity: 1 !important; transform: none !important; transition: none !important; }
+  [data-apple-stage], .hero-stage-scrub, .hero-intro-scrub { transform: none !important; opacity: 1 !important; }
+  .glass-specular::before, .glass-specular::after { display: none; }
+  .workspace-shot { transition: none; transform: none; }
+  .bento-media img { transition: none; }
+}

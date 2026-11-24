@@ -783,10 +783,399 @@
 .vs-table{width:100%;min-width:680px;border-collapse:collapse;text-align:left;font-size:14px}
 .vs-table th,.vs-table td{padding:18px 22px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.65}
 .vs-table thead th{font-size:15px;font-weight:600;color:var(--ink);background:rgb(255 255 255 / .03);white-space:nowrap}
-.vs-table thead th.col-phos{color:#ffffff;border-bottom:2px solid var(--accent);background:rgb(41 151 255 / .08)}
+.vs-table thead th.col-phos{color:#f5f5f7;border-bottom:2px solid var(--accent);background:rgb(201 168 118 / .09)}
 .vs-table tbody tr:last-child th,.vs-table tbody tr:last-child td{border-bottom:0}
 .vs-table tbody th{width:22%;font-weight:600;color:var(--ink);white-space:nowrap}
-.vs-table td.col-phos{width:40%;color:#e5e5ea;background:rgb(41 151 255 / .04)}
+.vs-table td.col-phos{width:40%;color:#e8e6e1;background:rgb(201 168 118 / .042)}
 .vs-table td.col-lr{width:38%;color:var(--muted)}
 .vs-note{margin-top:20px;font-size:14px;color:var(--muted);line-height:1.7;max-width:78ch}
 .vs-note strong{color:var(--ink);font-weight:500}
+
+
+/* ==========================================================================
+   Apple-Grade Centered Editorial Architecture + Key Spec Strip + Bento Grid
+   ========================================================================== */
+
+/* Centered Hero Stage */
+.photo-hero {
+  padding-top: clamp(56px, 7.5vw, 108px);
+  padding-bottom: clamp(32px, 4vw, 56px);
+  position: relative;
+}
+.photo-hero::before {
+  content: "";
+  position: absolute;
+  inset: -64px 0 auto;
+  height: 560px;
+  background: radial-gradient(64% 58% at 50% 0%, rgb(201 168 118 / .11), transparent 72%);
+  pointer-events: none;
+  z-index: 0;
+}
+.photo-hero > * { position: relative; z-index: 1; }
+
+.photo-hero .hero-intro {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 920px;
+  margin-inline: auto;
+  margin-bottom: clamp(44px, 5vw, 68px);
+  gap: 0;
+}
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 15px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / .045);
+  border: 1px solid rgb(201 168 118 / .30);
+  color: #e2caa0;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: .01em;
+  margin-bottom: 26px;
+}
+.hero-eyebrow i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #c9a876;
+  box-shadow: 0 0 10px rgb(201 168 118 / .85);
+}
+.photo-edition .hero-intro h1 {
+  font-size: clamp(44px, 6vw, 82px) !important;
+  line-height: 1.05 !important;
+  letter-spacing: -.04em !important;
+  font-weight: 600;
+  margin: 0;
+}
+.hero-lead {
+  margin-top: 24px;
+  max-width: 600px;
+  font-size: clamp(17px, 1.45vw, 21px);
+  line-height: 1.55;
+  color: #a1a1a6;
+}
+.hero-intro .hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 34px;
+}
+.hero-meta {
+  margin-top: 20px;
+  font-size: 13px;
+  color: #7d7d84;
+  line-height: 1.6;
+}
+.hero-meta a {
+  color: var(--accent);
+  text-decoration: none;
+  margin-left: 6px;
+}
+.hero-meta a:hover { color: var(--accent-light); text-decoration: underline; text-underline-offset: 3px; }
+
+.hero-photo-story figcaption {
+  padding-top: 16px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Apple Key Spec Strip (4 crisp metric glass cards) */
+.spec-strip {
+  padding-block: 24px clamp(64px, 7vw, 96px);
+}
+.spec-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+.spec-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 26px 24px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #141418 0%, #0d0d10 100%);
+  border: 1px solid rgb(255 255 255 / .08);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .05);
+  min-height: 146px;
+}
+.spec-val {
+  font-size: clamp(32px, 3vw, 44px);
+  font-weight: 600;
+  letter-spacing: -.035em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(180deg, #ffffff 10%, #dfc394 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.spec-label {
+  margin-top: 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #9e9ea6;
+}
+.spec-label strong {
+  display: block;
+  color: #f5f5f7;
+  font-weight: 500;
+  margin-bottom: 3px;
+}
+
+/* Centered Section Headings (Apple Keynote Rhythm) */
+.section-heading.is-centered {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0 !important;
+  margin-bottom: 48px;
+}
+.section-kicker {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+.section-heading.is-centered h2 {
+  font-size: clamp(34px, 4.2vw, 56px);
+  line-height: 1.08;
+  letter-spacing: -.036em;
+  max-width: 18ch;
+}
+.section-heading.is-centered p {
+  margin-top: 18px;
+  max-width: 600px;
+  font-size: clamp(16px, 1.3vw, 19px);
+  line-height: 1.6;
+  color: #98989f;
+}
+
+/* Full-Bleed Workspace Stage */
+.workspace-showcase {
+  background: linear-gradient(180deg, #000000 0%, #09090c 14%, #09090c 86%, #000000 100%);
+  border-top: 1px solid var(--line);
+}
+.workspace-showcase .workspace-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.workspace-showcase .mode-picker {
+  margin-bottom: 28px;
+}
+.workspace-showcase .workspace-figure {
+  width: 100%;
+  margin: 0;
+}
+.workspace-showcase .workspace-image {
+  aspect-ratio: 2400 / 1498;
+  border-radius: 20px;
+  border: 1px solid rgb(255 255 255 / .12);
+  box-shadow: 0 36px 90px -24px rgb(0 0 0 / .85);
+}
+.workspace-showcase .workspace-figure figcaption {
+  text-align: center;
+  margin-top: 18px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.workspace-showcase .refine-bottom {
+  margin-top: 28px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 12px 24px;
+}
+
+/* Apple 12-Column Bento Grid */
+.bento-section {
+  border-top: 1px solid var(--line);
+}
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 22px;
+}
+.bento-card {
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #141418 0%, #0d0d10 100%);
+  border: 1px solid rgb(255 255 255 / .085);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .055);
+  border-radius: 24px;
+  padding: 32px;
+  gap: 22px;
+  min-width: 0;
+}
+.bento-span-7 { grid-column: span 7; }
+.bento-span-5 { grid-column: span 5; }
+.bento-copy { display: flex; flex-direction: column; gap: 10px; }
+.bento-copy h3 {
+  font-size: clamp(22px, 2vw, 28px);
+  line-height: 1.18;
+  letter-spacing: -.028em;
+  color: #f5f5f7;
+  margin: 0;
+}
+.bento-copy p {
+  font-size: 15px;
+  line-height: 1.65;
+  color: #98989f;
+  margin: 0;
+  max-width: 54ch;
+}
+.bento-points {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bento-points li {
+  font-size: 12.5px;
+  color: #d0d0d6;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / .05);
+  border: 1px solid rgb(255 255 255 / .09);
+}
+.bento-media {
+  margin-top: auto;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / .09);
+  background: #08080a;
+  position: relative;
+}
+.bento-media img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+.bento-media.is-tall {
+  display: flex;
+  justify-content: center;
+  padding: 20px 20px 0;
+  max-height: 410px;
+  background: radial-gradient(80% 70% at 50% 10%, rgb(201 168 118 / .08), #08080a 75%);
+}
+.bento-media.is-tall img {
+  width: auto;
+  max-width: 82%;
+  max-height: 390px;
+  border-radius: 14px 14px 0 0;
+  box-shadow: 0 -10px 40px rgb(0 0 0 / .6);
+}
+.bento-media .image-zoom {
+  top: auto;
+  bottom: 12px;
+  right: 12px;
+  min-height: 34px;
+  padding: 6px 12px;
+  background: rgb(0 0 0 / .68);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgb(255 255 255 / .16);
+}
+.bento-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Balanced Film Gallery Cards */
+.looks-section {
+  border-top: 1px solid var(--line);
+}
+.look-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+.look-card {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #141418 0%, #0d0d10 100%);
+  border: 1px solid rgb(255 255 255 / .085);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .055);
+  gap: 14px;
+}
+.look-card figure { margin: 0; }
+.look-card .photo-comparison .compare-viewport { aspect-ratio: 4 / 3 !important; border-radius: 14px; }
+.look-card figcaption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+.look-card h3 { font-size: 19px; margin: 0; color: #f5f5f7; }
+.look-card h4 { font-size: 17px; font-weight: 500; margin: 0; color: #e2e2e7; }
+.look-card > p { font-size: 14px; line-height: 1.6; color: var(--muted); min-height: 0 !important; }
+.look-card > .recipe-params { font-size: 12.5px; color: #a1a1a6; padding-top: 10px; border-top: 1px solid var(--line); min-height: 0 !important; }
+.look-card .recipe-link { margin-top: auto; min-height: 36px; font-size: 13px; }
+.look-card .compare-actions { margin-top: 0; }
+.look-card .compare-actions button { min-height: 38px; padding: 6px 10px; font-size: 13px; }
+
+/* Interactive Editor Banner */
+.try-editor.page-width {
+  margin-top: 48px;
+  border-radius: 22px;
+  overflow: hidden;
+  border: 1px solid rgb(201 168 118 / .24);
+  background: linear-gradient(180deg, #15151a 0%, #0f0f13 100%);
+}
+.try-editor > summary {
+  padding: 22px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 17px;
+  font-weight: 500;
+  color: #f5f5f7;
+}
+.try-editor > summary span {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / .07);
+  color: var(--accent-light);
+  font-size: 20px;
+  transition: transform 280ms var(--apple-ease);
+}
+.try-editor[open] > summary span { transform: rotate(45deg); }
+
+/* Responsive Bento & Specs */
+@media (max-width: 1100px) {
+  .spec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bento-span-7, .bento-span-5 { grid-column: span 12; }
+  .look-grid { grid-template-columns: minmax(0, 1fr); }
+  .look-card { display: flex !important; flex-direction: column; }
+}
+@media (max-width: 760px) {
+  .spec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .spec-card { padding: 18px 16px; min-height: 124px; border-radius: 16px; }
+  .bento-card { padding: 22px 18px; border-radius: 20px; }
+  .photo-hero { padding-top: 38px; }
+  .hero-eyebrow { font-size: 12px; padding: 5px 12px; margin-bottom: 18px; }
+  .try-editor > summary { padding: 18px 20px; font-size: 15px; }
+}

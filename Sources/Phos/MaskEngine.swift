@@ -60,76 +60,147 @@ final class CoreMLSkyEngine: @unchecked Sendable {
 
     func predict(cg: CGImage, targetExtent: CGRect) -> CIImage? {
         guard let model = loadModel() else { return nil }
-        guard let vnModel = try? VNCoreMLModel(for: model) else { return nil }
-        let req = VNCoreMLRequest(model: vnModel)
-        req.imageCropAndScaleOption = .scaleFill
-        let handler = VNImageRequestHandler(cgImage: cg, options: [:])
-        try? handler.perform([req])
 
-        if let obs = req.results?.first as? VNPixelBufferObservation {
-            let mask = CIImage(cvPixelBuffer: obs.pixelBuffer)
-            let sx = targetExtent.width / max(mask.extent.width, 1)
-            let sy = targetExtent.height / max(mask.extent.height, 1)
-            return mask.transformed(by: CGAffineTransform(translationX: targetExtent.minX, y: targetExtent.minY)
-                .scaledBy(x: sx, y: sy)).cropped(to: targetExtent)
+        // 1) Image-input Core ML model (VNCoreMLRequest)
+        if model.modelDescription.inputDescriptionsByName.values.contains(where: { $0.imageConstraint != nil }),
+           let vnModel = try? VNCoreMLModel(for: model) {
+            let req = VNCoreMLRequest(model: vnModel)
+            req.imageCropAndScaleOption = .scaleFill
+            let handler = VNImageRequestHandler(cgImage: cg, options: [:])
+            try? handler.perform([req])
+
+            if let obs = req.results?.first as? VNPixelBufferObservation {
+                let mask = CIImage(cvPixelBuffer: obs.pixelBuffer)
+                let sx = targetExtent.width / max(mask.extent.width, 1)
+                let sy = targetExtent.height / max(mask.extent.height, 1)
+                return mask.transformed(by: CGAffineTransform(translationX: targetExtent.minX, y: targetExtent.minY)
+                    .scaledBy(x: sx, y: sy)).cropped(to: targetExtent)
+            }
+            if let fObs = req.results?.first as? VNCoreMLFeatureValueObservation,
+               let arr = fObs.featureValue.multiArrayValue {
+                return decodeSkyMultiArray(arr, targetExtent: targetExtent, stretchScore: false)
+            }
         }
 
-        if let fObs = req.results?.first as? VNCoreMLFeatureValueObservation,
-           let arr = fObs.featureValue.multiArrayValue {
-            let dims = arr.shape.map(\.intValue)
-            let h: Int, w: Int, channels: Int
-            let strides = arr.strides.map(\.intValue)
-            var yStride = 1, xStride = 1, cStride = 1
-            if dims.count == 4 {
-                if dims[1] <= 4 {
-                    channels = dims[1]; h = dims[2]; w = dims[3]
-                    cStride = strides[1]; yStride = strides[2]; xStride = strides[3]
-                } else {
-                    h = dims[1]; w = dims[2]; channels = dims[3]
-                    yStride = strides[1]; xStride = strides[2]; cStride = strides[3]
+        // 2) MLMultiArray-input Core ML model (e.g. U²-Net skyseg [1, 3, 320, 320] ImageNet-normalized)
+        guard let inEntry = model.modelDescription.inputDescriptionsByName.first(where: { $0.value.multiArrayConstraint != nil }),
+              let constraint = inEntry.value.multiArrayConstraint else { return nil }
+        let shape = constraint.shape.map(\.intValue)
+        let isNCHW: Bool
+        let inH: Int, inW: Int
+        if shape.count == 4 && shape[1] == 3 {
+            isNCHW = true; inH = shape[2]; inW = shape[3]
+        } else if shape.count == 4 && shape[3] == 3 {
+            isNCHW = false; inH = shape[1]; inW = shape[2]
+        } else {
+            return nil
+        }
+        guard inW > 8, inH > 8 else { return nil }
+        var px = [UInt8](repeating: 0, count: inW * inH * 4)
+        guard let gctx = CGContext(data: &px, width: inW, height: inH, bitsPerComponent: 8,
+                                   bytesPerRow: inW * 4, space: Engine.srgb,
+                                   bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        gctx.interpolationQuality = .high
+        gctx.draw(cg, in: CGRect(x: 0, y: 0, width: inW, height: inH))
+
+        let dt: MLMultiArrayDataType = constraint.dataType == .float16 ? .float16 : .float32
+        guard let inArr = try? MLMultiArray(shape: constraint.shape, dataType: dt) else { return nil }
+        let st = inArr.strides.map(\.intValue)
+        let ptr = inArr.dataPointer
+        let isF16 = dt == .float16
+        let mean: [Float] = [0.485, 0.456, 0.406]
+        let std: [Float] = [0.229, 0.224, 0.225]
+        for y in 0..<inH {
+            for x in 0..<inW {
+                let p = (y * inW + x) * 4
+                for c in 0..<3 {
+                    let v = (Float(px[p + c]) / 255.0 - mean[c]) / std[c]
+                    let off = isNCHW ? (c * st[1] + y * st[2] + x * st[3]) : (y * st[1] + x * st[2] + c * st[3])
+                    if isF16 {
+                        ptr.assumingMemoryBound(to: UInt16.self)[off] = Float16(v).bitPattern
+                    } else {
+                        ptr.assumingMemoryBound(to: Float.self)[off] = v
+                    }
                 }
-            } else if dims.count == 3 {
-                if dims[0] <= 4 {
-                    channels = dims[0]; h = dims[1]; w = dims[2]
-                    cStride = strides[0]; yStride = strides[1]; xStride = strides[2]
-                } else {
-                    h = dims[0]; w = dims[1]; channels = dims[2]
-                    yStride = strides[0]; xStride = strides[1]; cStride = strides[2]
-                }
-            } else if dims.count == 2 {
-                channels = 1; h = dims[0]; w = dims[1]
-                yStride = strides[0]; xStride = strides[1]
+            }
+        }
+        guard let provider = try? MLDictionaryFeatureProvider(dictionary: [inEntry.key: MLFeatureValue(multiArray: inArr)]),
+              let pred = try? model.prediction(from: provider),
+              let outName = model.modelDescription.outputDescriptionsByName.first(where: { $0.value.multiArrayConstraint != nil })?.key
+                ?? model.modelDescription.outputDescriptionsByName.keys.first,
+              let outArr = pred.featureValue(for: outName)?.multiArrayValue else { return nil }
+        return decodeSkyMultiArray(outArr, targetExtent: targetExtent, stretchScore: true)
+    }
+
+    private func decodeSkyMultiArray(_ arr: MLMultiArray, targetExtent: CGRect, stretchScore: Bool) -> CIImage? {
+        let dims = arr.shape.map(\.intValue)
+        let h: Int, w: Int, channels: Int
+        let strides = arr.strides.map(\.intValue)
+        var yStride = 1, xStride = 1, cStride = 1
+        if dims.count == 4 {
+            if dims[1] <= 4 {
+                channels = dims[1]; h = dims[2]; w = dims[3]
+                cStride = strides[1]; yStride = strides[2]; xStride = strides[3]
             } else {
-                return nil
+                h = dims[1]; w = dims[2]; channels = dims[3]
+                yStride = strides[1]; xStride = strides[2]; cStride = strides[3]
             }
-            guard w > 8, h > 8 else { return nil }
-            let chIdx = channels > 1 ? 1 : 0
-            var rgba = [UInt8](repeating: 0, count: w * h * 4)
-            let ptr = arr.dataPointer
-            let isF16 = arr.dataType == .float16
-            func readAt(_ off: Int) -> Float {
-                if isF16 {
-                    let bits = ptr.assumingMemoryBound(to: UInt16.self)[off]
-                    return Float(Float16(bitPattern: bits))
-                }
-                return ptr.assumingMemoryBound(to: Float.self)[off]
+        } else if dims.count == 3 {
+            if dims[0] <= 4 {
+                channels = dims[0]; h = dims[1]; w = dims[2]
+                cStride = strides[0]; yStride = strides[1]; xStride = strides[2]
+            } else {
+                h = dims[0]; w = dims[1]; channels = dims[2]
+                yStride = strides[0]; xStride = strides[1]; cStride = strides[2]
             }
-            for y in 0..<h {
-                for x in 0..<w {
-                    let off = chIdx * cStride + y * yStride + x * xStride
-                    let v = max(0.0, min(1.0, readAt(off)))
-                    let byte = UInt8((v * 255.0).rounded())
-                    let idx = (y * w + x) * 4
-                    rgba[idx] = byte; rgba[idx + 1] = byte; rgba[idx + 2] = byte; rgba[idx + 3] = 255
-                }
-            }
-            let ci = CIImage(bitmapData: Data(rgba), bytesPerRow: w * 4, size: CGSize(width: w, height: h),
-                             format: .RGBA8, colorSpace: Engine.srgb)
-            let sx = targetExtent.width / CGFloat(w), sy = targetExtent.height / CGFloat(h)
-            return ci.transformed(by: CGAffineTransform(translationX: targetExtent.minX, y: targetExtent.minY)
-                .scaledBy(x: sx, y: sy)).cropped(to: targetExtent)
+        } else if dims.count == 2 {
+            channels = 1; h = dims[0]; w = dims[1]
+            yStride = strides[0]; xStride = strides[1]
+        } else {
+            return nil
         }
-        return nil
+        guard w > 8, h > 8 else { return nil }
+        let chIdx = channels > 1 ? 1 : 0
+        let ptr = arr.dataPointer
+        let isF16 = arr.dataType == .float16
+        func readAt(_ off: Int) -> Float {
+            if isF16 {
+                return Float(Float16(bitPattern: ptr.assumingMemoryBound(to: UInt16.self)[off]))
+            }
+            return ptr.assumingMemoryBound(to: Float.self)[off]
+        }
+        var raw = [Float](repeating: 0, count: w * h)
+        var minV: Float = .greatestFiniteMagnitude
+        var maxV: Float = -.greatestFiniteMagnitude
+        for y in 0..<h {
+            for x in 0..<w {
+                let v = readAt(chIdx * cStride + y * yStride + x * xStride)
+                let fv = v.isFinite ? v : 0
+                raw[y * w + x] = fv
+                if fv < minV { minV = fv }
+                if fv > maxV { maxV = fv }
+            }
+        }
+        let shouldStretch = stretchScore && maxV > 0.15 && (maxV - minV) > 0.05
+        let span = max(maxV - minV, 1e-5)
+        var rgba = [UInt8](repeating: 0, count: w * h * 4)
+        for i in 0..<(w * h) {
+            let v: Float
+            if shouldStretch {
+                let s = (raw[i] - minV) / span
+                v = s < 0.06 ? 0 : min(1, s)
+            } else {
+                v = max(0, min(1, raw[i]))
+            }
+            let byte = UInt8((v * 255.0).rounded())
+            let idx = i * 4
+            rgba[idx] = byte; rgba[idx + 1] = byte; rgba[idx + 2] = byte; rgba[idx + 3] = 255
+        }
+        let ci = CIImage(bitmapData: Data(rgba), bytesPerRow: w * 4, size: CGSize(width: w, height: h),
+                         format: .RGBA8, colorSpace: Engine.srgb)
+        let sx = targetExtent.width / CGFloat(w), sy = targetExtent.height / CGFloat(h)
+        return ci.transformed(by: CGAffineTransform(translationX: targetExtent.minX, y: targetExtent.minY)
+            .scaledBy(x: sx, y: sy)).cropped(to: targetExtent)
     }
 
     private func loadModel() -> MLModel? {

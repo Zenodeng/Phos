@@ -1,7 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-REPO_BASE="https://huggingface.co/apple/coreml-depth-anything-v2-small/resolve/main"
+HF_ENDPOINT="${HF_ENDPOINT:-https://huggingface.co}"
+REPO_BASE="${HF_ENDPOINT%/}/apple/coreml-depth-anything-v2-small/resolve/main"
 SRC_PKG="DepthAnythingV2SmallF16.mlpackage"
 DEST_ROOT="$HOME/Library/Application Support/Phos/Models"
 DEST_MODEL="$DEST_ROOT/DepthAnythingV2.mlmodelc"

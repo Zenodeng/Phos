@@ -1123,9 +1123,11 @@ struct MaskPane: View {
                                 get: { m.radialAngle },
                                 set: { var x = MaskGeometry.ellipse(m); x.radialAngle = $0; s.updateMaskLive(x) }), range: -180...180) { s.endEdit() }
                         }
-                        SliderRow(label: "蒙版羽化", value: Binding(
-                            get: { m.feather },
-                            set: { var x = m; x.feather = $0; s.updateMaskLive(x) }), range: 0...1, defaultValue:Mask().feather) { s.endEdit() }
+                        if m.kind != .linear && m.kind != .luminanceRange {
+                            SliderRow(label: "蒙版羽化", value: Binding(
+                                get: { m.feather },
+                                set: { var x = m; x.feather = $0; s.updateMaskLive(x) }), range: 0...1, defaultValue:Mask().feather) { s.endEdit() }
+                        }
                         if m.kind != .depth {
                             Divider()
                             SliderRow(label: "曝光", value: Binding(

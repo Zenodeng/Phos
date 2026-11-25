@@ -180,7 +180,7 @@ enum MaskGeometry {
             else { result = ellipse(original); result.radialAngle = degrees }
         case .radialX, .radialY, .feather:
             result = ellipse(original)
-            let a = result.radialAngle * Double.pi / 180
+            let a = -result.radialAngle * Double.pi / 180
             let ex = Double(end.x - c.x), ey = Double(end.y - c.y)
             let lx = ex * cos(a) + ey * sin(a)
             let ly = -ex * sin(a) + ey * cos(a)

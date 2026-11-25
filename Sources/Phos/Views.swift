@@ -676,9 +676,10 @@ struct CanvasPane: View {
     func selectionOverlay(width: CGFloat, height: CGFloat) -> some View {
         if s.showMaskOverlay, !s.showBefore, !s.cropMode,
            s.previewFrame?.maskID == (s.maskDraft?.id ?? s.selectedMask), let mask = s.previewFrame?.mask {
-            Color.red.opacity(0.45)
-                .mask(Image(decorative: mask, scale: 1).resizable().luminanceToAlpha())
-                .frame(width: width, height: height).allowsHitTesting(false)
+            Image(decorative: mask, scale: 1)
+                .resizable()
+                .frame(width: width, height: height)
+                .allowsHitTesting(false)
         }
     }
 
@@ -1146,14 +1147,14 @@ struct MaskOverlay: View {
             // CoreGraphics 的 CGFloat 版和 _math 的 Double 版，这里统一按 Double 算再转回。
             let a = angle * Double.pi / 180
             let rxD = Double(rx), ryD = Double(ry)
-            let xHandle = CGPoint(x: c.x + CGFloat(rxD * cos(a)), y: c.y - CGFloat(ryD * sin(a)))
-            let yHandle = CGPoint(x: c.x + CGFloat(rxD * sin(a)), y: c.y + CGFloat(ryD * cos(a)))
+            let xHandle = CGPoint(x: c.x + CGFloat(rxD * cos(a)), y: c.y - CGFloat(rxD * sin(a)))
+            let yHandle = CGPoint(x: c.x + CGFloat(ryD * sin(a)), y: c.y + CGFloat(ryD * cos(a)))
             Handle(position: xHandle, color: .yellow, size: 12,
                    onMove: { start, end in edit(.radialX, from: start, to: end) }, onEnd: { endDrag() })
             Handle(position: yHandle, color: .yellow, size: 12,
                    onMove: { start, end in edit(.radialY, from: start, to: end) }, onEnd: { endDrag() })
             Handle(position: CGPoint(x: c.x + CGFloat((rxD + 24) * cos(a)),
-                                     y: c.y - CGFloat((ryD + 24) * sin(a))), color: .orange, size: 12,
+                                     y: c.y - CGFloat((rxD + 24) * sin(a))), color: .orange, size: 12,
                    onMove: { start, end in edit(.rotate, from: start, to: end) },
                    onEnd: { endDrag() })
         }

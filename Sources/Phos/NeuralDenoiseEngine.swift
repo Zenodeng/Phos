@@ -91,57 +91,88 @@ final class CoreMLImageModelManager: @unchecked Sendable {
         return m
     }
 
-    /// 在图块上运行 Core ML 图像模型，大图使用 512×512 重叠 Hann 窗融合消除拼缝。
+    /// 读取模型声明的输入图块边长（同时兼容 ImageType 与 MLMultiArray 模型，如 SCUNet 512 / RealESRGAN x2 256）。
+    private func preferredTileSize(for model: MLModel) -> (w: Int, h: Int) {
+        if let imgDesc = model.modelDescription.inputDescriptionsByName.values.first(where: { $0.imageConstraint != nil }),
+           let c = imgDesc.imageConstraint, c.pixelsWide >= 64, c.pixelsHigh >= 64 {
+            return (min(1024, c.pixelsWide), min(1024, c.pixelsHigh))
+        }
+        if let arrDesc = model.modelDescription.inputDescriptionsByName.values.first(where: { $0.multiArrayConstraint != nil }),
+           let shape = arrDesc.multiArrayConstraint?.shape.map(\.intValue), shape.count == 4 {
+            let h = shape[1] == 3 ? shape[2] : shape[1]
+            let w = shape[1] == 3 ? shape[3] : shape[2]
+            if w >= 64, h >= 64 { return (min(1024, w), min(1024, h)) }
+        }
+        return (512, 512)
+    }
+
+    /// 在图块上运行 Core ML 图像模型，大图使用重叠 Hann 窗融合消除拼缝。
+    /// 同时兼容 Image 输入（VNCoreMLRequest）与 MLMultiArray NCHW/NHWC 输入（如 SCUNet / Real-ESRGAN x2plus）。
     func inferTiled(_ source: CIImage, scaleFactor: CGFloat = 1.0) -> CIImage? {
-        guard let model = loadModel(),
-              let vnModel = try? VNCoreMLModel(for: model) else { return nil }
+        guard let model = loadModel() else { return nil }
+        let vnModel = model.modelDescription.inputDescriptionsByName.values.contains(where: { $0.imageConstraint != nil })
+            ? (try? VNCoreMLModel(for: model))
+            : nil
         let ext = source.extent
         let w = Int(ext.width.rounded())
         let h = Int(ext.height.rounded())
         guard w >= 8, h >= 8 else { return nil }
 
-        let tileSide = 512
-        let overlap = 64
-        if w <= tileSide && h <= tileSide {
-            guard let outTile = runSingleTile(source, extent: ext, vnModel: vnModel) else { return nil }
-            let targetRect = CGRect(x: ext.minX * scaleFactor, y: ext.minY * scaleFactor,
-                                    width: ext.width * scaleFactor, height: ext.height * scaleFactor)
-            let sx = targetRect.width / max(1, outTile.extent.width)
-            let sy = targetRect.height / max(1, outTile.extent.height)
-            return outTile.transformed(by: CGAffineTransform(translationX: targetRect.minX - outTile.extent.minX * sx,
-                                                             y: targetRect.minY - outTile.extent.minY * sy)
-                .scaledBy(x: sx, y: sy)).cropped(to: targetRect)
+        let tileDims = preferredTileSize(for: model)
+        let tileW = tileDims.w
+        let tileH = tileDims.h
+        let overlapX = max(24, tileW / 8)
+        let overlapY = max(24, tileH / 8)
+        let clampedSource = source.clampedToExtent()
+
+        if w <= tileW && h <= tileH {
+            let padRect = CGRect(x: ext.minX, y: ext.minY, width: CGFloat(tileW), height: CGFloat(tileH))
+            guard let outTile = runSingleTile(clampedSource.cropped(to: padRect), extent: padRect, model: model, vnModel: vnModel) else {
+                return nil
+            }
+            let cropW = CGFloat(w) * scaleFactor
+            let cropH = CGFloat(h) * scaleFactor
+            let sx = (CGFloat(tileW) * scaleFactor) / max(1, outTile.extent.width)
+            let sy = (CGFloat(tileH) * scaleFactor) / max(1, outTile.extent.height)
+            let scaled = outTile.transformed(by: CGAffineTransform(translationX: -outTile.extent.minX, y: -outTile.extent.minY))
+                .transformed(by: CGAffineTransform(scaleX: sx, y: sy))
+            let cropped = scaled.cropped(to: CGRect(x: 0, y: 0, width: cropW, height: cropH))
+            return cropped.transformed(by: CGAffineTransform(translationX: ext.minX * scaleFactor,
+                                                             y: ext.minY * scaleFactor))
         }
 
-        let step = tileSide - overlap
+        let stepX = max(32, tileW - overlapX)
+        let stepY = max(32, tileH - overlapY)
         let outW = Int((Double(w) * Double(scaleFactor)).rounded())
         let outH = Int((Double(h) * Double(scaleFactor)).rounded())
         var accum = [Float](repeating: 0, count: outW * outH * 4)
         var weights = [Float](repeating: 0, count: outW * outH)
 
         var ys = [0]
-        while ys.last! + tileSide < h { ys.append(min(h - tileSide, ys.last! + step)) }
+        while ys.last! + tileH < h { ys.append(min(max(0, h - tileH), ys.last! + stepY)) }
         var xs = [0]
-        while xs.last! + tileSide < w { xs.append(min(w - tileSide, xs.last! + step)) }
+        while xs.last! + tileW < w { xs.append(min(max(0, w - tileW), xs.last! + stepX)) }
 
         for ty in ys {
             for tx in xs {
-                let tw = min(tileSide, w - tx)
-                let th = min(tileSide, h - ty)
-                let tileRect = CGRect(x: ext.minX + CGFloat(tx), y: ext.minY + CGFloat(ty),
-                                      width: CGFloat(tw), height: CGFloat(th))
-                guard let tileOut = runSingleTile(source.cropped(to: tileRect), extent: tileRect, vnModel: vnModel) else {
+                let tw = min(tileW, w - tx)
+                let th = min(tileH, h - ty)
+                let padRect = CGRect(x: ext.minX + CGFloat(tx), y: ext.minY + CGFloat(ty),
+                                     width: CGFloat(tileW), height: CGFloat(tileH))
+                guard let tileOut = runSingleTile(clampedSource.cropped(to: padRect), extent: padRect, model: model, vnModel: vnModel) else {
                     return nil
                 }
                 let ow = max(1, Int((CGFloat(tw) * scaleFactor).rounded()))
                 let oh = max(1, Int((CGFloat(th) * scaleFactor).rounded()))
+                let fullOutW = CGFloat(tileW) * scaleFactor
+                let fullOutH = CGFloat(tileH) * scaleFactor
                 let resized = tileOut.transformed(by: CGAffineTransform(
                     translationX: -tileOut.extent.minX,
                     y: -tileOut.extent.minY
                 )).transformed(by: CGAffineTransform(
-                    scaleX: CGFloat(ow) / max(1, tileOut.extent.width),
-                    y: CGFloat(oh) / max(1, tileOut.extent.height)
-                ))
+                    scaleX: fullOutW / max(1, tileOut.extent.width),
+                    y: fullOutH / max(1, tileOut.extent.height)
+                )).cropped(to: CGRect(x: 0, y: 0, width: CGFloat(ow), height: CGFloat(oh)))
                 var tileBuf = [Float](repeating: 0, count: ow * oh * 4)
                 Engine.ctx.render(resized, toBitmap: &tileBuf, rowBytes: ow * 16,
                                   bounds: CGRect(x: 0, y: 0, width: ow, height: oh),
@@ -150,7 +181,8 @@ final class CoreMLImageModelManager: @unchecked Sendable {
                 let dstY0 = Int((CGFloat(ty) * scaleFactor).rounded())
                 for py in 0..<oh {
                     let wy = 0.5 - 0.5 * cos(2.0 * Double.pi * Double(py + 1) / Double(oh + 1))
-                    let outRow = min(outH - 1, max(0, outH - 1 - (dstY0 + (oh - 1 - py))))
+                    // tileBuf 与 CIImage(bitmapData:) 均为顶行优先（row 0 = 顶边），dstY0 为 CI 坐标（y 向上）。
+                    let outRow = min(outH - 1, max(0, outH - dstY0 - oh + py))
                     for px in 0..<ow {
                         let wx = 0.5 - 0.5 * cos(2.0 * Double.pi * Double(px + 1) / Double(ow + 1))
                         let win = Float(max(0.05, wx * wy))
@@ -181,18 +213,102 @@ final class CoreMLImageModelManager: @unchecked Sendable {
                                                         y: ext.minY * scaleFactor))
     }
 
-    private func runSingleTile(_ tile: CIImage, extent: CGRect, vnModel: VNCoreMLModel) -> CIImage? {
+    private func runSingleTile(_ tile: CIImage, extent: CGRect, model: MLModel, vnModel: VNCoreMLModel?) -> CIImage? {
         guard let cg = Engine.ctx.createCGImage(tile, from: extent, format: .RGBA8, colorSpace: Engine.srgb) else {
             return nil
         }
-        let req = VNCoreMLRequest(model: vnModel)
-        req.imageCropAndScaleOption = .scaleFill
-        let handler = VNImageRequestHandler(cgImage: cg, options: [:])
-        try? handler.perform([req])
-        if let obs = req.results?.first as? VNPixelBufferObservation {
-            return CIImage(cvPixelBuffer: obs.pixelBuffer)
+        if let vnModel {
+            let req = VNCoreMLRequest(model: vnModel)
+            req.imageCropAndScaleOption = .scaleFill
+            let handler = VNImageRequestHandler(cgImage: cg, options: [:])
+            try? handler.perform([req])
+            if let obs = req.results?.first as? VNPixelBufferObservation {
+                return CIImage(cvPixelBuffer: obs.pixelBuffer)
+            }
         }
-        return nil
+        guard let inEntry = model.modelDescription.inputDescriptionsByName.first(where: { $0.value.multiArrayConstraint != nil }),
+              let constraint = inEntry.value.multiArrayConstraint else { return nil }
+        let shape = constraint.shape.map(\.intValue)
+        let isNCHW: Bool
+        let inH: Int, inW: Int
+        if shape.count == 4 && shape[1] == 3 {
+            isNCHW = true; inH = shape[2]; inW = shape[3]
+        } else if shape.count == 4 && shape[3] == 3 {
+            isNCHW = false; inH = shape[1]; inW = shape[2]
+        } else {
+            return nil
+        }
+        var px = [UInt8](repeating: 0, count: inW * inH * 4)
+        guard let gctx = CGContext(data: &px, width: inW, height: inH, bitsPerComponent: 8,
+                                   bytesPerRow: inW * 4, space: Engine.srgb,
+                                   bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        gctx.interpolationQuality = .high
+        gctx.draw(cg, in: CGRect(x: 0, y: 0, width: inW, height: inH))
+
+        let dt: MLMultiArrayDataType = constraint.dataType == .float16 ? .float16 : .float32
+        guard let inArr = try? MLMultiArray(shape: constraint.shape, dataType: dt) else { return nil }
+        let st = inArr.strides.map(\.intValue)
+        let inPtr = inArr.dataPointer
+        let inF16 = dt == .float16
+        for y in 0..<inH {
+            for x in 0..<inW {
+                let p = (y * inW + x) * 4
+                for c in 0..<3 {
+                    let v = Float(px[p + c]) / 255.0
+                    let off = isNCHW ? (c * st[1] + y * st[2] + x * st[3]) : (y * st[1] + x * st[2] + c * st[3])
+                    if inF16 {
+                        inPtr.assumingMemoryBound(to: UInt16.self)[off] = Float16(v).bitPattern
+                    } else {
+                        inPtr.assumingMemoryBound(to: Float.self)[off] = v
+                    }
+                }
+            }
+        }
+        guard let provider = try? MLDictionaryFeatureProvider(dictionary: [inEntry.key: MLFeatureValue(multiArray: inArr)]),
+              let pred = try? model.prediction(from: provider),
+              let outName = model.modelDescription.outputDescriptionsByName.first(where: { $0.value.multiArrayConstraint != nil })?.key
+                ?? model.modelDescription.outputDescriptionsByName.keys.first,
+              let outArr = pred.featureValue(for: outName)?.multiArrayValue else { return nil }
+        let oDims = outArr.shape.map(\.intValue)
+        let oSt = outArr.strides.map(\.intValue)
+        let oNCHW: Bool, oh: Int, ow: Int
+        if oDims.count == 4 && oDims[1] == 3 {
+            oNCHW = true; oh = oDims[2]; ow = oDims[3]
+        } else if oDims.count == 4 && oDims[3] == 3 {
+            oNCHW = false; oh = oDims[1]; ow = oDims[2]
+        } else {
+            return nil
+        }
+        let oPtr = outArr.dataPointer
+        let oF16 = outArr.dataType == .float16
+        @inline(__always) func readO(_ off: Int) -> Float {
+            if oF16 { return Float(Float16(bitPattern: oPtr.assumingMemoryBound(to: UInt16.self)[off])) }
+            return oPtr.assumingMemoryBound(to: Float.self)[off]
+        }
+        var maxSample: Float = 0
+        for y in stride(from: 0, to: oh, by: max(1, oh / 16)) {
+            for x in stride(from: 0, to: ow, by: max(1, ow / 16)) {
+                let off = oNCHW ? (y * oSt[2] + x * oSt[3]) : (y * oSt[1] + x * oSt[2])
+                let v = readO(off)
+                if v.isFinite && v > maxSample { maxSample = v }
+            }
+        }
+        let scale: Float = maxSample > 2.0 ? (1.0 / 255.0) : 1.0
+        var outRGBA = [UInt8](repeating: 255, count: ow * oh * 4)
+        for y in 0..<oh {
+            for x in 0..<ow {
+                let dst = (y * ow + x) * 4
+                for c in 0..<3 {
+                    let off = oNCHW ? (c * oSt[1] + y * oSt[2] + x * oSt[3]) : (y * oSt[1] + x * oSt[2] + c * oSt[3])
+                    let raw = readO(off)
+                    let v = raw.isFinite ? max(0.0, min(1.0, raw * scale)) : 0.0
+                    outRGBA[dst + c] = UInt8((v * 255.0).rounded())
+                }
+            }
+        }
+        return CIImage(bitmapData: Data(outRGBA), bytesPerRow: ow * 4,
+                       size: CGSize(width: ow, height: oh),
+                       format: .RGBA8, colorSpace: Engine.srgb)
     }
 }
 

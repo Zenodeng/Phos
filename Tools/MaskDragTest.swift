@@ -1,4 +1,6 @@
 import Foundation
+import CoreGraphics
+import CoreImage
 
 /// 蒙版控制点拖动的回归测试。
 ///
@@ -120,6 +122,51 @@ struct MaskDragTest {
         // 终点 = rc.x + 120，距圆心 120px
         check(abs((rx.radiusX ?? 0) - 120.0 / 600.0) < 1e-9,
               String(format: "径向 X 手柄拖到 120px 处：radiusX = %.4f", rx.radiusX ?? -1))
+
+        // 回归验证 1：线性渐变红膜叠层（maskOverlayImage）必须在未选区透明（alpha=0），不能整图泛红
+        var linMask = Mask()
+        linMask.kind = .linear
+        linMask.x0 = 0.5; linMask.y0 = 0.85
+        linMask.x1 = 0.5; linMask.y1 = 0.35
+        let testExtent = CGRect(x: 0, y: 0, width: 200, height: 200)
+        if let linCI = Engine.maskImage(for: linMask, extent: testExtent),
+           let overlayCG = Engine.maskOverlayImage(linCI, extent: testExtent) {
+            var px = [UInt8](repeating: 0, count: 200 * 200 * 4)
+            if let g = CGContext(data: &px, width: 200, height: 200, bitsPerComponent: 8, bytesPerRow: 200 * 4,
+                                 space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                 bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) {
+                g.draw(overlayCG, in: testExtent)
+                let topAlpha = px[(10 * 200 + 100) * 4 + 3]     // 顶部天空选区 (y=95% in CI)
+                let botAlpha = px[(180 * 200 + 100) * 4 + 3]    // 底部湖面未选区 (y=10% in CI)
+                check(topAlpha > 90 && botAlpha == 0,
+                      "线性渐变红膜叠层选区正确（顶部 alpha=\(topAlpha)，底部 alpha=\(botAlpha)）")
+            }
+        } else {
+            check(false, "线性渐变红膜叠层生成失败")
+        }
+
+        // 回归验证 2：旋转后的径向蒙版（radialAngle = -30°，画布向右上方倾斜）渲染方向与参考椭圆一致
+        var rotRad = Mask()
+        rotRad.kind = .radial
+        rotRad.gradientVersion = 1
+        rotRad.x0 = 0.5; rotRad.y0 = 0.5
+        rotRad.radiusX = 0.4; rotRad.radiusY = 0.08
+        rotRad.radialAngle = -30.0
+        if let radCI = Engine.maskImage(for: rotRad, extent: testExtent),
+           let radCG = Engine.ctx.createCGImage(radCI, from: testExtent, format: .RGBA8, colorSpace: Engine.srgb) {
+            var px = [UInt8](repeating: 0, count: 200 * 200 * 4)
+            if let g = CGContext(data: &px, width: 200, height: 200, bitsPerComponent: 8, bytesPerRow: 200 * 4,
+                                 space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                 bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) {
+                g.draw(radCG, in: testExtent)
+                let upRight = px[(71 * 200 + 150) * 4]    // 屏幕右上方（沿 -30° 长轴）
+                let downRight = px[(129 * 200 + 150) * 4] // 屏幕右下方（错误镜像方向）
+                check(upRight > 120 && downRight < 20,
+                      "旋转径向蒙版方向与画布一致（右上=\(upRight)，右下=\(downRight)）")
+            }
+        } else {
+            check(false, "旋转径向蒙版渲染失败")
+        }
 
         print(failures == 0 ? "\n全部通过" : "\n\(failures) 项失败")
         exit(failures == 0 ? 0 : 1)

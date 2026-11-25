@@ -42,8 +42,10 @@ enum AIModelSlot: String, CaseIterable, Identifiable {
     var installScriptCommand: String? {
         switch self {
         case .lama: return "bash Scripts/install_lama_model.sh"
+        case .sky: return "bash Scripts/install_sky_model.sh"
         case .depth: return "bash Scripts/install_depth_model.sh"
-        default: return nil
+        case .denoise: return "bash Scripts/install_denoise_model.sh"
+        case .superRes: return "bash Scripts/install_superres_model.sh"
         }
     }
 }

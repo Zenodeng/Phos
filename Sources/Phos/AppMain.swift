@@ -1021,7 +1021,7 @@ final class AppState: ObservableObject {
                                                    colorSpace: Engine.srgb) else { return nil }
         // Histogram the displayed pixels without evaluating the RAW/filter graph a second time.
         let histogram = Engine.histogram(CIImage(cgImage: image))
-        let maskCG = mask.flatMap { Engine.ctx.createCGImage($0, from: out.extent, format: .RGBA8, colorSpace: Engine.srgb) }
+        let maskCG = mask.flatMap { Engine.maskOverlayImage($0, extent: out.extent) }
         let edited = PreviewFrame(key: request.key, image: image, mask: maskCG, maskID: request.overlayMask,
                             histogram: histogram, renderExtent: out.extent,
                             editedExtent: out.extent.applying(CGAffineTransform(scaleX: 1 / scale, y: 1 / scale)),

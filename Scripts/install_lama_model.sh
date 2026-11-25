@@ -11,7 +11,8 @@ else
     exit 2
 fi
 
-REPO_BASE="https://huggingface.co/heypatkay/solume-big-lama-coreml/resolve/main"
+HF_ENDPOINT="${HF_ENDPOINT:-https://huggingface.co}"
+REPO_BASE="${HF_ENDPOINT%/}/heypatkay/solume-big-lama-coreml/resolve/main"
 DEST_ROOT="$HOME/Library/Application Support/Phos/Models"
 DEST_MODEL="$DEST_ROOT/LaMa.mlmodelc"
 DEST_LICENSE="$DEST_ROOT/LaMa-LICENSE.txt"

@@ -675,6 +675,24 @@ enum Engine {
         return img
     }
 
+    /// 将灰度蒙版 CIImage 转为带真实 Alpha 通道的半透明红膜 CGImage（供画布「显示选区」直接渲染）。
+    /// 直接在 Core Image 中按真实蒙版权重写入 Alpha，彻底规避 macOS SwiftUI `.mask(...luminanceToAlpha())`
+    /// 在 NSHostingView 图层合成/离屏渲染下丢弃亮度遮罩导致整图泛红的 bug。
+    static func maskOverlayImage(_ mask: CIImage, extent: CGRect, opacity: CGFloat = 0.48) -> CGImage? {
+        guard !extent.isEmpty, !extent.isInfinite else { return nil }
+        let flattened = mask
+            .composited(over: CIImage(color: .black).cropped(to: extent))
+            .cropped(to: extent)
+        let tinted = flattened.applyingFilter("CIColorMatrix", parameters: [
+            "inputRVector": CIVector(x: 0, y: 0, z: 0, w: 0),
+            "inputGVector": CIVector(x: 0, y: 0, z: 0, w: 0),
+            "inputBVector": CIVector(x: 0, y: 0, z: 0, w: 0),
+            "inputAVector": CIVector(x: 0.2126 * opacity, y: 0.7152 * opacity, z: 0.0722 * opacity, w: 0),
+            "inputBiasVector": CIVector(x: 0.92, y: 0.025, z: 0.032, w: 0)
+        ]).cropped(to: extent)
+        return ctx.createCGImage(tinted, from: extent, format: .RGBA8, colorSpace: srgb)
+    }
+
     static func baseMaskImage(for m: Mask, extent: CGRect, analyzed: CIImage? = nil, refScale: CGFloat = 1) -> CIImage? {
         let w = extent.width, h = extent.height
         var img: CIImage
@@ -717,8 +735,9 @@ enum Engine {
                 let local = feather == 0
                     ? output.applyingFilter("CIColorThreshold", parameters: ["inputThreshold": NSNumber(value: 0.5)])
                     : output
+                // radialAngle 在画布（Y 向下）中顺时针为正，Core Image（Y 向上）中需取反以保持与参考椭圆完全同向。
                 let transform = CGAffineTransform(translationX: cx, y: cy)
-                    .rotated(by: CGFloat(angle * .pi / 180))
+                    .rotated(by: CGFloat(-angle * .pi / 180))
                     .scaledBy(x: CGFloat(rx), y: CGFloat(ry))
                 img = local.transformed(by: transform).cropped(to: extent)
             } else {

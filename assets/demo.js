@@ -45,8 +45,15 @@
   var maskLayer  = document.getElementById('maskLayer');
   var guides     = document.getElementById('guides');
   var curveLine  = document.getElementById('curveLine');
+  var curveArea  = document.getElementById('curveArea');
   var curveSvg   = document.getElementById('curveSvg');
   var curvePtsG  = document.getElementById('curvePts');
+  var stageBadge = document.getElementById('stageBadge');
+  var histModeLabel = document.getElementById('histModeLabel');
+  var demoRoot   = stage.closest('.demo');
+  var isZh       = (document.documentElement.lang || 'zh').toLowerCase().indexOf('zh') === 0;
+  var FILM_LABEL = { none: null, k2383: 'Kodak 2383', k2393: 'Kodak 2393', f3510: 'Fuji 3510' };
+  var applyingPreset = false;
   /* 影调滤镜 #toneFx 的各个基元。所有调整都写在这里，
      sceneGroup 上不再有 CSS filter，避免「外层滤镜缓存输入」的问题。 */
   var tf = {};
@@ -119,13 +126,20 @@
   }
 
   var CSTEP = 33;
+  function curveHeight(){
+    return (curveSvg && curveSvg.viewBox && curveSvg.viewBox.baseVal && curveSvg.viewBox.baseVal.height) || 140;
+  }
   function drawCurve(){
+    var ch = curveHeight();
     var pts = [];
     for (var x = 0; x <= CSTEP; x++) {
       var t = x / CSTEP;
-      pts.push((t * 260).toFixed(1) + ',' + (110 - curveTotal(t) * 110).toFixed(1));
+      pts.push((t * 260).toFixed(1) + ',' + (ch - curveTotal(t) * ch).toFixed(1));
     }
     curveLine.setAttribute('points', pts.join(' '));
+    if (curveArea) {
+      curveArea.setAttribute('points', '0,' + ch + ' ' + pts.join(' ') + ' 260,' + ch);
+    }
 
     // 控制点圆点
     if (curvePtsG) {
@@ -134,7 +148,7 @@
         var c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         c.setAttribute('data-cpi', k);
         c.setAttribute('cx', ((k / (CVN - 1)) * 260).toFixed(1));
-        c.setAttribute('cy', (110 - curveTotal(k / (CVN - 1)) * 110).toFixed(1));
+        c.setAttribute('cy', (ch - curveTotal(k / (CVN - 1)) * ch).toFixed(1));
         c.setAttribute('r', 4);
         c.style.cursor = 'ns-resize';
         curvePtsG.appendChild(c);
@@ -167,6 +181,9 @@
       setOpacityIfChanged(vignetteLayer, 0);
       renderCount++;
       badgeText.textContent = UI.originalBadge;
+      if (stageBadge) stageBadge.dataset.state = 'before';
+      if (histModeLabel) histModeLabel.textContent = isZh ? '直方图 · 原图' : 'Histogram · Original';
+      if (demoRoot) demoRoot.dispatchEvent(new CustomEvent('phos:studio-render'));
       return;
     }
 
@@ -215,7 +232,19 @@
     maskLayer.style.opacity = guidesOn() ? Math.abs(S.mExp / 100 * 0.85).toFixed(3) : '0';
 
     renderCount++;
-    badgeText.textContent = UI.renderBadge();
+    if (stageBadge) stageBadge.dataset.state = 'after';
+    if (histModeLabel) histModeLabel.textContent = isZh ? '直方图 · 调整后' : 'Histogram · Edited';
+    if (S.sat <= -95 && S.vib <= -90) {
+      badgeText.textContent = isZh
+        ? ('黑白暗房 · 对比 ' + (S.con >= 0 ? '+' : '−') + Math.abs(S.con))
+        : ('Monochrome · Contrast ' + (S.con >= 0 ? '+' : '−') + Math.abs(S.con));
+    } else if (FILM_LABEL[S.film] && S.str > 0) {
+      badgeText.textContent = FILM_LABEL[S.film] + ' · ' + Math.round(S.str) + '%';
+    } else {
+      var expStr = (S.exp >= 0 ? '+' : '−') + Math.abs(S.exp / 100).toFixed(2) + ' EV';
+      badgeText.textContent = isZh ? ('自定义影调 · ' + expStr) : ('Custom Tone · ' + expStr);
+    }
+    if (demoRoot) demoRoot.dispatchEvent(new CustomEvent('phos:studio-render'));
   }
 
   /* ---------- 控件绑定 ---------- */
@@ -243,6 +272,31 @@
   }
   document.addEventListener('visibilitychange', function(){ if (!document.hidden) forceRender(); });
 
+  function syncRangeTrack(el){
+    if (!el) return;
+    var min = el.min !== '' ? Number(el.min) : 0;
+    var max = el.max !== '' ? Number(el.max) : 100;
+    var val = Number(el.value);
+    var span = (max - min) || 1;
+    var pct = Math.max(0, Math.min(100, ((val - min) / span) * 100));
+    var f0 = 0, f1 = pct;
+    if (min < 0 && max > 0) {
+      var zero = ((0 - min) / span) * 100;
+      f0 = Math.min(zero, pct);
+      f1 = Math.max(zero, pct);
+    }
+    el.style.setProperty('--f0', f0.toFixed(2) + '%');
+    el.style.setProperty('--f1', f1.toFixed(2) + '%');
+    var row = el.closest('.ctrl');
+    if (row) row.dataset.active = String(Math.abs(val) > 0.001);
+  }
+
+  var quickLookBtns = document.querySelectorAll('.quick-look-btn');
+  function clearQuickPreset(){
+    if (applyingPreset) return;
+    quickLookBtns.forEach(function(b){ b.setAttribute('aria-pressed', 'false'); });
+  }
+
   function bind(id, key, out, fmt){
     var el = document.getElementById(id), o = document.getElementById(out);
     if (!el) return;
@@ -252,11 +306,26 @@
       else if (key === 'mFe') o.textContent = (S.mFe / 100).toFixed(2);
       else if (key === 'exp') o.textContent = (S.exp >= 0 ? '+' : '−') + Math.abs(S.exp / 100).toFixed(2);
       else o.textContent = (S[key] > 0 ? '+' : S[key] < 0 ? '−' : '') + Math.abs(Math.round(S[key]));
+      syncRangeTrack(el);
+      clearQuickPreset();
       // 停在「原图」时拖滑杆会自动切回「已调整」，否则用户会以为滑杆坏了
       if (shown === 'before') setCompareState('after');
       scheduleRender();
     }
+    function zero(){
+      var target = Number(el.min) < 0 ? 0 : Number(el.min || 0);
+      if (Number(el.value) === target) return;
+      el.value = String(target);
+      apply();
+    }
     el.addEventListener('input', apply);
+    el.addEventListener('dblclick', zero);
+    var row = el.closest('.ctrl');
+    if (row) {
+      var lbl = row.querySelector('label');
+      if (lbl) lbl.addEventListener('dblclick', zero);
+      if (o) o.addEventListener('dblclick', zero);
+    }
     apply();
   }
   bind('rExp','exp','oExp'); bind('rCon','con','oCon');
@@ -582,10 +651,45 @@
     });
   });
   var pointSelect=document.getElementById('curvePoint'), pointValue=document.getElementById('curveValue');
-  function syncPoint(){ pointValue.value=Math.round(curvePts[Number(pointSelect.value)]*100); }
+  function syncPoint(){ pointValue.value=Math.round(curvePts[Number(pointSelect.value)]*100); syncRangeTrack(pointValue); }
   pointSelect.addEventListener('change',syncPoint);
-  pointValue.addEventListener('input',function(){ curvePts[Number(pointSelect.value)]=Number(this.value)/100;scheduleRender(); });
+  pointValue.addEventListener('input',function(){ syncRangeTrack(this); curvePts[Number(pointSelect.value)]=Number(this.value)/100;clearQuickPreset();scheduleRender(); });
   document.getElementById('resetCurve').addEventListener('click',function(){ for(var i=0;i<CVN;i++)curvePts[i]=i/(CVN-1);syncPoint();scheduleRender(); });
+  var brushEl = document.getElementById('brushSize');
+  if (brushEl) { syncRangeTrack(brushEl); brushEl.addEventListener('input', function(){ syncRangeTrack(this); }); }
+  syncPoint();
+
+  var PRESETS = {
+    cinema: { rExp:14, rCon:18, rHi:-22, rSh:26, rSat:8,    rTem:6,   rVib:16,   rStr:85, rGr:22, rVig:18, film:'k2383' },
+    nordic: { rExp:-6, rCon:24, rHi:-34, rSh:16, rSat:-18,  rTem:-36, rVib:10,   rStr:90, rGr:16, rVig:26, film:'f3510' },
+    golden: { rExp:18, rCon:14, rHi:-18, rSh:34, rSat:14,   rTem:38,  rVib:22,   rStr:82, rGr:18, rVig:22, film:'k2393' },
+    mono:   { rExp:10, rCon:46, rHi:-28, rSh:22, rSat:-100, rTem:0,   rVib:-100, rStr:0,  rGr:36, rVig:32, film:'none'  }
+  };
+  function applyQuickPreset(name){
+    var p = PRESETS[name];
+    if (!p) return;
+    applyingPreset = true;
+    try {
+      Object.keys(p).forEach(function(id){
+        if (id === 'film') return;
+        var el = document.getElementById(id);
+        if (el) { el.value = String(p[id]); el.dispatchEvent(new Event('input',{bubbles:true})); }
+      });
+      for (var i = 0; i < CVN; i++) curvePts[i] = i / (CVN - 1);
+      var filmBtn = document.querySelector('#films [data-film="' + p.film + '"]');
+      if (filmBtn) filmBtn.click();
+      setCompareState('after');
+      quickLookBtns.forEach(function(b){ b.setAttribute('aria-pressed', String(b.dataset.preset === name)); });
+      syncPoint();
+      forceRender();
+    } finally {
+      applyingPreset = false;
+    }
+  }
+  quickLookBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){ applyQuickPreset(btn.dataset.preset); });
+  });
+  quickLookBtns.forEach(function(b){ b.setAttribute('aria-pressed', String(b.dataset.preset === 'cinema')); });
   [[hStart,'s'],[hEnd,'e'],[hMid,'m'],[hRot,'r']].forEach(function(pair){
     var el=pair[0],which=pair[1];
     el.setAttribute('tabindex','0');el.setAttribute('role','button');
@@ -612,12 +716,18 @@
   setGuides=function(on){originalSetGuides(on);guides.setAttribute('aria-hidden',on?'false':'true');[hStart,hEnd,hMid,hRot].forEach(function(el){el.setAttribute('tabindex',on?'0':'-1');});};
   setGuides(false);
   document.getElementById('resetDemo').addEventListener('click',function(){
-    var defaults={rExp:14,rCon:18,rHi:-22,rSh:26,rSat:8,rTem:6,rVib:16,rStr:85,rGr:22,rVig:18,rMExp:52,rMFe:60};
-    Object.keys(defaults).forEach(function(id){var el=document.getElementById(id);el.value=defaults[id];el.dispatchEvent(new Event('input',{bubbles:true}));});
-    for(var i=0;i<CVN;i++)curvePts[i]=i/(CVN-1);
-    mS={x:.20,y:.72};mE={x:.78,y:.24};rC={x:.46,y:.46};rRX=300;rRY=200;rAngle=-18;
-    var film=document.querySelector('[data-film="k2383"]');if(film)film.click();
-    maskRows[0].click();tabBtns[0].click();bAfter.click();syncPoint();updateMask();forceRender();
+    applyingPreset = true;
+    try {
+      var defaults={rExp:14,rCon:18,rHi:-22,rSh:26,rSat:8,rTem:6,rVib:16,rStr:85,rGr:22,rVig:18,rMExp:52,rMFe:60};
+      Object.keys(defaults).forEach(function(id){var el=document.getElementById(id);el.value=defaults[id];el.dispatchEvent(new Event('input',{bubbles:true}));});
+      for(var i=0;i<CVN;i++)curvePts[i]=i/(CVN-1);
+      mS={x:.20,y:.72};mE={x:.78,y:.24};rC={x:.46,y:.46};rRX=300;rRY=200;rAngle=-18;
+      var film=document.querySelector('[data-film="k2383"]');if(film)film.click();
+      quickLookBtns.forEach(function(b){ b.setAttribute('aria-pressed', String(b.dataset.preset === 'cinema')); });
+      maskRows[0].click();tabBtns[0].click();bAfter.click();syncPoint();updateMask();forceRender();
+    } finally {
+      applyingPreset = false;
+    }
   });
 
 })();

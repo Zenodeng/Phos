@@ -244,7 +244,7 @@
   document.querySelectorAll('.feature-shot,.gallery-panel,.install-shots>figure,.look-card,.resource-link').forEach(element=>element.classList.add('motion-lift'));
 
   // A small travelling underline answers a tab selection; photographs crossfade only.
-  document.querySelectorAll('.mode-picker,.gallery-tabs,.tabs').forEach(tabs => {
+  document.querySelectorAll('.mode-picker,.gallery-tabs').forEach(tabs => {
     const indicator=document.createElement('span'); indicator.className='motion-indicator';indicator.setAttribute('aria-hidden','true');
     tabs.classList.add('motion-tabbed');tabs.append(indicator);
     function update() {
@@ -368,7 +368,7 @@
 
 /* RubberSegment, simplified vanilla: moving thumb + squash; existing JS keeps state. */
 (() => {
-  const groups = [...document.querySelectorAll('.mode-picker, .compare-actions, .tabs, .cmp, .gallery-tabs')];
+  const groups = [...document.querySelectorAll('.mode-picker, .compare-actions, .gallery-tabs')];
   groups.forEach(group => {
     if (group.dataset.rubberReady) return;
     group.classList.add('rubber-segment');

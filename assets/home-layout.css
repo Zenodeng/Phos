@@ -318,41 +318,6 @@
   height:440px;
   object-fit:contain;
   border-radius:10px}
-.try-editor{
-  margin-top:65px;
-  background:var(--raised);
-  border-radius:12px}
-.try-editor>summary{
-  display:flex;
-  gap:30px;
-  justify-content:space-between;
-  align-items:center;
-  padding:24px 30px;
-  cursor:pointer;
-  list-style:none}
-.try-editor>summary::-webkit-details-marker{
-  display:none}
-.try-editor>summary>span{
-  color:var(--muted)}
-.try-editor[open]>summary>span{
-  transform:rotate(45deg)}
-.photo-edition .try-editor .studio-section{
-  padding:35px 30px;
-  background:var(--raised);
-  color:var(--ink)}
-.try-editor .studio-section h2{
-  }
-.photo-edition .try-editor .section-heading{
-  gap:30px;
-  margin-bottom:30px}
-.try-editor .studio-section .section-heading p{
-  color:var(--muted)}
-.try-editor .demo-note{
-  color:var(--muted)}
-.try-editor .demo-reset{
-  color:var(--ink)}
-.try-editor .demo{
-  border:1px solid var(--line)}
 .looks-section{
   padding-bottom:110px}
 .look-grid{
@@ -615,14 +580,6 @@
   margin-top:14px}
 .workflow-export{
   flex-direction:column-reverse}
-.try-editor{
-  margin-top:45px}
-.try-editor>summary{
-  padding:18px 20px}
-.try-editor .studio-section.section-pad{
-  padding:25px 14px}
-.try-editor .studio-section .section-heading h2{
-  }
 .look-grid{
   grid-template-columns:minmax(0,1fr);
   gap:45px}
@@ -1134,35 +1091,7 @@
 .look-card .compare-actions { margin-top: 0; }
 .look-card .compare-actions button { min-height: 38px; padding: 6px 10px; font-size: 13px; }
 
-/* Interactive Editor Banner */
-.try-editor.page-width {
-  margin-top: 48px;
-  border-radius: 22px;
-  overflow: hidden;
-  border: 1px solid rgb(201 168 118 / .24);
-  background: linear-gradient(180deg, #15151a 0%, #0f0f13 100%);
-}
-.try-editor > summary {
-  padding: 22px 28px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 17px;
-  font-weight: 500;
-  color: #f5f5f7;
-}
-.try-editor > summary span {
-  display: inline-grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: rgb(255 255 255 / .07);
-  color: var(--accent-light);
-  font-size: 20px;
-  transition: transform 280ms var(--apple-ease);
-}
-.try-editor[open] > summary span { transform: rotate(45deg); }
+/* Interactive Editor styles live exclusively in editor-demo.css */
 
 /* Responsive Bento & Specs */
 @media (max-width: 1100px) {
@@ -1177,7 +1106,6 @@
   .bento-card { padding: 22px 18px; border-radius: 20px; }
   .photo-hero { padding-top: 38px; }
   .hero-eyebrow { font-size: 12px; padding: 5px 12px; margin-bottom: 18px; }
-  .try-editor > summary { padding: 18px 20px; font-size: 15px; }
 }
 
 /* Optical centering for centered display headings (no punctuation pull) */

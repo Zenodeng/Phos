@@ -121,11 +121,169 @@
   async function renderRange(){if(!rangePoint)return;try{const data=await pixels(),x=Math.max(0,Math.min(359,Math.round(rangePoint.x/1200*360))),y=Math.max(0,Math.min(227,Math.round(rangePoint.y/760*228))),ix=(y*360+x)*4;const c=document.createElement('canvas');c.width=360;c.height=228;const ctx=c.getContext('2d'),out=ctx.createImageData(360,228),rgb=[data.data[ix],data.data[ix+1],data.data[ix+2]],tolerance=20+Number(feather.value)*1.5,fill=Number(exp.value)<0?0:255;for(let i=0;i<data.data.length;i+=4){const distance=Math.hypot(data.data[i]-rgb[0],data.data[i+1]-rgb[1],data.data[i+2]-rgb[2]);out.data[i]=out.data[i+1]=out.data[i+2]=fill;out.data[i+3]=Math.max(0,1-distance/tolerance)*Math.abs(Number(exp.value))/100*180;}ctx.putImageData(out,0,0);range.setAttribute('href',c.toDataURL());scheduleHistogram();}catch{document.getElementById('maskHint').textContent=text('无法读取示例图片，仍可试用其他工具。','The sample image could not be read. Other tools remain available.');}}
   [exp,feather,brushSize].forEach(el=>el.addEventListener('input',()=>{updateEffects();if(mode==='range')renderRange();}));
   document.getElementById('resetDemo').addEventListener('click',()=>{strokes=[];depthStrokes=[];rangePoint=null;range.removeAttribute('href');mode='linear';paintTools.hidden=true;updateEffects();scheduleHistogram();});
-  // Measure a downsample of the actual filtered browser SVG, not a synthetic distribution.
-  const hist=document.getElementById('hist'),status=document.getElementById('histStatus'),badge=document.getElementById('badgeText');const bars=[];for(let i=0;i<56;i++){const bar=document.createElement('i');bar.style.height='64px';bar.style.transformOrigin='bottom';bar.style.transform='scaleY(0.015625)';hist.append(bar);bars.push(bar);}let histTimer=0,sequence=0;
+  // Fast HiDPI RGB + Luminance smooth curve histogram (matches Phos native HistogramView).
+  const hist=document.getElementById('hist'),histCanvas=document.getElementById('histCanvas'),status=document.getElementById('histStatus');
   const editorDisclosure=demo.closest('.try-editor');
-  function scheduleHistogram(){clearTimeout(histTimer);if(editorDisclosure&&!editorDisclosure.open)return;histTimer=setTimeout(samplePreview,170);}
-  editorDisclosure?.addEventListener('toggle',()=>{if(editorDisclosure.open)scheduleHistogram();});
-  async function samplePreview(){const ticket=++sequence;try{const source=await photoData();if(ticket!==sequence)return;const started=performance.now(),clone=scene.cloneNode(true);clone.setAttribute('xmlns','http://www.w3.org/2000/svg');clone.setAttribute('width','360');clone.setAttribute('height','228');clone.removeAttribute('class');clone.querySelector('#guides')?.remove();clone.querySelectorAll('image').forEach(image=>{const href=image.getAttribute('href');if(!href){image.remove();return;}if(!href.startsWith('data:'))image.setAttribute('href',source);});const svg=new XMLSerializer().serializeToString(clone),image=new Image();image.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);await image.decode();if(ticket!==sequence)return;const canvas=document.createElement('canvas');canvas.width=360;canvas.height=228;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(image,0,0,360,228);const data=ctx.getImageData(0,0,360,228).data,bins=Array(56).fill(0);for(let i=0;i<data.length;i+=4){if(data[i+3]<128)continue;bins[Math.min(55,Math.floor((data[i]*.2126+data[i+1]*.7152+data[i+2]*.0722)/256*56))]++;}const max=Math.max(...bins,1);bars.forEach((bar,i)=>bar.style.transform=`scaleY(${Math.max(1/64,Math.sqrt(bins[i]/max))})`);hist.dataset.state='ready';hist.dataset.samples=String(bins.reduce((a,b)=>a+b,0));status.textContent=text('亮度分布取自当前网页预览，非原生 RAW 直方图。','Luminance sampled from the browser preview, not the native RAW pipeline.');badge.textContent=text('网页采样 ','Web sample ')+Math.round(performance.now()-started)+' ms · 360 × 228';}catch{hist.dataset.state='unavailable';status.textContent=text('预览直方图暂不可用；其他交互仍可使用。','Preview histogram unavailable; other controls remain available.');badge.textContent=text('网页交互示意','Interactive browser preview');}}
-  demo.addEventListener('input',scheduleHistogram);demo.addEventListener('click',scheduleHistogram);demo.addEventListener('pointerup',scheduleHistogram);demo.addEventListener('keydown',scheduleHistogram);scheduleHistogram();
+  const tfRS=document.getElementById('tfRS'),tfSat=document.getElementById('tfSat'),tfSep=document.getElementById('tfSep'),tfHue=document.getElementById('tfHue'),tfCR=document.getElementById('tfCR');
+  let histRaf=0,baseImageData=null,loadingPixels=false;
+  function clamp01(v){return v<0?0:v>1?1:v;}
+  function mul3(a,b){
+    return [
+      a[0]*b[0]+a[1]*b[3]+a[2]*b[6], a[0]*b[1]+a[1]*b[4]+a[2]*b[7], a[0]*b[2]+a[1]*b[5]+a[2]*b[8],
+      a[3]*b[0]+a[4]*b[3]+a[5]*b[6], a[3]*b[1]+a[4]*b[4]+a[5]*b[7], a[3]*b[2]+a[4]*b[5]+a[5]*b[8],
+      a[6]*b[0]+a[7]*b[3]+a[8]*b[6], a[6]*b[1]+a[7]*b[4]+a[8]*b[7], a[6]*b[2]+a[7]*b[5]+a[8]*b[8]
+    ];
+  }
+  function smoothBins(arr){
+    const n=arr.length,tmp=new Float32Array(n),out=new Float32Array(n);
+    for(let i=0;i<n;i++) tmp[i]=(arr[Math.max(0,i-1)]*0.22)+(arr[i]*0.56)+(arr[Math.min(n-1,i+1)]*0.22);
+    for(let i=0;i<n;i++) out[i]=(tmp[Math.max(0,i-1)]*0.22)+(tmp[i]*0.56)+(tmp[Math.min(n-1,i+1)]*0.22);
+    return out;
+  }
+  function drawCurveChannel(ctx,bins,w,h,peak,fillStyle,strokeStyle){
+    const n=bins.length,padTop=5;
+    ctx.beginPath();
+    ctx.moveTo(0,h);
+    for(let i=0;i<n;i++){
+      const x=(i/(n-1))*w;
+      const norm=Math.min(1,Math.pow(bins[i]/peak,0.78));
+      const y=h-norm*(h-padTop);
+      if(i===0){ctx.lineTo(x,y);}else{
+        const px=((i-1)/(n-1))*w;
+        const pnorm=Math.min(1,Math.pow(bins[i-1]/peak,0.78));
+        const py=h-pnorm*(h-padTop);
+        ctx.quadraticCurveTo(px,py,(px+x)*0.5,(py+y)*0.5);
+      }
+    }
+    const lastY=h-Math.min(1,Math.pow(bins[n-1]/peak,0.78))*(h-padTop);
+    ctx.lineTo(w,lastY);
+    ctx.lineTo(w,h);
+    ctx.closePath();
+    if(fillStyle){ctx.fillStyle=fillStyle;ctx.fill();}
+    if(strokeStyle){
+      ctx.beginPath();
+      for(let i=0;i<n;i++){
+        const x=(i/(n-1))*w;
+        const y=h-Math.min(1,Math.pow(bins[i]/peak,0.78))*(h-padTop);
+        if(i===0)ctx.moveTo(x,y);
+        else{
+          const px=((i-1)/(n-1))*w;
+          const py=h-Math.min(1,Math.pow(bins[i-1]/peak,0.78))*(h-padTop);
+          ctx.quadraticCurveTo(px,py,(px+x)*0.5,(py+y)*0.5);
+        }
+      }
+      ctx.lineTo(w,lastY);
+      ctx.strokeStyle=strokeStyle;
+      ctx.lineWidth=1.1;
+      ctx.stroke();
+    }
+  }
+  function renderHistogram(){
+    histRaf=0;
+    if(!hist||!histCanvas)return;
+    if(editorDisclosure&&!editorDisclosure.open)return;
+    if(!baseImageData){
+      if(!loadingPixels){
+        loadingPixels=true;
+        pixels().then(data=>{baseImageData=data;loadingPixels=false;scheduleHistogram();}).catch(()=>{loadingPixels=false;hist.dataset.state='unavailable';});
+      }
+      return;
+    }
+    const rect=hist.getBoundingClientRect();
+    const w=Math.max(120,Math.round(rect.width)),h=Math.max(40,Math.round(rect.height));
+    const dpr=Math.min(window.devicePixelRatio||1,2);
+    if(histCanvas.width!==Math.round(w*dpr)||histCanvas.height!==Math.round(h*dpr)){
+      histCanvas.width=Math.round(w*dpr);histCanvas.height=Math.round(h*dpr);
+    }
+    const ctx=histCanvas.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+
+    const slope=parseFloat(tfRS?.getAttribute('slope')||'1')||1;
+    const inter=parseFloat(tfRS?.getAttribute('intercept')||'0')||0;
+    const sat=parseFloat(tfSat?.getAttribute('values')||'1');
+    const satV=Number.isFinite(sat)?sat:1;
+    const sepRaw=(tfSep?.getAttribute('values')||'').trim().split(/\s+/).map(Number);
+    const sepM=sepRaw.length>=15?[sepRaw[0],sepRaw[1],sepRaw[2],sepRaw[5],sepRaw[6],sepRaw[7],sepRaw[10],sepRaw[11],sepRaw[12]]:[1,0,0,0,1,0,0,0,1];
+    const hueDeg=parseFloat(tfHue?.getAttribute('values')||'0')||0;
+    const rad=hueDeg*Math.PI/180,co=Math.cos(rad),sn=Math.sin(rad);
+    const satM=[
+      0.213+0.787*satV, 0.715-0.715*satV, 0.072-0.072*satV,
+      0.213-0.213*satV, 0.715+0.285*satV, 0.072-0.072*satV,
+      0.213-0.213*satV, 0.715-0.715*satV, 0.072+0.928*satV
+    ];
+    const hueM=[
+      0.213+co*0.787-sn*0.213, 0.715-co*0.715-sn*0.715, 0.072-co*0.072+sn*0.928,
+      0.213-co*0.213+sn*0.143, 0.715+co*0.285+sn*0.140, 0.072-co*0.072-sn*0.283,
+      0.213-co*0.213-sn*0.787, 0.715-co*0.715+sn*0.715, 0.072+co*0.928+sn*0.072
+    ];
+    const M=mul3(hueM,mul3(sepM,satM));
+
+    const tbl=(tfCR?.getAttribute('tableValues')||'0 1').trim().split(/\s+/).map(Number);
+    const tn=Math.max(2,tbl.length);
+    const linLut=new Float32Array(256),curLut=new Float32Array(256);
+    for(let i=0;i<256;i++){
+      linLut[i]=clamp01((i/255)*slope+inter);
+      const pos=(i/255)*(tn-1),idx=Math.min(tn-2,Math.floor(pos)),f=pos-idx;
+      curLut[i]=clamp01(tbl[idx]+(tbl[idx+1]-tbl[idx])*f);
+    }
+
+    const BINS=64,rB=new Float32Array(BINS),gB=new Float32Array(BINS),bB=new Float32Array(BINS),lB=new Float32Array(BINS);
+    const d=baseImageData.data,iw=baseImageData.width,ih=baseImageData.height;
+    for(let y=0;y<ih;y+=2){
+      const row=y*iw*4;
+      for(let x=0;x<iw;x+=2){
+        const ix=row+x*4;
+        const r1=linLut[d[ix]],g1=linLut[d[ix+1]],b1=linLut[d[ix+2]];
+        const r2=clamp01(M[0]*r1+M[1]*g1+M[2]*b1);
+        const g2=clamp01(M[3]*r1+M[4]*g1+M[5]*b1);
+        const b2=clamp01(M[6]*r1+M[7]*g1+M[8]*b1);
+        const rf=curLut[(r2*255+0.5)|0],gf=curLut[(g2*255+0.5)|0],bf=curLut[(b2*255+0.5)|0];
+        const lf=0.2126*rf+0.7152*gf+0.0722*bf;
+        rB[Math.min(BINS-1,(rf*BINS)|0)]++;
+        gB[Math.min(BINS-1,(gf*BINS)|0)]++;
+        bB[Math.min(BINS-1,(bf*BINS)|0)]++;
+        lB[Math.min(BINS-1,(lf*BINS)|0)]++;
+      }
+    }
+
+    const sR=smoothBins(rB),sG=smoothBins(gB),sB=smoothBins(bB),sL=smoothBins(lB);
+    let peak=1;
+    for(let i=2;i<BINS-2;i++){
+      if(sR[i]>peak)peak=sR[i];
+      if(sG[i]>peak)peak=sG[i];
+      if(sB[i]>peak)peak=sB[i];
+      if(sL[i]>peak)peak=sL[i];
+    }
+
+    // Subtle quarter-stop exposure gridlines
+    ctx.strokeStyle='rgba(255,255,255,0.06)';
+    ctx.lineWidth=1;
+    [0.25,0.5,0.75].forEach(p=>{
+      const gx=Math.round(w*p)+0.5;
+      ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,h);ctx.stroke();
+    });
+
+    ctx.globalCompositeOperation='screen';
+    drawCurveChannel(ctx,sR,w,h,peak,'rgba(232,82,82,0.48)','rgba(246,118,118,0.82)');
+    drawCurveChannel(ctx,sG,w,h,peak,'rgba(72,196,110,0.46)','rgba(112,224,144,0.82)');
+    drawCurveChannel(ctx,sB,w,h,peak,'rgba(72,146,242,0.50)','rgba(116,178,250,0.84)');
+    ctx.globalCompositeOperation='source-over';
+    drawCurveChannel(ctx,sL,w,h,peak,null,'rgba(245,245,247,0.36)');
+
+    hist.dataset.state='ready';
+    if(status)status.textContent=text('实时 RGB 预览直方图已更新','Live RGB preview histogram updated');
+  }
+  function scheduleHistogram(){
+    if(editorDisclosure&&!editorDisclosure.open)return;
+    if(!histRaf)histRaf=requestAnimationFrame(renderHistogram);
+  }
+  editorDisclosure?.addEventListener('toggle',()=>{if(editorDisclosure.open)requestAnimationFrame(scheduleHistogram);});
+  if(hist&&'ResizeObserver' in window)new ResizeObserver(scheduleHistogram).observe(hist);
+  demo.addEventListener('phos:studio-render',scheduleHistogram);
+  demo.addEventListener('input',scheduleHistogram);
+  demo.addEventListener('click',scheduleHistogram);
+  demo.addEventListener('pointerup',scheduleHistogram);
+  demo.addEventListener('keydown',scheduleHistogram);
+  scheduleHistogram();
 })();

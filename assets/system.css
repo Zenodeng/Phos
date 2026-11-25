@@ -302,22 +302,7 @@ dialog::backdrop { background:var(--scrim); }
 .mobile-menu-footer { padding:16px 24px 24px; display:flex; flex-wrap:wrap; gap:20px; align-items:center; border-top:1px solid var(--line); }
 .mobile-menu-footer .language { font-size:var(--body); }
 
-/* Existing editor: legible controls, no tiny captions and no extra font family. */
-.try-editor { background:var(--surface); }
-.try-editor .panel { background:var(--canvas); }
-.try-editor .pane h4,.try-editor .pane .control-heading { font-size:var(--body); }
-.try-editor .ctrl { font-size:var(--caption); grid-template-columns:60px minmax(0,1fr) 52px; }
-.try-editor .ctrl output,.try-editor .hint,.try-editor .badge,.try-editor .demo-actions p,.try-editor .cmp button,.try-editor .tabs button,.try-editor .maskrow,.try-editor .maskrow em,.try-editor .films button,.try-editor .films span,.try-editor .curve-access { font-size:var(--caption); line-height:1.6; }
-.try-editor .hint,.try-editor .demo-actions p,.try-editor .hint strong { color:var(--muted); }
-.try-editor button,.try-editor .maskrow,.try-editor select { min-height:44px; }
-.try-editor .real-hist i { transform-origin:bottom; background:var(--muted); }
-.try-editor .maskrow[aria-pressed=true],.try-editor .films button[aria-pressed=true],.try-editor .tabs button[aria-selected=true],.try-editor .cmp button[aria-pressed=true] { color:#000000; background:#f5f5f7; }
-.try-editor .tabs { background:var(--raised); }
-.try-editor .tabs button svg { width:20px; height:20px; }
-
-.try-editor .demo-actions { align-items:start; }
-.try-editor .curve-access label { font-size:var(--caption); }
-.try-editor .films b { font-size:var(--body); }
+/* Interactive darkroom styles live exclusively in editor-demo.css */
 /* 404 uses the same system, with useful bilingual exits. */
 .not-found { min-height:calc(100dvh - var(--nav-h)); display:flex; align-items:center; padding-block:80px; }
 .not-found .page-width { max-width:960px; }
@@ -414,12 +399,6 @@ dialog::backdrop { background:var(--scrim); }
   .command-result { padding:12px; gap:12px; }
   .command-result>span { display:none; }
   .command-footer { padding:16px; }
-  .try-editor>summary { font-size:var(--body); }
-  .try-editor .studio-section .section-heading h2 { font-size:var(--title); }
-  .try-editor .demo-actions p { font-size:var(--caption); }
-  .try-editor .ctrl { grid-template-columns:52px minmax(0,1fr) 48px; gap:12px; }
-  .try-editor .demo { grid-template-columns:minmax(0,1fr); }
-  .try-editor .stage { height:300px; }
 }
 @media(max-width:370px) {
   :root { --page-gutter:22px; }
@@ -481,21 +460,6 @@ dialog::backdrop { background:var(--scrim); }
 .compare-divider>span svg{display:block;width:32px;height:24px;flex-shrink:0}
 @media(hover:hover) and (pointer:fine) and (min-width:761px){html[data-motion=on] .button:hover>span{transform:translateY(2px)}}
 
-/* Stable editor viewport: each tab scrolls inside the same panel. */
-.try-editor .demo{height:620px;grid-template-columns:minmax(0,1fr) 340px;align-items:stretch}
-.try-editor .stage{height:100%;min-height:0}
-.try-editor .panel{height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden}
-.try-editor .panel>.tabs{flex-shrink:0}
-.try-editor .panel>.body{flex:1;min-height:0;overflow-y:auto}
-.try-editor .pane.on{min-height:0}
-.try-editor input[type=range]{appearance:none;-webkit-appearance:none;height:28px;width:100%;margin:0;background:transparent;cursor:ew-resize;accent-color:var(--accent)}
-.try-editor input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:3px;background:var(--strong-line)}
-.try-editor input[type=range]::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#f5f5f7;border:2px solid #000000;margin-top:-5.5px;box-shadow:0 2px 5px var(--shadow)}
-.try-editor input[type=range]::-moz-range-track{height:3px;border-radius:3px;background:var(--strong-line)}
-.try-editor input[type=range]::-moz-range-thumb{width:11px;height:11px;border-radius:50%;background:#f5f5f7;border:2px solid #000000}
-.try-editor input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
-@media(max-width:760px){.try-editor .demo{height:auto;grid-template-columns:minmax(0,1fr);grid-template-rows:280px 500px}.try-editor .stage{height:280px}.try-editor .panel{height:500px}}
-
 /* Optical centre is defined by SVG geometry, independent of font baselines. */
 .nav-sculpture{filter:none}
 .button>span.download-icon{display:flex;align-items:center;justify-content:center;box-sizing:content-box;width:24px;height:32px;padding:0 0 0 16px;flex-shrink:0;font-size:0;line-height:0;align-self:center}
@@ -537,8 +501,7 @@ dialog::backdrop { background:var(--scrim); }
 }
 .ai-story,
 .support-card,
-dialog,
-.try-editor {
+dialog {
   background:linear-gradient(180deg,#151519 0%,#0f0f12 100%);
   border:1px solid var(--line);
   box-shadow:inset 0 1px 0 rgb(255 255 255 / .05);

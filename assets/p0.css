@@ -275,33 +275,8 @@ html { scrollbar-gutter: stable; }
 
 .mode-picker.rubber-segment { display: inline-grid; width: max-content; flex-wrap: nowrap; padding: 3px; }
 .compare-actions.rubber-segment { display: grid; width: 100%; grid-auto-columns: minmax(0, 1fr); }
-.tabs.rubber-segment { display: inline-grid; width: max-content; flex-wrap: nowrap; grid-auto-columns: 62px; padding: 3px; }
 .gallery-tabs.rubber-segment { display: inline-grid; width: max-content; max-width: 100%; flex-wrap: nowrap; gap: 0; margin-bottom: 28px; }
 .gallery-tabs.rubber-segment .rubber-thumb { pointer-events: none; cursor: default; }
-
-.tabs.rubber-segment button { min-height: 60px; height: 60px; flex-direction: column; gap: 3px; padding: 6px 4px; }
-.tabs.rubber-segment .rubber-thumb-label { flex-direction: column; gap: 3px; padding: 4px 2px; font-size: 12px; line-height: 1.2; }
-.tabs.rubber-segment .rubber-thumb-label svg,
-.tabs.rubber-segment .rubber-thumb-label svg * {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.cmp.rubber-segment {
-  display: inline-grid;
-  grid-auto-columns: max-content;
-  width: max-content;
-  padding: 3px;
-  border-radius: 999px;
-  background: rgb(18 18 22 / .82);
-  backdrop-filter: blur(12px);
-}
-.cmp.rubber-segment button { min-height: 36px; height: 36px; padding: 0 16px; border-radius: 999px; }
-.cmp.rubber-segment .rubber-thumb { border-radius: 999px; }
-.cmp.rubber-segment .rubber-thumb-label { padding: 0 16px; font-size: 13px; }
 
 /* Clean Apple text links — optical blue on hover, zero boxy gold frame */
 .text-link,

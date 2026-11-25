@@ -41,9 +41,9 @@
 
 <link rel="icon" href="../images/phos-icon-dark.png" type="image/png">
 
-<link rel="stylesheet" href="../assets/system.css?v=520studio">
+<link rel="stylesheet" href="../assets/system.css?v=530models">
 
-<link rel="stylesheet" href="../assets/motion.css?v=520studio"><link rel="stylesheet" href="../assets/p0.css?v=520studio"><link rel="stylesheet" href="../assets/kinetic-light.css?v=520studio"></head>
+<link rel="stylesheet" href="../assets/motion.css?v=530models"><link rel="stylesheet" href="../assets/p0.css?v=530models"><link rel="stylesheet" href="../assets/kinetic-light.css?v=530models"></head>
 
 <body class="help-page"><a class="skip" href="#main">Skip to content</a>
 
@@ -96,7 +96,7 @@
         
 
 <figure class="rv">
-          <img class="shot" src="../images/en-09-gatekeeper-dialog.webp?v=520studio" width="1600" height="900" loading="lazy" alt="macOS dialog saying Phos Not Opened because Apple could not verify it is free of malware, with Done and Move to Trash buttons">
+          <img class="shot" src="../images/en-09-gatekeeper-dialog.webp?v=530models" width="1600" height="900" loading="lazy" alt="macOS dialog saying Phos Not Opened because Apple could not verify it is free of malware, with Done and Move to Trash buttons">
           
 
 <figcaption>Double-clicking Phos gets blocked once. This dialog has only two buttons — “Done” and “Move to Trash”. Click “Done”, not Trash.</figcaption>
@@ -105,7 +105,7 @@
         
 
 <figure class="rv">
-          <img class="shot" src="../images/en-10-system-settings-open-anyway.webp?v=520studio" width="1600" height="900" loading="lazy" alt="Privacy &amp; Security pane in System Settings, showing Phos was blocked in the Security section with an Open Anyway button on the right">
+          <img class="shot" src="../images/en-10-system-settings-open-anyway.webp?v=530models" width="1600" height="900" loading="lazy" alt="Privacy &amp; Security pane in System Settings, showing Phos was blocked in the Security section with an Open Anyway button on the right">
           
 
 <figcaption>If you’ve already double-clicked, you can also go to System Settings → Privacy &amp; Security and click “Open Anyway”.</figcaption>
@@ -255,188 +255,186 @@
       
 
 <div class="channels" id="ai-model" style="margin-top:40px">
-        
+<h3>Complete Guide to Connecting &amp; Deploying Local AI Models</h3>
+<p class="sum">Phos uses a <strong>three-tier on-device AI architecture</strong> — all inference runs locally on your Mac and photos never leave your machine. Tier 1 works immediately after installing Phos; Tiers 2 and 3 are strictly optional drop-in upgrades that activate automatically once installed.</p>
 
-<h3>1. Out of the Box: Zero-Python Native AI &amp; 5-Slot Core ML Model Hub</h3>
+<div class="model-tier-grid">
+  <div class="model-tier-card">
+    <span class="model-tier-badge">Tier 1 · Built-in</span>
+    <h4>Zero-Download Native AI</h4>
+    <p>Pure Swift, Metal &amp; Apple Vision. Includes Native AI Edit, Reference Color Match, Subject / Person / 8-part Portrait masks, 4-level PatchMatch Remove, zero-model Sky &amp; Depth, YCoCg RAW Denoise, 2x Sharpened Super Res, Smart Culling and bilingual search.</p>
+  </div>
+  <div class="model-tier-card">
+    <span class="model-tier-badge">Tier 2 · Zero Python</span>
+    <h4>5-Slot Core ML Neural Models</h4>
+    <p>Native Apple Neural Engine &amp; GPU models stored under <code>~/Library/Application Support/Phos/Models/</code> (~337 MB total for all 5 slots). Any uninstalled slot seamlessly falls back to Tier 1.</p>
+  </div>
+  <div class="model-tier-card">
+    <span class="model-tier-badge">Tier 3 · Optional VLM</span>
+    <h4>Qwen3-VL-4B / MLX Local Server</h4>
+    <p>Open-ended natural-language prompting. Stored under <code>~/Library/Application Support/Phos/MLX/</code> (~3.1 GB base weights + bundled 1.3 MB LoRA adapter). Phos spawns an offline <code>127.0.0.1</code> local server on demand.</p>
+  </div>
+</div>
 
-<p class="sum">Starting with 4.7, Phos’s core on-device AI capabilities are <strong>built in with zero Python dependencies</strong> — ready to use immediately without downloading external weights:</p>
+<h3 style="margin-top:40px">1. The 5 Core ML Model Slots &amp; Exact Specifications</h3>
+<p class="sum">Below are all 5 Core ML neural slots supported by Phos, their verified open-source upstream models, exact target filenames, tensor/image contracts, and one-line installer scripts.</p>
 
-<p class="sum" style="margin-top:12px">
-  · <strong>Pure-Swift Native AI Edit (NativePhotoPlanner)</strong>: analyzes image statistics and intent to propose editable global sliders and local masks with a side-by-side preview.<br>
-  · <strong>Reference Color Match</strong>: solves any reference still into fully editable Phos parameters with <code>0%–150%</code> match strength and skin protection.<br>
-  · <strong>Any-RAW Monocular Depth &amp; Optical Bokeh</strong>: built-in Vision saliency + person + perspective depth drives circular / 5–8 polygon blades, HDR specular boost and cat-eye bokeh.<br>
-  · <strong>Zero-Model Remove, Sky, RAW Denoise &amp; 2x Super Res</strong>: 4-level PatchMatch remove, horizon + gradient-blocked sky segmentation, Metal linear YCoCg RAW denoise, export Lanczos + structure-tensor 2x Super Res, plus Smart Culling and bilingual semantic search.
-</p>
+<div class="model-table-wrap">
+  <table class="model-table">
+    <thead>
+      <tr>
+        <th>Model Slot</th>
+        <th>Target Filename</th>
+        <th>Recommended Upstream &amp; License</th>
+        <th>Size</th>
+        <th>Input / Output Contract</th>
+        <th>Feature &amp; Install Script</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>LaMa Inpainting</strong><small>Object &amp; blemish removal</small></td>
+        <td><code>LaMa.mlmodelc</code></td>
+        <td><a href="https://huggingface.co/heypatkay/solume-big-lama-coreml" target="_blank" rel="noopener"><code>heypatkay/solume-big-lama-coreml</code></a><small>LaMa512 (default) or LaMa1024 · Apache-2.0</small></td>
+        <td>~99 MB</td>
+        <td>Float32 <code>[1,3,512,512]</code> + Mask <code>[1,1,512,512]</code> → Float16 RGB</td>
+        <td>Remove brush<small><code>bash Scripts/install_lama_model.sh</code></small></td>
+      </tr>
+      <tr>
+        <td><strong>Core ML Sky Segmentation</strong><small>Fine foliage &amp; skyline masks</small></td>
+        <td><code>SkySegmentation.mlmodelc</code></td>
+        <td><a href="https://huggingface.co/melmass/skyseg-coreml" target="_blank" rel="noopener"><code>melmass/skyseg-coreml</code></a><small>U²-Net skyseg FP16 · MIT</small></td>
+        <td>~84 MB</td>
+        <td><code>Image</code> or Float16/32 <code>[1,3,320,320]</code> (ImageNet norm) → <code>[1,1,H,W]</code></td>
+        <td>Masks → Select Sky<small><code>bash Scripts/install_sky_model.sh</code></small></td>
+      </tr>
+      <tr>
+        <td><strong>DepthAnythingV2</strong><small>Any-RAW optical bokeh depth</small></td>
+        <td><code>DepthAnythingV2.mlmodelc</code></td>
+        <td><a href="https://huggingface.co/apple/coreml-depth-anything-v2-small" target="_blank" rel="noopener"><code>apple/coreml-depth-anything-v2-small</code></a><small>Apple official F16 export · Apache-2.0</small></td>
+        <td>~48 MB</td>
+        <td>Color Image <code>518×392</code> (or MultiArray inverse depth) → normalized depth</td>
+        <td>Optical Bokeh / Depth Map<small><code>bash Scripts/install_depth_model.sh</code></small></td>
+      </tr>
+      <tr>
+        <td><strong>AI RAW Denoise</strong><small>High-ISO neural denoising</small></td>
+        <td><code>Denoise.mlmodelc</code></td>
+        <td><a href="https://huggingface.co/markhamilton/scunet-coreml" target="_blank" rel="noopener"><code>markhamilton/scunet-coreml</code></a><small>SCUNet color real PSNR · Apache-2.0</small></td>
+        <td>~74 MB</td>
+        <td><code>Image</code> or Float32 <code>[1,3,512,512]</code> (auto-tiled + Hann window blend)</td>
+        <td>Detail → AI Denoise<small><code>bash Scripts/install_denoise_model.sh</code></small></td>
+      </tr>
+      <tr>
+        <td><strong>AI 2x Super Resolution</strong><small>2x neural detail export</small></td>
+        <td><code>SuperRes.mlmodelc</code></td>
+        <td><a href="https://huggingface.co/marshiyar/RealESRGAN_x2_CoreML" target="_blank" rel="noopener"><code>marshiyar/RealESRGAN_x2_CoreML</code></a><small>RealESRGAN_x2plus · MIT</small></td>
+        <td>~33 MB</td>
+        <td><code>Image</code> or Float32 <code>[1,3,256,256]</code> → <code>[1,3,512,512]</code> (2x tiled)</td>
+        <td>Export → 2x Super Res<small><code>bash Scripts/install_superres_model.sh</code></small></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
-<p class="sum" style="margin-top:14px"><strong>Want higher neural precision?</strong> Open “AI Edit → Model Hub” at the top of the inspector to import local <code>.mlpackage</code> or <code>.mlmodelc</code> weights into any of the 5 Core ML slots (<code>LaMa Remove</code>, <code>Sky Segmentation</code>, <code>DepthAnythingV2</code>, <code>AI RAW Denoise</code>, <code>AI 2x Super Res</code>), or run the helper scripts from the repository:</p>
+<figure class="model-shot">
+  <img src="../images/11-ai-model-hub.webp?v=530models" width="1480" height="1180" loading="lazy" decoding="async" alt="Phos On-Device Model Hub showing all 5 Core ML slots installed with green checkmarks and sizes">
+  <figcaption>Phos “AI Edit → Model Hub” with all 5 Core ML neural slots installed and ready. Each slot can be replaced or removed independently at any time.</figcaption>
+</figure>
 
-<pre style="margin: 12px 0px 0px; padding: 14px 16px; border-radius: 10px; overflow-x: auto;"><code style="padding: 0px; word-break: normal; white-space: pre;"># Convert &amp; install Big-LaMa or DepthAnythingV2 into Phos Core ML slots
-bash Scripts/install_lama_model.sh
-bash Scripts/install_depth_model.sh</code></pre>
+<h3 style="margin-top:36px">2. Three Ways to Deploy &amp; Connect Core ML Models</h3>
 
-<h3 style="margin-top:40px">2. Optional Advanced Mode: Local Multimodal VLM (Qwen3-VL-4B / MLX)</h3>
-        
+<div class="model-method-grid">
+  <div class="model-method-card">
+    <h4>Method A · One-Command Shell Scripts (Recommended)</h4>
+    <p>Each script downloads the pinned weights from Hugging Face, verifies every file’s <strong>SHA-256</strong> checksum, compiles via <code>xcrun coremlcompiler</code>, and atomically installs into <code>~/Library/Application Support/Phos/Models/</code>.</p>
+    <p style="margin-top:10px">Requires Xcode or Xcode Command Line Tools (<code>xcrun coremlcompiler</code>).</p>
+  </div>
+  <div class="model-method-card">
+    <h4>Method B · In-App GUI Import (No Terminal)</h4>
+    <ol>
+      <li>Download any <code>.mlpackage</code> from the table above (unzip if <code>.zip</code>; ignore any <code>__MACOSX</code> folder).</li>
+      <li>Open Phos → click <strong>“AI Edit”</strong> at the top of the right inspector → switch to the <strong>“Model Hub”</strong> tab.</li>
+      <li>Click <strong>“Import…”</strong> on the matching slot and pick the <code>.mlpackage</code> or <code>.mlmodelc</code> bundle. Phos compiles and activates it immediately without restarting.</li>
+    </ol>
+  </div>
+</div>
+
+<pre style="margin: 12px 0px 0px; padding: 16px 18px; border-radius: 12px; overflow-x: auto;"><code style="padding: 0px; word-break: normal; white-space: pre;"># 1) Install all 5 Core ML models at once (~337 MB total)
+git clone https://github.com/Zenodeng/Phos.git &amp;&amp; cd Phos
+bash Scripts/install_all_coreml_models.sh
+
+# 2) Or install individual slots on demand (LaMa supports --512 or --1024)
+bash Scripts/install_lama_model.sh --512
+bash Scripts/install_sky_model.sh
+bash Scripts/install_depth_model.sh
+bash Scripts/install_denoise_model.sh
+bash Scripts/install_superres_model.sh
+
+# 3) Mainland China mirror (uses hf-mirror.com with identical SHA-256 checks)
+HF_ENDPOINT=https://hf-mirror.com bash Scripts/install_all_coreml_models.sh</code></pre>
+
+<p class="sum" style="margin-top:16px"><strong>Method C · Manual Compile or Custom Models:</strong> Phos supports both <code>Image</code> and <code>MLMultiArray</code> (NCHW/NHWC, FP16/FP32) Core ML models and reads tile dimensions directly from the model metadata. Compile manually or import via Model Hub:</p>
+
+<pre style="margin: 10px 0px 0px; padding: 14px 16px; border-radius: 12px; overflow-x: auto;"><code style="padding: 0px; word-break: normal; white-space: pre;">mkdir -p "$HOME/Library/Application Support/Phos/Models"
+xcrun coremlcompiler compile MyCustomModel.mlpackage "$HOME/Library/Application Support/Phos/Models"
+# Rename to the exact slot filename (e.g. SuperRes.mlmodelc) and open AI Edit → Model Hub</code></pre>
+
+<h3 style="margin-top:44px">3. Optional Advanced Mode: Local Multimodal VLM (Qwen3-VL-4B / MLX)</h3>
 
 <ul>
-          
+  <li><a href="../download/Phos-Optional-Model-Installer.zip" download="">Phos-Optional-Model-Installer.zip</a><span>6.7 KB · installer scripts &amp; SHA-256 manifest only</span></li>
+</ul>
 
-<li><a href="../download/Phos-Optional-Model-Installer.zip" download="">Phos-Optional-Model-Installer.zip</a><span>6.7 KB · scripts and checksums only</span></li>
-        </ul>
-
-        
-
-<p class="sum">If you want open-ended natural-language prompting powered by a local vision-language model, you can optionally install the ~3.1 GB <code>Qwen3-VL-4B</code> base model and MLX runtime (Phos already bundles the ~1.3 MB fine-tuned adapter). This 6.7 KB installer contains no weights itself — it downloads a pinned revision from Hugging Face and verifies the SHA256 of every file.</p>
-        
-
-<p class="sum" style="margin-top:14px"><strong>Completely optional.</strong> Skipping Qwen3-VL never affects standard editing or any of the zero-Python Native AI features above.</p>
-
-        
-
-<h3 style="margin-top:36px">Before you install</h3>
-        
+<p class="sum">If you want free-form natural-language prompting powered by a local 4B vision-language model, install the ~3.1 GB <code>Qwen3-VL-4B-Instruct-4bit</code> base model and MLX runtime (Phos already bundles the ~1.3 MB fine-tuned LoRA adapter and attaches it automatically). <strong>Completely optional</strong> — skipping it never affects standard editing or any of the 5 Core ML slots above.</p>
 
 <p class="sum" style="margin-top:12px">
-          · An Apple-silicon (M-series) Mac running macOS 26 or later<br>
-          ·  <strong>Python 3.11 for arm64</strong> installed (from the <a href="https://www.python.org/downloads/macos/" target="_blank" rel="noopener">python.org downloads page</a>; choose the macOS 64-bit universal2 installer)<br>
-          · At least  <strong>8 GB of free disk space</strong> (weights are ~3.1 GB, plus Python and MLX dependencies)<br>
-          · The first install needs internet access to  <code>pypi.org</code>  and  <code>huggingface.co</code><br>
-          · 16 GB of unified memory is the configuration tested here; 8 GB is unverified
-        </p>
+  <strong>Requirements:</strong> Apple-silicon Mac (macOS 26+) · <strong>arm64 Python 3.11</strong> (<a href="https://www.python.org/downloads/macos/" target="_blank" rel="noopener">python.org universal2 installer</a>) · at least <strong>8 GB free disk space</strong> · 16 GB+ unified memory recommended.
+</p>
 
-        
+<ol style="margin-top: 14px; padding-left: 22px; list-style: decimal;">
+  <li style="display: list-item; padding: 0px; margin-bottom: 12px; border: 0;"><strong>Install Python 3.11</strong> and verify <code>python3.11 --version</code> prints a version in Terminal.</li>
+  <li style="display: list-item; padding: 0px; margin-bottom: 12px; border: 0;"><strong>Run the installer.</strong> Unzip <code>Phos-Optional-Model-Installer.zip</code>, right-click <strong>“安装模型.command”</strong> → “Open” (or <strong>“国内网络安装.command”</strong> in mainland China to use <code>hf-mirror.com</code> and the Tsinghua PyPI mirror while still checking all 16 SHA-256 hashes).</li>
+  <li style="display: list-item; padding: 0px; margin-bottom: 12px; border: 0;"><strong>Connect inside Phos.</strong> It installs to <code>~/Library/Application Support/Phos/MLX</code> by default. Open any photo → click <strong>“AI Edit”</strong> → bottom-left <strong>“Open Legacy MLX-VLM Window…”</strong>. On your first prompt, Phos automatically launches an offline local server (<code>HF_HUB_OFFLINE=1</code>) on <code>http://127.0.0.1:8765</code> (auto-selecting a free port if occupied), mounts the bundled LoRA adapter, and terminates cleanly when Phos quits.</li>
+</ol>
 
-<h3 style="margin-top:36px">Three steps to install</h3>
-        
+<pre style="margin: 12px 0px 0px; padding: 14px 16px; border-radius: 12px; overflow-x: auto;"><code style="padding: 0px; word-break: normal; white-space: pre;"># Manual install using China mirrors
+HF_ENDPOINT=https://hf-mirror.com PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple python3.11 install_model.py
 
-<ol style="margin-top: 12px; padding-left: 22px; list-style: decimal;">
-          
+# Verify an existing MLX environment and all 16 model checksums
+python3 install_model.py --verify-only
 
-<li style="display: list-item; padding: 0px; margin-bottom: 12px; border-width: 0px; border-style: none; border-image: none;"><strong>Install Python 3.11.</strong> Download the installer from the link above and double-click to install, then run  <code>python3.11 --version</code>  in Terminal — if it prints a version number, you’re set.</li>
-          
+# Install to a custom path (then pick the outer folder containing .venv and model inside Phos)
+python3.11 install_model.py --environment /absolute/path/Phos-MLX</code></pre>
 
-<li style="display: list-item; padding: 0px; margin-bottom: 12px; border-width: 0px; border-style: none; border-image: none;"><strong>Unzip it and double-click “安装模型.command” (Install Model).</strong> If macOS says “cannot verify the developer”, <strong>right-click the file → “Open” → “Open” again</strong>. A Terminal window opens and installation begins.<br><strong>If you can’t reach Hugging Face from mainland China, double-click “国内网络安装.command” (China-network install) instead</strong> — see the next section.</li>
-          
-
-<li style="display: list-item; padding: 0px; border-width: 0px; border-style: none; border-image: none;"><strong>Let it finish.</strong> It installs pinned MLX dependencies, downloads the model from Hugging Face (~3.1 GB, depending on your connection), then verifies each file’s SHA256. When you see “installation and verification complete,” you’re done.</li>
-        </ol>
-
-        
-
-<h3 style="margin-top:36px">Installing from mainland China</h3>
-        
-
-<p class="sum" style="margin-top:12px">The installer pulls the model from  <code>huggingface.co</code>  and dependencies from  <code>pypi.org</code>  by default. <strong>Both can be unreachable or very slow on some networks</strong>, especially Hugging Face. You can install without a proxy.</p>
-        
-
-<p class="sum" style="margin-top:12px"><strong>The simplest option: unzip and double-click “国内网络安装.command” (China-network install)</strong>. Bundled since 4.0.1, it swaps the two download sources for hf-mirror and the Tsinghua PyPI mirror; everything else is identical to the normal install, with no terminal needed.</p>
-        
-
-<p class="sum" style="margin-top:12px">To run it manually or choose other mirrors, open Terminal in the unzipped folder (right-click the folder → Services → New Terminal at Folder) and paste:</p>
-        <pre style="margin: 12px 0px 0px; padding: 14px 16px; background-image: none; background-position: 0% 0%; background-size: auto; background-repeat: repeat; background-origin: padding-box; background-clip: border-box; background-attachment: scroll; border-radius: 10px; overflow-x: auto;"><code style="padding: 0px; word-break: normal; white-space: pre;">HF_ENDPOINT=https://hf-mirror.com \
-PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple \
-python3.11 install_model.py</code></pre>
-        
-
-<p class="sum" style="margin-top:12px"><strong>Mirrors only change where files come from, not verification</strong>: every model file is still checked against the manifest, and a single wrong byte stops the install with an error — no corrupt files get in. To test a mirror first, open  <a href="https://hf-mirror.com/mlx-community/Qwen3-VL-4B-Instruct-4bit" target="_blank" rel="noopener">the model page on hf-mirror.com</a>.</p>
-        
-
-<p class="sum" style="margin-top:12px">If the Python installer downloads slowly from python.org, use the Huawei Cloud mirror: <a href="https://mirrors.huaweicloud.com/python/" target="_blank" rel="noopener">mirrors.huaweicloud.com/python</a>, and pick a 3.11.x macOS universal2 installer.</p>
-
-        
-
-<h3 style="margin-top:36px">Using it after installation</h3>
-        
-
-<p class="sum" style="margin-top:12px">It installs to  <code>~/Library/Application Support/Phos/MLX</code> by default, and Phos finds it automatically — open any photo and click “AI Edit” at the top of the adjustment panel. No further configuration.</p>
-        
-
-<p class="sum" style="margin-top:12px">To install elsewhere, run  <code>python3.11 install_model.py --environment /absolute/path/Phos-MLX</code> in Terminal; afterwards use “AI Edit → Choose model environment” in the app and select the <strong>outer folder that contains both  <code>.venv</code>  and  <code>model</code>.</strong></p>
-        
-
-<p class="sum" style="margin-top:12px">To check the install, run <code>python3 install_model.py --verify-only</code>. To uninstall, just delete that folder.</p>
-
-        
-
-<h3 style="margin-top:36px">FAQ</h3>
-        
+<h3 style="margin-top:36px">Model Deployment FAQ</h3>
 
 <div class="faq" style="margin-top:14px">
-          
+  <details>
+    <summary>Do I need to restart Phos after installing Core ML models?</summary>
+    <div class="ans"><p>No. Importing via Model Hub hot-reloads immediately; after installing via terminal scripts into <code>~/Library/Application Support/Phos/Models/</code>, opening Model Hub refreshes status and the Remove brush, Sky mask, Optical Bokeh, AI Denoise, and 2x Super Res export automatically pick up the installed weights.</p></div>
+  </details>
+  <details>
+    <summary>What if <code>xcrun coremlcompiler</code> is not found?</summary>
+    <div class="ans"><p>Run <code>xcode-select --install</code> (or install Xcode) before running the shell scripts. Alternatively, download any <code>.mlpackage</code> manually and import it inside Phos “AI Edit → Model Hub” — macOS compiles it automatically via <code>MLModel.compileModel</code>.</p></div>
+  </details>
+  <details>
+    <summary>It says “Please install Apple Silicon Python 3.11”</summary>
+    <div class="ans"><p>Only Tier 3 (Qwen3-VL MLX) requires Python 3.11 — Tier 1 Native AI and all 5 Tier 2 Core ML models are 100% Python-free. Reinstall the macOS universal2 Python 3.11 package from python.org if you want Qwen3-VL.</p></div>
+  </details>
+  <details>
+    <summary>How do I troubleshoot the local MLX server?</summary>
+    <div class="ans"><p>Run <code>python3 install_model.py --verify-only</code> to verify weights and imports, then inspect <code>~/Library/Logs/Phos-MLX.log</code>. Never move an existing <code>.venv</code> folder (it stores absolute paths); use <code>--environment</code> to install into a new path instead.</p></div>
+  </details>
+  <details>
+    <summary>Do any models upload my photos?</summary>
+    <div class="ans"><p>Never. All 5 Core ML models run in-process on Apple Neural Engine / Metal, and the optional Qwen3-VL MLX server binds strictly to loopback <code>127.0.0.1</code> with <code>HF_HUB_OFFLINE=1</code>. Internet access is used only while downloading weights.</p></div>
+  </details>
+</div>
 
-<details>
-            
+<p class="sum" style="margin-top:24px">All third-party upstream models retain their original open-source licenses: <code>solume-big-lama-coreml</code> (Apache-2.0), <code>melmass/skyseg-coreml</code> (MIT), <code>apple/coreml-depth-anything-v2-small</code> (Apache-2.0), <code>markhamilton/scunet-coreml</code> (Apache-2.0), <code>marshiyar/RealESRGAN_x2_CoreML</code> (MIT), and <code>mlx-community/Qwen3-VL-4B-Instruct-4bit</code> (Apache-2.0).</p>
+</div>
 
-<summary>It says “Please install Apple Silicon Python 3.11”</summary>
-            
 
-<div class="ans">
-
-<p>Either Python isn’t installed, or the Intel build was installed. Download the universal2 installer from python.org again; after installing, run  <code>python3.11 --version</code>  in Terminal to confirm, then double-click “安装模型.command” again.</p></div>
-
-          </details>
-
-          
-
-<details>
-            
-
-<summary>What if the download fails halfway?</summary>
-            
-
-<div class="ans">
-
-<p>The script won’t overwrite an existing environment, and partial progress is kept. Switch to a network that can reliably reach Hugging Face and double-click “安装模型.command” again; alternatively, use  <code>--environment</code>  to install into a brand-new empty directory. The script never switches to an unvetted mirror on its own.</p></div>
-
-          </details>
-
-          
-
-<details>
-            
-
-<summary>I downloaded the model files — why doesn’t it work?</summary>
-            
-
-<div class="ans">
-
-<p>Weights and runtime are two different things. Putting only the  <code>.safetensors</code>  files in a folder doesn’t provide the MLX dependencies; the installer must set up the  <code>.venv</code>. Phos needs both before it can start the local inference server.</p></div>
-
-          </details>
-
-          
-
-<details>
-            
-
-<summary>Can I move or copy that folder after installing?</summary>
-            
-
-<div class="ans">
-
-<p>Moving it isn’t recommended. The  <code>.venv</code>  records absolute interpreter paths and breaks if moved. To relocate, reinstall with  <code>--environment</code>.</p></div>
-
-          </details>
-
-          
-
-<details>
-            
-
-<summary>Does AI upload my photos anywhere?</summary>
-            
-
-<div class="ans">
-
-<p>No. Inference runs locally at  <code>127.0.0.1</code>  and photos never leave this Mac. Network access is needed only during installation, to download the model and dependencies.</p></div>
-
-          </details>
-
-        </div>
-
-        
-
-<p class="sum" style="margin-top:24px">The base model is  <a href="https://huggingface.co/mlx-community/Qwen3-VL-4B-Instruct-4bit" target="_blank" rel="noopener"><code>mlx-community/Qwen3-VL-4B-Instruct-4bit</code></a> (pinned version  <code>2fd8dacb…</code>; China mirror:  <a href="https://hf-mirror.com/mlx-community/Qwen3-VL-4B-Instruct-4bit" target="_blank" rel="noopener">hf-mirror</a>), licensed under  <strong>Apache-2.0</strong>. Attribution and the full license text ship inside the app’s  <code>PhotoAIAdapter</code>  directory. Phos’s academic-use notice does not change the licensing terms of third-party models.</p>
-      </div>
 
       
 
@@ -525,10 +523,10 @@ python3.11 install_model.py</code></pre>
 </div>
 </footer>
 
-<script src="../assets/brand-v2.js?v=520studio" defer=""></script>
-<script src="../assets/navigation.js?v=520studio" defer=""></script>
-<script src="../assets/motion.js?v=520studio" defer=""></script>
-<script>if(new URLSearchParams(location.search).has('audit')){const s=document.createElement('script');s.src='../assets/audit-metrics.js?v=520studio';s.defer=true;document.body.append(s);}</script>
+<script src="../assets/brand-v2.js?v=530models" defer=""></script>
+<script src="../assets/navigation.js?v=530models" defer=""></script>
+<script src="../assets/motion.js?v=530models" defer=""></script>
+<script>if(new URLSearchParams(location.search).has('audit')){const s=document.createElement('script');s.src='../assets/audit-metrics.js?v=530models';s.defer=true;document.body.append(s);}</script>
 
 
-<script src="../assets/kinetic-light.js?v=520studio" defer></script></body></html>
+<script src="../assets/kinetic-light.js?v=530models" defer></script></body></html>

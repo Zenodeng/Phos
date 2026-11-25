@@ -41,9 +41,9 @@
 
 <link rel="icon" href="images/phos-icon-dark.png" type="image/png">
 
-<link rel="stylesheet" href="assets/system.css?v=520studio">
+<link rel="stylesheet" href="assets/system.css?v=530models">
 
-<link rel="stylesheet" href="assets/motion.css?v=520studio"><link rel="stylesheet" href="assets/p0.css?v=520studio"><link rel="stylesheet" href="assets/kinetic-light.css?v=520studio"></head>
+<link rel="stylesheet" href="assets/motion.css?v=530models"><link rel="stylesheet" href="assets/p0.css?v=530models"><link rel="stylesheet" href="assets/kinetic-light.css?v=530models"></head>
 
 <body class="help-page"><a class="skip" href="#main">跳到正文</a>
 
@@ -96,7 +96,7 @@
         
 
 <figure class="rv">
-          <img class="shot" src="images/09-gatekeeper-dialog.webp?v=520studio" width="1600" height="900" loading="lazy" alt="macOS 弹窗提示无法打开 Phos，因为 Apple 无法检查其是否包含恶意软件，弹窗中提供「完成」与「移到废纸篓」按钮">
+          <img class="shot" src="images/09-gatekeeper-dialog.webp?v=530models" width="1600" height="900" loading="lazy" alt="macOS 弹窗提示无法打开 Phos，因为 Apple 无法检查其是否包含恶意软件，弹窗中提供「完成」与「移到废纸篓」按钮">
           
 
 <figcaption>双击 Phos 会被拦一次。这个弹窗里只有「完成」和「移到废纸篓」两个按钮 —— 点「完成」，别点废纸篓。</figcaption>
@@ -105,7 +105,7 @@
         
 
 <figure class="rv">
-          <img class="shot" src="images/10-system-settings-open-anyway.webp?v=520studio" width="1600" height="900" loading="lazy" alt="系统设置中的隐私与安全性面板，在安全性一栏显示 Phos 已被阻止，右侧有「仍要打开」按钮">
+          <img class="shot" src="images/10-system-settings-open-anyway.webp?v=530models" width="1600" height="900" loading="lazy" alt="系统设置中的隐私与安全性面板，在安全性一栏显示 Phos 已被阻止，右侧有「仍要打开」按钮">
           
 
 <figcaption>如果已经双击过，也可以到「系统设置 → 隐私与安全性」点「仍要打开」。</figcaption>
@@ -255,188 +255,186 @@
       
 
 <div class="channels" id="ai-model" style="margin-top:40px">
-        
+<h3>AI 模型连接与本地部署完整指南</h3>
+<p class="sum">Phos 采用<strong>三层渐进式端侧 AI 架构</strong>：所有推理都在这台 Mac 本机完成，照片从不上传云端。安装主程序即可直接用第 1 层；按需加装第 2 层 Core ML 槽位或第 3 层 MLX 大模型，装好即自动生效。</p>
 
-<h3>一、开箱即用：零 Python 原生 AI 与 5 槽位 Core ML 模型中心</h3>
+<div class="model-tier-grid">
+  <div class="model-tier-card">
+    <span class="model-tier-badge">第 1 层 · 开箱即用</span>
+    <h4>零下载原生 AI</h4>
+    <p>纯 Swift + Metal + Apple Vision。涵盖原生 AI 修图、参考图一键对色、主体/人物/8 部位人像分割、PatchMatch 消除、零模型天空与景深、YCoCg RAW 降噪、2x 锐化超分、智能挑片与双语搜图。</p>
+  </div>
+  <div class="model-tier-card">
+    <span class="model-tier-badge">第 2 层 · 零 Python</span>
+    <h4>5 槽位 Core ML 神经模型</h4>
+    <p>纯 Apple Neural Engine / GPU 加速。统一存放于 <code>~/Library/Application Support/Phos/Models/</code>，共 5 个独立槽位（约 337 MB 全量），任一槽位未安装时自动回退第 1 层，互不影响。</p>
+  </div>
+  <div class="model-tier-card">
+    <span class="model-tier-badge">第 3 层 · 可选进阶</span>
+    <h4>Qwen3-VL-4B / MLX 视觉大模型</h4>
+    <p>开放式自然语言修图建议。安装于 <code>~/Library/Application Support/Phos/MLX/</code>（约 3.1 GB 底模 + 主程序内置 1.3 MB LoRA 适配器），由 Phos 按需拉起本机 <code>127.0.0.1</code> 离线服务。</p>
+  </div>
+</div>
 
-<p class="sum">从 4.7 起，Phos 的核心端侧 AI 能力<strong>全部内置、零 Python 依赖、安装完即可直接使用</strong>，不下载任何外部权重也能完整体验：</p>
+<h3 style="margin-top:40px">一、5 个 Core ML 模型槽位清单与规格</h3>
+<p class="sum">下表列出 Phos 内置支持的全部 5 个端侧 Core ML 槽位、推荐开源上游模型、目标文件名与输入输出接口规范。未安装对应模型时，相关功能仍可凭内置 Metal / Vision 管线正常工作。</p>
 
-<p class="sum" style="margin-top:12px">
-  · <strong>纯 Swift 原生 AI 修图（NativePhotoPlanner）</strong>：基于画面统计与意图解析生成可编辑参数与局部蒙版，双图预览确认后写入。<br>
-  · <strong>参考图一键对色（Color Match）</strong>：把任意参考片风格反解为完全可调的全局参数，支持 <code>0%–150%</code> 强度与肤色保护。<br>
-  · <strong>任意 RAW 单目深度与光学散景</strong>：内置 Vision 显著性 + 人物 + 透视梯度零模型深度，驱动多边形光圈叶片与猫眼散景。<br>
-  · <strong>零模型消除 / 天空 / 降噪与 2x 超分</strong>：内置 4 层 PatchMatch 消除、地平线+梯度阻断天空分割、Metal YCoCg RAW 保边降噪及导出端 Lanczos+结构张量 2x 超分，以及端侧智能挑片与双语语义搜图。
-</p>
+<div class="model-table-wrap">
+  <table class="model-table">
+    <thead>
+      <tr>
+        <th>模型槽位</th>
+        <th>本地路径文件名</th>
+        <th>推荐上游开源模型与许可</th>
+        <th>体积</th>
+        <th>张量 / 图像接口规范</th>
+        <th>对应功能与一键脚本</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>LaMa 内容感知消除</strong><small>去除路人 / 杂物 / 污点</small></td>
+        <td><code>LaMa.mlmodelc</code></td>
+        <td><a href="https://huggingface.co/heypatkay/solume-big-lama-coreml" target="_blank" rel="noopener"><code>heypatkay/solume-big-lama-coreml</code></a><small>LaMa512（默认）或 LaMa1024 · Apache-2.0</small></td>
+        <td>~99 MB</td>
+        <td>Float32 <code>[1,3,512,512]</code> + Mask <code>[1,1,512,512]</code> → Float16 RGB</td>
+        <td>消除画笔（Remove）<small><code>bash Scripts/install_lama_model.sh</code></small></td>
+      </tr>
+      <tr>
+        <td><strong>Core ML 天空分割</strong><small>精细树梢 / 建筑天空蒙版</small></td>
+        <td><code>SkySegmentation.mlmodelc</code></td>
+        <td><a href="https://huggingface.co/melmass/skyseg-coreml" target="_blank" rel="noopener"><code>melmass/skyseg-coreml</code></a><small>U²-Net skyseg FP16 · MIT</small></td>
+        <td>~84 MB</td>
+        <td>支持 <code>Image</code> 或 Float16/32 <code>[1,3,320,320]</code>（ImageNet 归一化）→ <code>[1,1,H,W]</code></td>
+        <td>蒙版 → 选择天空<small><code>bash Scripts/install_sky_model.sh</code></small></td>
+      </tr>
+      <tr>
+        <td><strong>DepthAnythingV2 景深</strong><small>任意 RAW 单目深度物理散景</small></td>
+        <td><code>DepthAnythingV2.mlmodelc</code></td>
+        <td><a href="https://huggingface.co/apple/coreml-depth-anything-v2-small" target="_blank" rel="noopener"><code>apple/coreml-depth-anything-v2-small</code></a><small>Apple 官方 F16 导出 · Apache-2.0</small></td>
+        <td>~48 MB</td>
+        <td>Color Image <code>518×392</code>（或 MultiArray 逆深度）→ 归一化景深图</td>
+        <td>光学散景 / 深度可视化<small><code>bash Scripts/install_depth_model.sh</code></small></td>
+      </tr>
+      <tr>
+        <td><strong>AI RAW 神经降噪</strong><small>高感暗光降噪保细节</small></td>
+        <td><code>Denoise.mlmodelc</code></td>
+        <td><a href="https://huggingface.co/markhamilton/scunet-coreml" target="_blank" rel="noopener"><code>markhamilton/scunet-coreml</code></a><small>SCUNet color real PSNR · Apache-2.0</small></td>
+        <td>~74 MB</td>
+        <td>支持 <code>Image</code> 或 Float32 <code>[1,3,512,512]</code>（自动按图块 + Hann 窗无缝融合）</td>
+        <td>细节 → AI 降噪滑杆<small><code>bash Scripts/install_denoise_model.sh</code></small></td>
+      </tr>
+      <tr>
+        <td><strong>AI 2x 超分辨率</strong><small>导出 2 倍像素重建放大</small></td>
+        <td><code>SuperRes.mlmodelc</code></td>
+        <td><a href="https://huggingface.co/marshiyar/RealESRGAN_x2_CoreML" target="_blank" rel="noopener"><code>marshiyar/RealESRGAN_x2_CoreML</code></a><small>RealESRGAN_x2plus · MIT</small></td>
+        <td>~33 MB</td>
+        <td>支持 <code>Image</code> 或 Float32 <code>[1,3,256,256]</code> → <code>[1,3,512,512]</code>（2x 分块融合）</td>
+        <td>导出面板 → 2x 超分辨率<small><code>bash Scripts/install_superres_model.sh</code></small></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
-<p class="sum" style="margin-top:14px"><strong>想要进一步提升精度？</strong>打开调整面板顶部的「AI 修图 → 端侧模型中心」，可按需为 5 个独立 Core ML 槽位（<code>LaMa 消除</code>、<code>Core ML 天空分割</code>、<code>DepthAnythingV2 景深</code>、<code>AI RAW 神经降噪</code>、<code>AI 2x 超分辨率</code>）直接导入本地 <code>.mlpackage</code> 或 <code>.mlmodelc</code> 模型，也可在源码仓库运行一键安装脚本：</p>
+<figure class="model-shot">
+  <img src="images/11-ai-model-hub.webp?v=530models" width="1480" height="1180" loading="lazy" decoding="async" alt="Phos 端侧模型中心实机界面，展示全部 5 个 Core ML 模型槽位已安装就绪与磁盘体积">
+  <figcaption>Phos「AI 修图 → 端侧模型中心」：全部 5 个 Core ML 槽位部署完成后的状态，每个槽位均可随时单独替换或移除。</figcaption>
+</figure>
 
-<pre style="margin: 12px 0px 0px; padding: 14px 16px; border-radius: 10px; overflow-x: auto;"><code style="padding: 0px; word-break: normal; white-space: pre;"># 按需将 Big-LaMa 或 DepthAnythingV2 转换并安装到 Phos Core ML 槽位
-bash Scripts/install_lama_model.sh
-bash Scripts/install_depth_model.sh</code></pre>
+<h3 style="margin-top:36px">二、Core ML 模型部署与连接的 3 种方式</h3>
 
-<h3 style="margin-top:40px">二、可选进阶：本地多模态大模型（Qwen3-VL-4B / MLX）</h3>
-        
+<div class="model-method-grid">
+  <div class="model-method-card">
+    <h4>方式 A · 终端一键脚本（推荐）</h4>
+    <p>脚本会自动从 Hugging Face 下载固定版本、逐个文件校验 <strong>SHA-256</strong>、调用 <code>xcrun coremlcompiler</code> 编译，并原子替换到 <code>~/Library/Application Support/Phos/Models/</code>。</p>
+    <p style="margin-top:10px">需要已安装 Xcode 或 Xcode Command Line Tools（能运行 <code>xcrun coremlcompiler</code>）。</p>
+  </div>
+  <div class="model-method-card">
+    <h4>方式 B · 应用内图形化导入（零终端）</h4>
+    <ol>
+      <li>在浏览器下载上表任一模型的 <code>.mlpackage</code>（如为 <code>.zip</code> 先双击解压，不要选 <code>__MACOSX</code> 隐藏目录）。</li>
+      <li>打开 Phos，点击右侧调整面板顶部的 <strong>「AI 修图」</strong>，切换到 <strong>「端侧模型中心」</strong> 标签页。</li>
+      <li>点击对应槽位右侧的 <strong>「导入…」</strong>，选中 <code>.mlpackage</code> 或 <code>.mlmodelc</code> 文件夹。Phos 会自动编译并安装，绿标亮起即生效，无需重启。</li>
+    </ol>
+  </div>
+</div>
+
+<pre style="margin: 12px 0px 0px; padding: 16px 18px; border-radius: 12px; overflow-x: auto;"><code style="padding: 0px; word-break: normal; white-space: pre;"># 1）从仓库根目录一键安装全部 5 个 Core ML 模型（总计约 337 MB）
+git clone https://github.com/Zenodeng/Phos.git &amp;&amp; cd Phos
+bash Scripts/install_all_coreml_models.sh
+
+# 2）或按需只安装单个槽位（LaMa 支持 --512 / --1024）
+bash Scripts/install_lama_model.sh --512
+bash Scripts/install_sky_model.sh
+bash Scripts/install_depth_model.sh
+bash Scripts/install_denoise_model.sh
+bash Scripts/install_superres_model.sh
+
+# 3）国内网络直连镜像（自动走 hf-mirror.com，同样严格校验 SHA-256）
+HF_ENDPOINT=https://hf-mirror.com bash Scripts/install_all_coreml_models.sh</code></pre>
+
+<p class="sum" style="margin-top:16px"><strong>方式 C · 手动编译或接入自定义 Core ML 模型：</strong>如果你有自己转换的 <code>.mlpackage</code> / <code>.mlmodel</code>，除了直接在应用内点「导入…」，也可以在终端手动编译到统一目录，并重命名为上表对应的精确文件名（例如 <code>Denoise.mlmodelc</code>）：</p>
+
+<pre style="margin: 10px 0px 0px; padding: 14px 16px; border-radius: 12px; overflow-x: auto;"><code style="padding: 0px; word-break: normal; white-space: pre;">mkdir -p "$HOME/Library/Application Support/Phos/Models"
+xcrun coremlcompiler compile MyCustomModel.mlpackage "$HOME/Library/Application Support/Phos/Models"
+# 重命名为目标槽位名（例如 SuperRes.mlmodelc）后，打开「AI 修图 → 端侧模型中心」即可看到绿标就绪</code></pre>
+
+<h3 style="margin-top:44px">三、可选进阶：本地多模态视觉大模型（Qwen3-VL-4B / MLX）</h3>
 
 <ul>
-          
+  <li><a href="download/Phos-Optional-Model-Installer.zip" download="">Phos-Optional-Model-Installer.zip</a><span>6.7 KB · 只含安装脚本与 SHA-256 校验清单</span></li>
+</ul>
 
-<li><a href="download/Phos-Optional-Model-Installer.zip" download="">Phos-Optional-Model-Installer.zip</a><span>6.7 KB · 只含脚本与校验清单</span></li>
-        </ul>
-
-        
-
-<p class="sum">如果你希望用更自由的开放式自然语言让本地视觉大模型给出修图方案，可额外安装约 3.1 GB 的 <code>Qwen3-VL-4B</code> 底模与 MLX 运行环境（主程序已自带约 1.3 MB 微调适配器）。这个 6.7 KB 安装包不含权重，会按固定版本从 Hugging Face 拉取并逐个文件校验 SHA256。</p>
-        
-
-<p class="sum" style="margin-top:14px"><strong>完全可选。</strong>不安装 Qwen3-VL 也不影响全部常规修图和上面的零 Python 原生 AI 功能。</p>
-
-        
-
-<h3 style="margin-top:36px">安装前请确认</h3>
-        
+<p class="sum">如果你希望用更自由的开放式自然语言（如「保留窗边高光质感，给阴影补一点青绿电影调，同时单独提亮人物面部」）让本地 4B 视觉大模型生成全套可编辑参数与蒙版，可额外部署约 3.1 GB 的 <code>Qwen3-VL-4B-Instruct-4bit</code> 底模与 MLX 运行环境（主程序已内置约 1.3 MB 的 Phos 微调 LoRA 适配器，推理时自动挂载）。<strong>完全可选</strong>，不装不影响任何常规修图或上述 5 个 Core ML 模型。</p>
 
 <p class="sum" style="margin-top:12px">
-          · Apple 芯片（M 系列）的 Mac，macOS 26 及以上<br>
-          · 已安装 <strong>arm64 版 Python 3.11</strong>（<a href="https://www.python.org/downloads/macos/" target="_blank" rel="noopener">python.org 下载页</a>，选 macOS 64-bit universal2 installer）<br>
-          · 至少 <strong>8 GB 空闲磁盘</strong>（权重约 3.1 GB，另加 Python 与 MLX 依赖）<br>
-          · 首次安装需要联网，要能访问 <code>pypi.org</code> 与 <code>huggingface.co</code><br>
-          · 16 GB 统一内存是本机测试配置，8 GB 未验证
-        </p>
+  <strong>环境要求：</strong>Apple 芯片（M 系列）Mac + macOS 26 及以上 · 已安装 <strong>arm64 版 Python 3.11</strong>（<a href="https://www.python.org/downloads/macos/" target="_blank" rel="noopener">python.org</a> 或 <a href="https://mirrors.huaweicloud.com/python/" target="_blank" rel="noopener">华为云镜像</a> 选 macOS universal2 安装包）· 至少 <strong>8 GB 可用空间</strong> · 推荐 16 GB 及以上统一内存。
+</p>
 
-        
+<ol style="margin-top: 14px; padding-left: 22px; list-style: decimal;">
+  <li style="display: list-item; padding: 0px; margin-bottom: 12px; border: 0;"><strong>安装 Python 3.11。</strong>安装完成后在终端执行 <code>python3.11 --version</code>，能正常打印版本号即就绪。</li>
+  <li style="display: list-item; padding: 0px; margin-bottom: 12px; border: 0;"><strong>运行安装脚本。</strong>解压 <code>Phos-Optional-Model-Installer.zip</code>，右键点击 <strong>「安装模型.command」</strong> →「打开」；国内网络无法直连 Hugging Face 时，改右键打开 <strong>「国内网络安装.command」</strong>（自动切换 <code>hf-mirror.com</code> 与清华 PyPI 镜像，仍严格校验全部 16 个文件的 SHA-256）。</li>
+  <li style="display: list-item; padding: 0px; margin-bottom: 12px; border: 0;"><strong>在 Phos 中连接使用。</strong>默认安装到 <code>~/Library/Application Support/Phos/MLX</code>，Phos 启动后自动识别：点击调整面板顶部 <strong>「AI 修图」</strong> → 左下角 <strong>「打开旧版 MLX-VLM 实验窗口…」</strong> 即可直接使用。首次发起请求时，Phos 会在后台以纯离线模式（<code>HF_HUB_OFFLINE=1</code>）自动启动本机 <code>http://127.0.0.1:8765</code> 服务（端口被占时自动切换空闲端口）并挂载内置 LoRA 适配器，退出应用时自动关闭进程。</li>
+</ol>
 
-<h3 style="margin-top:36px">三步装好</h3>
-        
+<pre style="margin: 12px 0px 0px; padding: 14px 16px; border-radius: 12px; overflow-x: auto;"><code style="padding: 0px; word-break: normal; white-space: pre;"># 国内网络手动命令（在解压后的文件夹执行）
+HF_ENDPOINT=https://hf-mirror.com PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple python3.11 install_model.py
 
-<ol style="margin-top: 12px; padding-left: 22px; list-style: decimal;">
-          
+# 校验已安装的 MLX 环境与全部 16 个模型文件哈希
+python3 install_model.py --verify-only
 
-<li style="display: list-item; padding: 0px; margin-bottom: 12px; border-width: 0px; border-style: none; border-image: none;"><strong>装 Python 3.11。</strong>从上面的链接下载安装包，双击装完。终端里执行 <code>python3.11 --version</code> 能打印出版本号，就说明装好了。</li>
-          
+# 安装到自定义目录（装完后在 MLX 窗口点「选择模型环境」，选包含 .venv 和 model 的外层目录）
+python3.11 install_model.py --environment /绝对路径/Phos-MLX</code></pre>
 
-<li style="display: list-item; padding: 0px; margin-bottom: 12px; border-width: 0px; border-style: none; border-image: none;"><strong>解压，双击「安装模型.command」。</strong>如果 macOS 提示「无法验证开发者」，<strong>右键点这个文件 →「打开」→ 再点一次「打开」</strong>。会弹出一个终端窗口开始安装。<br><strong>国内网络连不上 Hugging Face 的话，改双击「国内网络安装.command」</strong>，见下一节。</li>
-          
-
-<li style="display: list-item; padding: 0px; border-width: 0px; border-style: none; border-image: none;"><strong>等它跑完。</strong>先装固定版本的 MLX 依赖，再从 Hugging Face 下载模型（约 3.1 GB，看网速），最后逐个文件校验 SHA256。看到「安装并校验完成」就是好了。</li>
-        </ol>
-
-        
-
-<h3 style="margin-top:36px">国内网络怎么装</h3>
-        
-
-<p class="sum" style="margin-top:12px">安装脚本默认从 <code>huggingface.co</code> 拉模型、从 <code>pypi.org</code> 拉依赖。<strong>这两个地址在部分网络下会连不上或极慢</strong>，尤其是 Hugging Face。不用代理也能装。</p>
-        
-
-<p class="sum" style="margin-top:12px"><strong>最简单的办法：解压后双击「国内网络安装.command」</strong>（4.0.1 起随包提供）。它会把两个下载源换成 hf-mirror 与清华 PyPI 镜像，其余流程和普通安装完全一样，不需要碰终端。</p>
-        
-
-<p class="sum" style="margin-top:12px">想手动跑、或者想自己指定别的镜像，就在解压后的文件夹里打开终端（文件夹上右键 →「服务」→「新建位于文件夹位置的终端窗口」），粘贴执行：</p>
-        <pre style="margin: 12px 0px 0px; padding: 14px 16px; background-image: none; background-position: 0% 0%; background-size: auto; background-repeat: repeat; background-origin: padding-box; background-clip: border-box; background-attachment: scroll; border-radius: 10px; overflow-x: auto;"><code style="padding: 0px; word-break: normal; white-space: pre;">HF_ENDPOINT=https://hf-mirror.com \
-PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple \
-python3.11 install_model.py</code></pre>
-        
-
-<p class="sum" style="margin-top:12px"><strong>镜像只影响从哪里下载，不改变校验</strong>：模型文件仍会按清单逐个比对 SHA256，镜像上的文件只要有一个字节不对就会报错停下，不会装进坏文件。想先确认镜像通不通，直接打开 <a href="https://hf-mirror.com/mlx-community/Qwen3-VL-4B-Instruct-4bit" target="_blank" rel="noopener">hf-mirror.com 上的模型页</a> 看看。</p>
-        
-
-<p class="sum" style="margin-top:12px">Python 安装包从 python.org 下得慢的话，可以用华为云镜像：<a href="https://mirrors.huaweicloud.com/python/" target="_blank" rel="noopener">mirrors.huaweicloud.com/python</a>，挑 3.11.x 的 macOS universal2 安装包。</p>
-
-        
-
-<h3 style="margin-top:36px">装完怎么用</h3>
-        
-
-<p class="sum" style="margin-top:12px">默认装在 <code>~/Library/Application Support/Phos/MLX</code>，Phos 会自动找到它 —— 打开任意照片，在调整面板顶部点「AI 修图」就能用，不需要再做配置。</p>
-        
-
-<p class="sum" style="margin-top:12px">想装到别处：终端执行 <code>python3.11 install_model.py --environment /绝对路径/新的Phos-MLX</code>，装完后在应用里走「AI 修图 → 选择模型环境」，选那个<strong>同时包含 <code>.venv</code> 和 <code>model</code> 的外层文件夹</strong>。</p>
-        
-
-<p class="sum" style="margin-top:12px">检查是否装好：<code>python3 install_model.py --verify-only</code>。想卸载，直接删掉那个文件夹即可。</p>
-
-        
-
-<h3 style="margin-top:36px">常见问题</h3>
-        
+<h3 style="margin-top:36px">模型部署常见问题</h3>
 
 <div class="faq" style="margin-top:14px">
-          
+  <details>
+    <summary>Core ML 模型装好后，需要手动开关或重启 Phos 吗？</summary>
+    <div class="ans"><p>不需要。通过应用内「导入…」安装会立即触发热重载；通过终端脚本安装到 <code>~/Library/Application Support/Phos/Models/</code> 后，重新打开「端侧模型中心」即可看到绿色对勾。使用消除画笔、天空蒙版、光学散景、AI 降噪或 2x 超分导出时会自动调用对应神经模型。</p></div>
+  </details>
+  <details>
+    <summary>提示 <code>xcrun: error: unable to find utility "coremlcompiler"</code> 怎么办？</summary>
+    <div class="ans"><p>安装脚本需要系统自带的 <code>coremlcompiler</code> 工具。请在终端执行 <code>xcode-select --install</code>（或在 App Store 安装 Xcode），安装完成后再重新运行脚本；或者直接下载 <code>.mlpackage</code> 并在 Phos「端侧模型中心」点「导入…」，应用会调用系统内置 <code>MLModel.compileModel</code> 完成编译。</p></div>
+  </details>
+  <details>
+    <summary>提示「请先安装 Apple Silicon Python 3.11」</summary>
+    <div class="ans"><p>仅第 3 层 Qwen3-VL MLX 模式需要 Python 3.11（第 1 层原生 AI 与第 2 层 5 个 Core ML 模型均零 Python）。如报错，说明未安装或装了 Intel 版，请从 python.org 或华为云镜像重新安装 macOS universal2 版 Python 3.11。</p></div>
+  </details>
+  <details>
+    <summary>本地 MLX 服务启动失败如何排查？</summary>
+    <div class="ans"><p>先运行 <code>python3 install_model.py --verify-only</code> 检查权重和依赖完整性，再查看日志 <code>~/Library/Logs/Phos-MLX.log</code>。注意不要手动移动已创建好的 <code>.venv</code> 目录（其内部记录绝对解释器路径），如需换位置请用 <code>--environment</code> 重新安装。</p></div>
+  </details>
+  <details>
+    <summary>所有模型会把我的照片上传到外部服务器吗？</summary>
+    <div class="ans"><p>不会。5 个 Core ML 模型完全在进程内通过 Apple Neural Engine / Metal 本地推理；Qwen3-VL MLX 服务以 <code>HF_HUB_OFFLINE=1</code> 仅监听 <code>127.0.0.1</code> 本机回环地址。仅在首次下载权重阶段需要联网。</p></div>
+  </details>
+</div>
 
-<details>
-            
+<p class="sum" style="margin-top:24px">所有上游第三方模型均保留其原始开源许可：<code>solume-big-lama-coreml</code>（Apache-2.0）、<code>melmass/skyseg-coreml</code>（MIT）、<code>apple/coreml-depth-anything-v2-small</code>（Apache-2.0）、<code>markhamilton/scunet-coreml</code>（Apache-2.0）、<code>marshiyar/RealESRGAN_x2_CoreML</code>（MIT）、<code>mlx-community/Qwen3-VL-4B-Instruct-4bit</code>（Apache-2.0）。</p>
+</div>
 
-<summary>提示「请先安装 Apple Silicon Python 3.11」</summary>
-            
 
-<div class="ans">
-
-<p>要么没装，要么装成了 Intel 版。从 python.org 重新下载 universal2 安装包；装完在终端跑一次 <code>python3.11 --version</code> 确认，再双击「安装模型.command」。</p></div>
-
-          </details>
-
-          
-
-<details>
-            
-
-<summary>下载到一半失败了怎么办</summary>
-            
-
-<div class="ans">
-
-<p>脚本不会覆盖已有环境，中断后现场会保留。换一个能稳定访问 Hugging Face 的网络，重新双击「安装模型.command」即可；也可以先用 <code>--environment</code> 指定一个全新的空目录重装。脚本不会自动切换到未审核的镜像站。</p></div>
-
-          </details>
-
-          
-
-<details>
-            
-
-<summary>我只下载了模型文件，为什么还是用不了</summary>
-            
-
-<div class="ans">
-
-<p>权重和运行环境是两件事。只把 <code>.safetensors</code> 放进目录不会有 MLX 依赖，必须由这个安装包装好 <code>.venv</code>。两者都齐了，Phos 才能启动本地推理服务。</p></div>
-
-          </details>
-
-          
-
-<details>
-            
-
-<summary>装好后能移动或复制那个文件夹吗</summary>
-            
-
-<div class="ans">
-
-<p>不建议移动。里面的 <code>.venv</code> 记录的是绝对解释器路径，换位置会失效。要换地方，用 <code>--environment</code> 重新装一份。</p></div>
-
-          </details>
-
-          
-
-<details>
-            
-
-<summary>AI 会把我的照片传到哪里吗</summary>
-            
-
-<div class="ans">
-
-<p>不会。推理在本机的 <code>127.0.0.1</code> 上跑，照片不离开这台 Mac。只有安装阶段下载模型和依赖时需要联网。</p></div>
-
-          </details>
-
-        </div>
-
-        
-
-<p class="sum" style="margin-top:24px">底模是 <a href="https://huggingface.co/mlx-community/Qwen3-VL-4B-Instruct-4bit" target="_blank" rel="noopener"><code>mlx-community/Qwen3-VL-4B-Instruct-4bit</code></a>（固定版本 <code>2fd8dacb…</code>；国内镜像见 <a href="https://hf-mirror.com/mlx-community/Qwen3-VL-4B-Instruct-4bit" target="_blank" rel="noopener">hf-mirror</a>），许可为 <strong>Apache-2.0</strong>，来源说明与许可原文随应用内 <code>PhotoAIAdapter</code> 目录一并保留。Phos 的学术用途声明不改变第三方模型的授权条件。</p>
-      </div>
 
       
 
@@ -525,10 +523,10 @@ python3.11 install_model.py</code></pre>
 </div>
 </footer>
 
-<script src="assets/brand-v2.js?v=520studio" defer=""></script>
-<script src="assets/navigation.js?v=520studio" defer=""></script>
-<script src="assets/motion.js?v=520studio" defer=""></script>
-<script>if(new URLSearchParams(location.search).has('audit')){const s=document.createElement('script');s.src='assets/audit-metrics.js?v=520studio';s.defer=true;document.body.append(s);}</script>
+<script src="assets/brand-v2.js?v=530models" defer=""></script>
+<script src="assets/navigation.js?v=530models" defer=""></script>
+<script src="assets/motion.js?v=530models" defer=""></script>
+<script>if(new URLSearchParams(location.search).has('audit')){const s=document.createElement('script');s.src='assets/audit-metrics.js?v=530models';s.defer=true;document.body.append(s);}</script>
 
 
-<script src="assets/kinetic-light.js?v=520studio" defer></script></body></html>
+<script src="assets/kinetic-light.js?v=530models" defer></script></body></html>

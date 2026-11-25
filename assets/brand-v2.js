@@ -41,7 +41,7 @@
     ['index.html#motion-settings',text('网页动效设置','Website motion settings'),text('动画 减少动态 关闭 开启','Animation reduce disable enable')],
     ['index.html#ai-demos',text('端侧 AI 实测对比','On-device AI comparisons'),text('参考图调色 对色 单目深度 物理散景 无痕消除 LaMa PatchMatch 对比','Reference Color Match monocular depth optical bokeh Content-Aware Remove LaMa PatchMatch before after')],
     ['index.html#compare',text('Phos vs Lightroom 对比','Phos vs Lightroom comparison'),text('Lightroom Classic 对比 差异 订阅 价格 XMP 预设 免费替代','Lightroom Classic comparison differences subscription pricing XMP presets free alternative')],
-    ['changelog.html',text('更新日志（v4.0 – v4.7.1）','Changelog (v4.0 – v4.7.1)'),text('版本 演进 历史 更新 记录 4.7.1 4.7.0 4.6.0 4.5.0','Release history versions updates notes 4.7.1 4.7.0 4.6.0 4.5.0')],
+    ['changelog.html',text('更新日志（v4.0 – v4.7.2）','Changelog (v4.0 – v4.7.2)'),text('版本 演进 历史 更新 记录 4.7.2 4.7.1 4.7.0 4.6.0 4.5.0','Release history versions updates notes 4.7.2 4.7.1 4.7.0 4.6.0 4.5.0')],
     ['index.html#faq',text('常见问题','Frequently asked questions'),text('价格 隐私 格式 Lightroom 对比 相机 系统要求 AI 模型','Price privacy formats Lightroom comparison camera requirements AI models')]
   ];
   const command=attachDialog(document.createElement('dialog'));command.className='command-dialog';command.setAttribute('aria-label',text('搜索 Phos 功能与帮助','Search Phos features and help'));

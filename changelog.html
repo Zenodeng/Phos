@@ -6,9 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phos — 更新日志与版本演进</title>
 
-<meta name="description" content="查看 Phos macOS RAW 照片编辑器从 4.0 工作区重构到 4.7.1 的完整版本更新日志：16-bit 线性浮点 Metal/EDR、复合布尔蒙版、零 Python 端侧 AI、单目深度物理散景与双向 XMP。">
+<meta name="description" content="查看 Phos macOS RAW 照片编辑器从 4.0 工作区重构到 4.7.2 的完整版本更新日志：16-bit 线性浮点 Metal/EDR、复合布尔蒙版、零 Python 端侧 AI、单目深度物理散景与双向 XMP。">
 
-<meta name="keywords" content="Phos 更新日志, Phos Changelog, Phos 4.7.1, macOS RAW 编辑器更新, Metal 16-bit, 端侧 AI 修图">
+<meta name="keywords" content="Phos 更新日志, Phos Changelog, Phos 4.7.2, macOS RAW 编辑器更新, Metal 16-bit, 端侧 AI 修图">
 
 <link rel="canonical" href="https://zenodeng.com/changelog.html">
 
@@ -30,7 +30,7 @@
 
 <meta property="og:title" content="Phos — 更新日志与版本演进">
 
-<meta property="og:description" content="Phos 从 4.0 到 4.7.1 的完整版本演进：16-bit Metal/EDR 管线、OKLCH 点颜色、复合布尔蒙版、零 Python 端侧 AI 与 5 槽位 Core ML 模型中心。">
+<meta property="og:description" content="Phos 从 4.0 到 4.7.2 的完整版本演进：16-bit Metal/EDR 管线、OKLCH 点颜色、复合布尔蒙版、零 Python 端侧 AI 与 5 槽位 Core ML 模型中心。">
 
 <meta property="og:url" content="https://zenodeng.com/changelog.html">
 
@@ -41,13 +41,13 @@
 
 <link rel="icon" href="images/phos-icon-dark.png" type="image/png">
 
-<link rel="stylesheet" href="assets/system.css?v=530models">
+<link rel="stylesheet" href="assets/system.css?v=472rel">
 
-<link rel="stylesheet" href="assets/motion.css?v=530models"><link rel="stylesheet" href="assets/p0.css?v=530models"><link rel="stylesheet" href="assets/kinetic-light.css?v=530models"></head>
+<link rel="stylesheet" href="assets/motion.css?v=472rel"><link rel="stylesheet" href="assets/p0.css?v=472rel"><link rel="stylesheet" href="assets/kinetic-light.css?v=472rel"></head>
 
 <body class="changelog-page"><a class="skip" href="#main">跳到正文</a>
 
-<nav class="site-nav" aria-label="主导航"><a class="wordmark" href="./" aria-label="Phos"><span class="wordmark-text" translate="no">Phos</span><span class="nav-ver" translate="no">4.7.1</span></a>
+<nav class="site-nav" aria-label="主导航"><a class="wordmark" href="./" aria-label="Phos"><span class="wordmark-text" translate="no">Phos</span><span class="nav-ver" translate="no">4.7.2</span></a>
 <div class="nav-links"><a href="index.html#workspace">工作区</a><a href="features.html">完整功能</a><a href="index.html#studio">试着修图</a><a href="help.html">安装帮助</a></div>
 
 <div class="nav-actions"><button class="command-trigger" type="button" aria-haspopup="dialog"><span>搜索</span><kbd>⌘ K</kbd></button><a class="language" href="en/changelog.html" aria-label="Switch to English">EN</a><a class="nav-download" href="download/Phos-macOS-apple-silicon.dmg" download="">下载 Mac 版</a><button class="menu-toggle" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="mobile-menu" hidden="">菜单<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 6h14M3 14h14"></path></svg></button></div>
@@ -70,15 +70,29 @@
 
 <h1>每一次迭代，<br>都落在真实修图上。</h1>
 
-<p>记录 Phos 从 4.0 工作区重构到 4.7.1 端侧 AI 与 Metal 16-bit 管线的真实改动，公开可追溯。</p><a class="button primary" href="download/Phos-macOS-apple-silicon.dmg" download="">下载 v4.7.1<span class="download-icon" aria-hidden="true"><svg class="download-arrow" viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true"><path d="M12 4v16m-6-6 6 6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a><p class="help-back"><a class="text-link" href="help.html#download-help">下载渠道与 SHA256 校验</a></p></header>
+<p>记录 Phos 从 4.0 工作区重构到 4.7.2 端侧 AI 与 Metal 16-bit 管线的真实改动，公开可追溯。</p><a class="button primary" href="download/Phos-macOS-apple-silicon.dmg" download="">下载 v4.7.2<span class="download-icon" aria-hidden="true"><svg class="download-arrow" viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true"><path d="M12 4v16m-6-6 6 6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a><p class="help-back"><a class="text-link" href="help.html#download-help">下载渠道与 SHA256 校验</a></p></header>
 
 <div class="changelog-main">
 
 <div class="changelog-list">
 
-<article id="v4.7.1" class="release-card is-latest">
+<article id="v4.7.2" class="release-card is-latest">
 <div class="release-head">
-<div class="release-title"><h2>v4.7.1</h2><span class="release-badge">当前最新 · 热修复</span></div>
+<div class="release-title"><h2>v4.7.2</h2><span class="release-badge">当前最新 · 修复与端侧模型升级</span></div>
+<div class="release-meta"><time datetime="2026-11-25">2026-11-25</time><a href="https://github.com/Zenodeng/Phos/releases/tag/v4.7.2" target="_blank" rel="noopener">GitHub Release ↗</a></div>
+</div>
+<p class="release-summary">彻底修复 macOS 蒙版选区预览满屏变红与旋转径向蒙版几何镜像问题，全面支持 <code>MLMultiArray</code> Core ML 分块推理，并补齐全部 5 槽位端侧模型一键安装脚本。</p>
+<ul class="release-items">
+<li><strong>修复蒙版选区红膜满屏覆盖</strong>：将蒙版叠加预览改为在 Core Image <code>Engine.maskOverlayImage</code> 中直接输出真实预乘 Alpha 红膜，彻底绕开 macOS <code>NSHostingView</code> 丢弃 SwiftUI <code>.mask(.luminanceToAlpha())</code> 导致的整图实心变红问题。</li>
+<li><strong>修复旋转径向蒙版镜像与手柄坐标</strong>：对齐径向蒙版渲染内核与画布引导线的旋转角符号，修正 <code>rxD</code> / <code>ryD</code> 宽高轴手柄互换；同步移除对线性渐变与亮度范围无效的「蒙版羽化」滑杆。</li>
+<li><strong>Core ML 引擎原生支持 <code>MLMultiArray</code> 模型</strong>：升级 <code>CoreMLSkyEngine</code>（U²-Net 天空分割）与 <code>CoreMLImageModelManager</code>（SCUNet 降噪 / RealESRGAN 2x 超分），同时支持 Image 与 <code>MLMultiArray</code>（NCHW/NHWC、FP16/FP32）模型，具备动态 tile 尺寸与 Hann 窗边缘融合。</li>
+<li><strong>5 槽位端侧模型全量一键脚本</strong>：新增天空分割、神经网络降噪、2x 超分与全量安装脚本（<code>install_*_model.sh</code>），全部 5 个槽位均可在应用内模型中心一键复制命令，并原生支持 <code>HF_ENDPOINT</code> 国内镜像加速。</li>
+</ul>
+</article>
+
+<article id="v4.7.1" class="release-card">
+<div class="release-head">
+<div class="release-title"><h2>v4.7.1</h2><span class="release-badge is-muted">热修复</span></div>
 <div class="release-meta"><time datetime="2026-11-24">2026-11-24</time><a href="https://github.com/Zenodeng/Phos/releases/tag/v4.7.1" target="_blank" rel="noopener">GitHub Release ↗</a></div>
 </div>
 <p class="release-summary">修复蒙版布尔子蒙版菜单在 macOS 26/27 下的符号名退化与右侧检视器左边界裁切问题。</p>
@@ -189,7 +203,7 @@
 <li><a href="help.html#download-help">下载渠道与校验</a></li>
 <li><a href="changelog.html" aria-current="page">更新日志</a></li></ul>
 
-<p>Phos 4.7.1 · 8.78 MB</p>
+<p>Phos 4.7.2 · 8.78 MB</p>
 <p>macOS 26+ · Apple 芯片</p></div>
 
 <div>
@@ -226,7 +240,7 @@
 </div>
 </footer>
 
-<script src="assets/brand-v2.js?v=530models" defer=""></script>
-<script src="assets/navigation.js?v=530models" defer=""></script>
-<script src="assets/motion.js?v=530models" defer=""></script>
-<script src="assets/kinetic-light.js?v=530models" defer=""></script></body></html>
+<script src="assets/brand-v2.js?v=472rel" defer=""></script>
+<script src="assets/navigation.js?v=472rel" defer=""></script>
+<script src="assets/motion.js?v=472rel" defer=""></script>
+<script src="assets/kinetic-light.js?v=472rel" defer=""></script></body></html>

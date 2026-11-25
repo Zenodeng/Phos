@@ -1,8 +1,8 @@
 {
-  "version": "4.7.1",
-  "released": "2026-11-24",
+  "version": "4.7.2",
+  "released": "2026-11-25",
   "page": "https://zenodeng.com/help#download-help",
   "url": "https://zenodeng.com/download/Phos-macOS-apple-silicon.dmg",
   "minOS": "26.0",
-  "notes": "4.7.1：修复蒙版「布尔子蒙版」图标按钮在 macOS 26/27 下退化为符号名文本并导致右侧检视器整列左边缘被裁切的问题，清理双重下拉箭头并补齐 1,017 条双语翻译；同时包含 4.7 全部 P3 端侧 AI 升级（参考图全可编辑参数对色、任意 RAW 单目深度物理散景、RAW 域降噪与导出 2x 超分、智能挑片/双语搜图与 5 槽位模型中心）。"
+  "notes": "4.7.2：修复 macOS 蒙版选区预览满屏变红及旋转径向蒙版渲染镜像与手柄坐标互换问题，移除线性渐变/亮度范围无效羽化滑杆；升级 Core ML 天空/降噪/超分引擎全面兼容 MLMultiArray 分块推理，并在模型中心补齐全部 5 个槽位的一键部署脚本（支持 HF_ENDPOINT 镜像）。"
 }

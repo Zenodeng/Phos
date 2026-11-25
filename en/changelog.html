@@ -6,9 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phos — Changelog &amp; Release History</title>
 
-<meta name="description" content="Release history for Phos macOS RAW photo editor from 4.0 workspace redesign to 4.7.1: 16-bit extended linear Metal/EDR pipeline, composite boolean masks, zero-Python on-device AI, monocular depth optical bokeh and bidirectional XMP.">
+<meta name="description" content="Release history for Phos macOS RAW photo editor from 4.0 workspace redesign to 4.7.2: 16-bit extended linear Metal/EDR pipeline, composite boolean masks, zero-Python on-device AI, monocular depth optical bokeh and bidirectional XMP.">
 
-<meta name="keywords" content="Phos changelog, Phos release notes, Phos 4.7.1, macOS RAW editor updates, Metal 16-bit, on-device AI photo editing">
+<meta name="keywords" content="Phos changelog, Phos release notes, Phos 4.7.2, macOS RAW editor updates, Metal 16-bit, on-device AI photo editing">
 
 <link rel="canonical" href="https://zenodeng.com/en/changelog.html">
 
@@ -30,7 +30,7 @@
 
 <meta property="og:title" content="Phos — Changelog &amp; Release History">
 
-<meta property="og:description" content="Every Phos milestone from 4.0 to 4.7.1: 16-bit Metal/EDR pipeline, OKLCH Point Color, composite boolean masks, zero-Python on-device AI and 5-slot Core ML Model Hub.">
+<meta property="og:description" content="Every Phos milestone from 4.0 to 4.7.2: 16-bit Metal/EDR pipeline, OKLCH Point Color, composite boolean masks, zero-Python on-device AI and 5-slot Core ML Model Hub.">
 
 <meta property="og:url" content="https://zenodeng.com/en/changelog.html">
 
@@ -41,13 +41,13 @@
 
 <link rel="icon" href="../images/phos-icon-dark.png" type="image/png">
 
-<link rel="stylesheet" href="../assets/system.css?v=530models">
+<link rel="stylesheet" href="../assets/system.css?v=472rel">
 
-<link rel="stylesheet" href="../assets/motion.css?v=530models"><link rel="stylesheet" href="../assets/p0.css?v=530models"><link rel="stylesheet" href="../assets/kinetic-light.css?v=530models"></head>
+<link rel="stylesheet" href="../assets/motion.css?v=472rel"><link rel="stylesheet" href="../assets/p0.css?v=472rel"><link rel="stylesheet" href="../assets/kinetic-light.css?v=472rel"></head>
 
 <body class="changelog-page"><a class="skip" href="#main">Skip to content</a>
 
-<nav class="site-nav" aria-label="Main navigation"><a class="wordmark" href="./" aria-label="Phos"><span class="wordmark-text" translate="no">Phos</span><span class="nav-ver" translate="no">4.7.1</span></a>
+<nav class="site-nav" aria-label="Main navigation"><a class="wordmark" href="./" aria-label="Phos"><span class="wordmark-text" translate="no">Phos</span><span class="nav-ver" translate="no">4.7.2</span></a>
 <div class="nav-links"><a href="index.html#workspace">Workspace</a><a href="features.html">Features</a><a href="index.html#studio">Try editing</a><a href="help.html">Help</a></div>
 
 <div class="nav-actions"><button class="command-trigger" type="button" aria-haspopup="dialog"><span>Search</span><kbd>⌘ K</kbd></button><a class="language" href="../changelog.html" aria-label="切换到简体中文">中文</a><a class="nav-download" href="../download/Phos-macOS-apple-silicon.dmg" download="">Download Mac</a><button class="menu-toggle" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="mobile-menu" hidden="">Menu<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 6h14M3 14h14"></path></svg></button></div>
@@ -70,15 +70,29 @@
 
 <h1>Every release,<br>grounded in real editing.</h1>
 
-<p>A public, verifiable history of Phos from the 4.0 workspace rebuild through 4.7.1’s 16-bit Metal pipeline and zero-Python on-device AI.</p><a class="button primary" href="../download/Phos-macOS-apple-silicon.dmg" download="">Download v4.7.1<span class="download-icon" aria-hidden="true"><svg class="download-arrow" viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true"><path d="M12 4v16m-6-6 6 6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a><p class="help-back"><a class="text-link" href="help.html#download-help">Mirrors &amp; SHA256 verification</a></p></header>
+<p>A public, verifiable history of Phos from the 4.0 workspace rebuild through 4.7.2’s 16-bit Metal pipeline and zero-Python on-device AI.</p><a class="button primary" href="../download/Phos-macOS-apple-silicon.dmg" download="">Download v4.7.2<span class="download-icon" aria-hidden="true"><svg class="download-arrow" viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true"><path d="M12 4v16m-6-6 6 6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a><p class="help-back"><a class="text-link" href="help.html#download-help">Mirrors &amp; SHA256 verification</a></p></header>
 
 <div class="changelog-main">
 
 <div class="changelog-list">
 
-<article id="v4.7.1" class="release-card is-latest">
+<article id="v4.7.2" class="release-card is-latest">
 <div class="release-head">
-<div class="release-title"><h2>v4.7.1</h2><span class="release-badge">Latest · Hotfix</span></div>
+<div class="release-title"><h2>v4.7.2</h2><span class="release-badge">Latest · Mask Fixes &amp; Core ML Upgrade</span></div>
+<div class="release-meta"><time datetime="2026-11-25">2026-11-25</time><a href="https://github.com/Zenodeng/Phos/releases/tag/v4.7.2" target="_blank" rel="noopener">GitHub Release ↗</a></div>
+</div>
+<p class="release-summary">Fixed macOS mask selection overlay solid-red flooding and rotated radial mask mirroring, added native <code>MLMultiArray</code> Core ML tiled inference, and shipped one-click installers for all 5 Core ML slots.</p>
+<ul class="release-items">
+<li><strong>Fixed solid-red mask overlay flood on macOS</strong>: moved mask overlay tinting into Core Image <code>Engine.maskOverlayImage</code> with true premultiplied alpha, eliminating the macOS <code>NSHostingView</code> failure when applying SwiftUI <code>.mask(.luminanceToAlpha())</code>.</li>
+<li><strong>Fixed rotated radial gradient mirroring &amp; handle axes</strong>: matched rotation sign between Metal/Core Image rendering and canvas overlay guides, fixed swapped <code>rxD</code>/<code>ryD</code> handles, and removed the inert Mask Feather slider for Linear Gradient and Luminance Range masks.</li>
+<li><strong>Native <code>MLMultiArray</code> Core ML inference</strong>: upgraded <code>CoreMLSkyEngine</code> (U²-Net sky) and <code>CoreMLImageModelManager</code> (SCUNet denoise / RealESRGAN 2x super-res) to support both Image and <code>MLMultiArray</code> (NCHW/NHWC, FP16/FP32) models with dynamic tile sizes and Hann-window blending.</li>
+<li><strong>One-click installers for all 5 Core ML slots</strong>: added sky, denoise, 2x super-resolution and all-in-one scripts (<code>install_*_model.sh</code>) wired directly into the in-app Model Hub, all supporting <code>HF_ENDPOINT</code> mirrors.</li>
+</ul>
+</article>
+
+<article id="v4.7.1" class="release-card">
+<div class="release-head">
+<div class="release-title"><h2>v4.7.1</h2><span class="release-badge is-muted">Hotfix</span></div>
 <div class="release-meta"><time datetime="2026-11-24">2026-11-24</time><a href="https://github.com/Zenodeng/Phos/releases/tag/v4.7.1" target="_blank" rel="noopener">GitHub Release ↗</a></div>
 </div>
 <p class="release-summary">Fixed macOS 26/27 icon-menu text fallback in Boolean Sub-Masks and hardened right-inspector leading-edge layout.</p>
@@ -189,7 +203,7 @@
 <li><a href="help.html#download-help">Mirrors and checksums</a></li>
 <li><a href="changelog.html" aria-current="page">Changelog</a></li></ul>
 
-<p>Phos 4.7.1 · 8.78 MB</p>
+<p>Phos 4.7.2 · 8.78 MB</p>
 <p>macOS 26+ · Apple silicon</p></div>
 
 <div>
@@ -226,7 +240,7 @@
 </div>
 </footer>
 
-<script src="../assets/brand-v2.js?v=530models" defer=""></script>
-<script src="../assets/navigation.js?v=530models" defer=""></script>
-<script src="../assets/motion.js?v=530models" defer=""></script>
-<script src="../assets/kinetic-light.js?v=530models" defer=""></script></body></html>
+<script src="../assets/brand-v2.js?v=472rel" defer=""></script>
+<script src="../assets/navigation.js?v=472rel" defer=""></script>
+<script src="../assets/motion.js?v=472rel" defer=""></script>
+<script src="../assets/kinetic-light.js?v=472rel" defer=""></script></body></html>

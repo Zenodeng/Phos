@@ -172,11 +172,11 @@
 }
 </script>
 
-<link rel="stylesheet" href="../assets/home-layout.css?v=472rel">
+<link rel="stylesheet" href="../assets/home-layout.css?v=472motion">
 
-<link rel="stylesheet" href="../assets/system.css?v=472rel">
+<link rel="stylesheet" href="../assets/system.css?v=472motion">
 
-<link rel="stylesheet" href="../assets/motion.css?v=472rel"><link rel="stylesheet" href="../assets/p0.css?v=472rel"><link rel="stylesheet" href="../assets/editor-demo.css?v=472rel"><link rel="stylesheet" href="../assets/seam-light.css?v=472rel"><link rel="stylesheet" href="../assets/kinetic-light.css?v=472rel"></head>
+<link rel="stylesheet" href="../assets/motion.css?v=472motion"><link rel="stylesheet" href="../assets/p0.css?v=472motion"><link rel="stylesheet" href="../assets/editor-demo.css?v=472motion"><link rel="stylesheet" href="../assets/seam-light.css?v=472motion"><link rel="stylesheet" href="../assets/kinetic-light.css?v=472motion"></head>
 
 <body><a class="skip" href="#main">Skip to content</a>
 
@@ -210,7 +210,7 @@
 
 <figure class="hero-photo-story page-width">
 <div class="hero-stage-scrub">
-<div class="photo-comparison signature-product hero-compare" data-compare="hero" data-split="48" data-seam data-edge="all" data-tone="light" data-trigger="enter" data-strength="default">
+<div class="photo-comparison signature-product hero-compare" data-compare="hero" data-split="48" data-scroll-scrub="hero" data-scrub-from="48" data-scrub-to="16" data-seam data-edge="all" data-tone="light" data-trigger="enter" data-strength="default">
 <div class="compare-viewport"><img class="compare-after" src="../images/photo-edits/braies-fuji-after-1600.webp?v=472rel" srcset="../images/photo-edits/braies-fuji-after-800.webp?v=472rel 1024w, ../images/photo-edits/braies-fuji-after-1600.webp?v=472rel 2048w" sizes="(max-width: 760px) 100vw, 1280px" width="2048" height="1280" alt="An autumn lake and wooden boats edited with Phos film and tone controls" fetchpriority="high" decoding="async">
 <div class="compare-before"><img src="../images/photo-edits/braies-fuji-before-1600.webp?v=472rel" srcset="../images/photo-edits/braies-fuji-before-800.webp?v=472rel 1024w, ../images/photo-edits/braies-fuji-before-1600.webp?v=472rel 2048w" sizes="(max-width: 760px) 100vw, 1280px" width="2048" height="1280" alt="" decoding="async"></div>
 <div class="compare-labels" aria-hidden="true"><span>Before</span><span>Edited in Phos</span></div>
@@ -230,11 +230,11 @@
 <div class="spec-card" data-apple-reveal data-delay="0"><span class="spec-val" data-count-to="16" data-count-suffix="-bit">16-bit</span><p class="spec-label"><strong>Linear Metal Pipeline</strong>20 GPU compute kernels with live EDR HDR preview</p></div>
 <div class="spec-card" data-apple-reveal data-delay="1"><span class="spec-val" data-count-to="303">303</span><p class="spec-label"><strong>Film CLUTs &amp; XMP</strong>Import .cube LUTs and Lightroom .xmp presets</p></div>
 <div class="spec-card" data-apple-reveal data-delay="2"><span class="spec-val" data-count-to="8.8" data-count-decimals="1" data-count-suffix=" MB">8.8 MB</span><p class="spec-label"><strong>Pure Swift / AppKit</strong>Instant cold launch, free &amp; open source forever</p></div>
-<div class="spec-card" data-apple-reveal data-delay="3"><span class="spec-val">0</span><p class="spec-label"><strong>Zero Python · Zero Cloud</strong>Open any folder; sidecars never modify originals</p></div>
+<div class="spec-card" data-apple-reveal data-delay="3"><span class="spec-val" data-zero-pulse>0</span><p class="spec-label"><strong>Zero Python · Zero Cloud</strong>Open any folder; sidecars never modify originals</p></div>
 </div>
 </section>
 
-<section id="workspace" class="workspace-showcase editorial-section">
+<section id="workspace" class="workspace-showcase editorial-section" data-active-mode="a">
 <div id="capabilities" class="page-width">
 <div id="refine" class="section-heading is-centered">
 <span class="section-kicker">Native Darkroom Workspace</span>
@@ -243,12 +243,19 @@
 </div>
 
 <div class="workspace-slot">
+<div class="workspace-sticky-runway">
+<div class="workspace-sticky-pin">
+<div class="workspace-controls-bar">
 <div class="mode-picker" role="group" aria-label="Workspace layout"><button type="button" data-workspace="a" aria-pressed="true">A Immersive</button><button type="button" data-workspace="b" aria-pressed="false">B Filmstrip</button></div>
-<figure class="workspace-figure" data-apple-stage>
-<div class="workspace-image" data-seam data-edge="all" data-tone="light" data-trigger="enter" data-strength="quiet"><img src="../images/native-20261031/workspace-a.webp?v=472rel" width="2400" height="1498" alt="Phos v4.7.2 Immersive dark workspace" class="workspace-shot active" loading="lazy" decoding="async"><img src="../images/native-20261031/workspace-b.webp?v=472rel" width="2400" height="1498" alt="Phos v4.7.2 Filmstrip dark workspace" class="workspace-shot" aria-hidden="true" loading="lazy" decoding="async"></div>
-<button class="image-zoom" type="button" data-zoom="workspace-real">Enlarge workspace</button>
+<div class="workspace-scroll-rail" aria-hidden="true"><span class="ws-rail-step" data-step="a">A</span><span class="ws-rail-track"><i class="ws-rail-fill"></i></span><span class="ws-rail-step" data-step="b">B</span></div>
+</div>
+<figure class="workspace-figure">
+<div class="workspace-image" data-seam data-edge="all" data-tone="light" data-trigger="enter" data-strength="quiet"><img src="../images/native-20261031/workspace-a.webp?v=472rel" width="2400" height="1498" alt="Phos v4.7.2 Immersive dark workspace" class="workspace-shot active" loading="lazy" decoding="async"><img src="../images/native-20261031/workspace-b.webp?v=472rel" width="2400" height="1498" alt="Phos v4.7.2 Filmstrip dark workspace" class="workspace-shot" aria-hidden="true" loading="lazy" decoding="async"><button class="image-zoom" type="button" data-zoom="workspace-real">Enlarge workspace</button></div>
+<div class="workspace-callouts" aria-hidden="true"><div class="ws-phase-group" data-ws-phase="a"><span class="ws-chip"><i></i>16-bit Linear Metal · Live EDR</span><span class="ws-chip"><i></i>Liquid Glass Panels · Full Canvas</span></div><div class="ws-phase-group" data-ws-phase="b"><span class="ws-chip"><i></i>Bottom Filmstrip · Rapid Culling</span><span class="ws-chip"><i></i>Grid G · Compare C · Multi N · Ref ⇧R</span></div></div>
 <figcaption id="workspaceCaption" aria-live="polite" data-a="A Immersive · Your photograph fills the canvas between floating Liquid Glass controls." data-b="B Filmstrip · Full-frame safe canvas paired with bottom filmstrip, grid, compare and survey views.">A Immersive · Your photograph fills the canvas between floating Liquid Glass controls.</figcaption>
 </figure>
+</div>
+</div>
 </div>
 
 <div class="refine-bottom">
@@ -273,7 +280,7 @@
 <p>Pick from 303 built-in film HALD CLUTs, dial in OKLCH Point Color, or reverse-solve any reference still into editable sliders. Imports .cube LUTs and Lightroom .xmp presets up to 200%.</p>
 <ul class="bento-points"><li>303 Film CLUTs</li><li>OKLCH Point Color</li><li>AgX Rolloff</li><li>LR .xmp Presets</li></ul>
 </div>
-<div class="bento-media">
+<div class="bento-media" data-parallax>
 <img src="../images/photo-edits/landro-ektar-after-1600.webp?v=472rel" srcset="../images/photo-edits/landro-ektar-after-800.webp?v=472rel 1024w, ../images/photo-edits/landro-ektar-after-1600.webp?v=472rel 2048w" sizes="(max-width: 1100px) 100vw, 720px" width="2048" height="1536" alt="Dolomites mountain lake edited with Kodak Ektar 100 film recipe" loading="lazy" decoding="async">
 </div>
 <div class="bento-foot"><span>Kodak Ektar 100 · 65% intensity</span><a class="text-link" href="#gallery">Compare three film looks ↗</a></div>
@@ -285,7 +292,7 @@
 <h3>Finished, ready for what’s next.</h3>
 <p>Export a single frame or a bounded-concurrent batch with Gain-Map HDR JPEG, 10-bit PQ HEIC, 16-bit Display P3 TIFF, 2x Super Resolution, GPS stripping and watermarks.</p>
 </div>
-<div class="bento-media is-tall">
+<div class="bento-media is-tall" data-parallax>
 <img src="../images/native-20261031/en-export.webp?v=472rel" width="928" height="1318" alt="Phos v4.7.2 English dark export sheet showing Display P3, HDR, metadata privacy and watermark options" loading="lazy" decoding="async">
 <button class="image-zoom" type="button" data-zoom="export-real">Enlarge</button>
 </div>
@@ -298,7 +305,7 @@
 <h3>Describe the mood. Preview first.</h3>
 <p>The pure-Swift Native AI workbench runs out of the box: combine natural-language intent with OKLab and Vision semantics to generate editable sliders and masks before applying.</p>
 </div>
-<div class="bento-media">
+<div class="bento-media" data-parallax>
 <img src="../images/ai-preview.webp?v=472rel" width="1560" height="1240" alt="Phos v4.7.2 Native AI workbench live side-by-side preview and parameter plan" loading="lazy" decoding="async">
 </div>
 <div class="bento-foot"><span>100% offline · Never leaves your Mac</span><a class="text-link" href="help.html#ai-model">Model Setup &amp; Deployment Guide ↗</a></div>
@@ -311,7 +318,7 @@
 <p>Combine Add, Subtract and Intersect sub-masks with 8-part portrait &amp; sky segmentation, Guided Filter edge refinement, local curves and Point Color — accelerated on demand via the 5-slot Core ML Hub.</p>
 <ul class="bento-points"><li>Add / Subtract / Intersect</li><li>8-Part Portrait AI</li><li>LaMa Remove</li><li>Monocular Depth Bokeh</li></ul>
 </div>
-<div class="bento-media">
+<div class="bento-media" data-parallax>
 <img src="../images/06-linear-gradient-mask.webp?v=472rel" width="2400" height="1498" alt="Phos v4.7.2 linear gradient mask controls and composite boolean sub-masks panel" loading="lazy" decoding="async">
 </div>
 <div class="bento-foot"><span>Live v4.7.2 dark Retina capture</span><a class="text-link" href="features.html#masks">Explore masks &amp; AI ↗</a></div>
@@ -589,7 +596,7 @@
 
 <h3>Content-Aware Remove</h3><span class="ai-demo-tag">LaMa · Core ML</span></div>
 
-<div class="photo-comparison" data-compare="ai-remove" data-split="50">
+<div class="photo-comparison" data-compare="ai-remove" data-split="50" data-scroll-scrub="ai" data-scrub-index="0" data-scrub-from="76" data-scrub-to="20">
 
 <div class="compare-viewport"><img class="compare-after" src="../images/ai-demos/remove-after.webp?v=472rel" width="1440" height="900" alt="Alpine lake mirror after Phos on-device LaMa removes the tourist boat, distant boat and moored wooden boat" loading="lazy" decoding="async">
 
@@ -615,7 +622,7 @@
 
 <h3>Reference Color Match</h3><span class="ai-demo-tag">Zero-Model · Editable</span></div>
 
-<div class="photo-comparison" data-compare="ai-match" data-split="50">
+<div class="photo-comparison" data-compare="ai-match" data-split="50" data-scroll-scrub="ai" data-scrub-index="1" data-scrub-from="76" data-scrub-to="20">
 
 <div class="compare-viewport"><img class="compare-after" src="../images/ai-demos/colormatch-after.webp?v=472rel" width="2048" height="1280" alt="Overcast Dolomites lake matched to a warm golden film still using Phos Reference Color Match" loading="lazy" decoding="async">
 
@@ -641,7 +648,7 @@
 
 <h3>Monocular Depth Bokeh</h3><span class="ai-demo-tag">Any RAW · 7 Blades</span></div>
 
-<div class="photo-comparison" data-compare="ai-bokeh" data-split="50">
+<div class="photo-comparison" data-compare="ai-bokeh" data-split="50" data-scroll-scrub="ai" data-scrub-index="2" data-scrub-from="76" data-scrub-to="20">
 
 <div class="compare-viewport"><img class="compare-after" src="../images/ai-demos/bokeh-after.webp?v=472rel" width="2048" height="1280" alt="Phos monocular depth estimation focusing on the foreground wooden boats while softly defocusing distant Dolomites peaks" loading="lazy" decoding="async">
 
@@ -679,7 +686,7 @@
 
 <figure>
 
-<div class="photo-comparison " data-compare="look-0" data-split="0" data-seam data-edge="all" data-tone="light" data-trigger="enter" data-strength="quiet">
+<div class="photo-comparison " data-compare="look-0" data-split="0" data-scroll-scrub="look" data-scrub-index="0" data-scrub-from="68" data-scrub-to="18" data-seam data-edge="all" data-tone="light" data-trigger="enter" data-strength="quiet">
 
 <div class="compare-viewport"><img class="compare-after" src="../images/photo-edits/landro-ektar-after-1600.webp?v=472rel" srcset="../images/photo-edits/landro-ektar-after-800.webp?v=472rel 1024w, ../images/photo-edits/landro-ektar-after-1600.webp?v=472rel 2048w" sizes="(max-width: 760px) 100vw, 400px" width="2048" height="1536" alt="A little more daylight. film edit" loading="lazy" decoding="async">
 
@@ -707,7 +714,7 @@
 
 <figure>
 
-<div class="photo-comparison " data-compare="look-1" data-split="0">
+<div class="photo-comparison " data-compare="look-1" data-split="0" data-scroll-scrub="look" data-scrub-index="1" data-scrub-from="68" data-scrub-to="18">
 
 <div class="compare-viewport"><img class="compare-after" src="../images/photo-edits/braies-fuji-after-1600.webp?v=472rel" srcset="../images/photo-edits/braies-fuji-after-800.webp?v=472rel 1024w, ../images/photo-edits/braies-fuji-after-1600.webp?v=472rel 2048w" sizes="(max-width: 760px) 100vw, 400px" width="2048" height="1280" alt="Soft colour, even on grey days. film edit" loading="lazy" decoding="async">
 
@@ -735,7 +742,7 @@
 
 <figure>
 
-<div class="photo-comparison " data-compare="look-2" data-split="0">
+<div class="photo-comparison " data-compare="look-2" data-split="0" data-scroll-scrub="look" data-scrub-index="2" data-scrub-from="68" data-scrub-to="18">
 
 <div class="compare-viewport"><img class="compare-after" src="../images/photo-edits/landro-tmax-after-1600.webp?v=472rel" srcset="../images/photo-edits/landro-tmax-after-800.webp?v=472rel 1024w, ../images/photo-edits/landro-tmax-after-1600.webp?v=472rel 2048w" sizes="(max-width: 760px) 100vw, 400px" width="2048" height="1536" alt="Let light and shape speak. film edit" loading="lazy" decoding="async">
 
@@ -1042,16 +1049,16 @@
 </div>
 </footer>
 
-<script src="../assets/demo.js?v=472rel" defer=""></script>
-<script src="../assets/showcase.js?v=472rel" defer=""></script>
-<script src="../assets/brand-v2.js?v=472rel" defer=""></script>
-<script src="../assets/photo-edition.js?v=472rel" defer=""></script>
-<script src="../assets/navigation.js?v=472rel" defer=""></script>
-<script src="../assets/motion.js?v=472rel" defer=""></script><script src="../assets/seam-light.js?v=472rel" defer=""></script>
-<script>if(new URLSearchParams(location.search).has('audit')){const s=document.createElement('script');s.src='../assets/audit-metrics.js?v=472rel';s.defer=true;document.body.append(s);}</script>
+<script src="../assets/demo.js?v=472motion" defer=""></script>
+<script src="../assets/showcase.js?v=472motion" defer=""></script>
+<script src="../assets/brand-v2.js?v=472motion" defer=""></script>
+<script src="../assets/photo-edition.js?v=472motion" defer=""></script>
+<script src="../assets/navigation.js?v=472motion" defer=""></script>
+<script src="../assets/motion.js?v=472motion" defer=""></script><script src="../assets/seam-light.js?v=472motion" defer=""></script>
+<script>if(new URLSearchParams(location.search).has('audit')){const s=document.createElement('script');s.src='../assets/audit-metrics.js?v=472motion';s.defer=true;document.body.append(s);}</script>
 
 
 
 
 
-<script src="../assets/kinetic-light.js?v=472rel" defer></script></body></html>
+<script src="../assets/kinetic-light.js?v=472motion" defer></script></body></html>

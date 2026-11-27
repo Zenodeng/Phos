@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phos — Installation &amp; downloads</title>
 
-<meta name="description" content="Download Phos 4.8.0 and find first-launch instructions, mirrors, SHA256 verification, zero-Python Native AI & 5-slot Core ML Model Hub, optional MLX VLM setup and the experimental Windows port.">
+<meta name="description" content="Download Phos 4.8.0 and find first-launch instructions, mirrors, SHA256 verification, zero-Python Native AI &amp; 5-slot Core ML Model Hub, optional MLX VLM &amp; curated film LUT installers, and the experimental Windows port.">
 
 <meta name="keywords" content="Phos, RAW editor, macOS RAW editor, RAW photo editor, film simulation LUT, photo editing app, Swift, Core Image, non-destructive editing">
 
@@ -30,7 +30,7 @@
 
 <meta property="og:title" content="Phos — Installation &amp; downloads">
 
-<meta property="og:description" content="Download Phos 4.8.0 and find first-launch instructions, mirrors, SHA256 verification, zero-Python Native AI & 5-slot Core ML Model Hub, optional MLX VLM setup and the experimental Windows port.">
+<meta property="og:description" content="Download Phos 4.8.0 and find first-launch instructions, mirrors, SHA256 verification, zero-Python Native AI &amp; 5-slot Core ML Model Hub, optional MLX VLM &amp; curated film LUT installers, and the experimental Windows port.">
 
 <meta property="og:url" content="https://zenodeng.com/en/help.html">
 
@@ -435,6 +435,30 @@ python3.11 install_model.py --environment /absolute/path/Phos-MLX</code></pre>
 </div>
 
 
+
+      
+
+<div class="channels" id="film-luts" style="margin-top:40px">
+        
+
+<h3>Optional: curated film LUT pack (34 sRGB-ready looks)</h3>
+        
+
+<ul>
+          
+
+<li><a href="../download/Phos-Optional-LUT-Installer.zip" download="">Phos-Optional-LUT-Installer.zip</a><span>13.8 KB · installer script &amp; license manifest (<code>8ebdcc39…eb71</code>)</span></li>
+        </ul>
+        
+
+<p class="sum">Phos keeps the app bundle lightweight and does not bundle hundreds of megabytes of third-party LUT files. This standalone 13.8 KB package contains no bundled LUT binaries — using macOS’s built-in Python 3 standard library, it fetches 34 de-duplicated, <strong>sRGB / Rec.709-ready</strong> presets directly from upstream authors (~30–40 MB via HTTP range requests) into <code>~/Documents/RawTherapee/HaldCLUT</code>.</p>
+        
+
+<p class="sum" style="margin-top:12px">Includes 18 RawTherapee classics &amp; Polaroid looks (Portra, Ektar, Kodachrome, 400H, HP5, Polaroid), 5 Stuart Sowerby Fuji X-Trans III presets, 3 abpy X-Trans IV <code>Provia → sRGB</code> profiles, 2 PictureFX looks, 4 IWLTBAP Freeware grades, plus locally baked <code>sRGB → Linear → Cineon Log</code> adaptations of <strong>Kodak 2383 D65</strong> and <strong>Fujifilm 3513DI D65</strong> so shadows never crush on sRGB images.</p>
+        
+
+<p class="sum" style="margin-top:12px"><strong>To install:</strong> unzip and double-click <code>安装精选胶片LUT.command</code> (or run <code>python3 install_luts.py</code>). Existing directories can be backed up first (keeping <code>我的LUT</code>) or merged non-destructively. Afterwards, click <strong>Refresh</strong> under <em>Color → Film CLUT</em> in Phos. Third-party license notices are inside <code>LICENSE-THIRD-PARTY.md</code> (<code>abpy</code> is <code>CC BY-NC-SA 4.0</code> non-commercial; pass <code>--skip-iwltbap</code> to omit IWLTBAP).</p>
+      </div>
 
       
 

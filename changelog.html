@@ -87,6 +87,7 @@
 <li><strong>修复 AI 套用后预览不同步与视差尺寸错配</strong>：新增 <code>AppState.applyAICandidate</code> 统一清理 <code>cropSession</code>/冲突覆盖层、按裁剪几何变化重置视口并刷新渲染管线；<code>NativeAISheet</code>、<code>NativePhotoPlanner</code> 与 <code>Alignment.resolveBokehDepth</code> 对视差/深度图自动按目标图尺寸缩放。</li>
 <li><strong>新增 Guided Upright、全景拼接与软打样引擎</strong>：落地双参考线透视拉直（<code>GuidedUprightEngine</code>）、多帧投影融合全景拼接（<code>PanoramaEngine</code>）与目标 ICC 软打样/超色域警示（<code>SoftProofEngine</code>），并接入双向 XMP 读写。</li>
 <li><strong>LibRaw 解码、DCP 相机配置与 Colab LoRA 训练链</strong>：新增 <code>LibRawEngine</code>（可选本地安装脚本）与 Adobe <code>.dcp</code> 解析引擎，镜头矫正保持按需自导入以控制包体；配套提交 Qwen3-VL-4B Phase 1 Colab LoRA 训练与 MLX 转换脚本。</li>
+<li><strong>独立可选精选胶片 LUT 安装包</strong>：随本版在<a href="help.html#film-luts">安装帮助</a>与 Release 同步提供 <code>Phos-Optional-LUT-Installer.zip</code>（13.8 KB，不含受限二进制文件），一键从官方上游分片拉取 34 款去重且已做 sRGB 适配的胶片预设（含现场烘焙的 sRGB 版 Kodak 2383 / Fuji 3513DI）。</li>
 </ul>
 </article>
 

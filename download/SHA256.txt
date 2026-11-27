@@ -1,3 +1,4 @@
 870f12b4f4c6ebab996f487239a2ab515665f9e6751cdbae90a18b6b5a38e49e  Phos-macOS-apple-silicon.dmg
 04a76a4cfc045fe359411c9cefce108609f1268394fc506dc3bcc75f2bec6417  Phos-macOS-apple-silicon.zip
 48bf4ef754f42b5d8037e9f791563ab7ea2b3ceeae38c5a91031efb2fac88fda  Phos-Optional-Model-Installer.zip
+8ebdcc3907001ceea3e532b097bbc0a9f990706f8d6600abeca9021f601beb71  Phos-Optional-LUT-Installer.zip

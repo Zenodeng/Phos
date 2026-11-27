@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phos — 安装与下载帮助</title>
 
-<meta name="description" content="下载 Phos 4.8.0，查看 macOS 首次打开步骤、下载渠道、SHA256 校验、零 Python 原生 AI 与 5 槽位 Core ML 模型中心、可选 MLX 大模型及 Windows 实验版说明。">
+<meta name="description" content="下载 Phos 4.8.0，查看 macOS 首次打开步骤、下载渠道、SHA256 校验、零 Python 原生 AI 与 5 槽位 Core ML 模型中心、可选 MLX 大模型、精选胶片 LUT 安装包及 Windows 实验版说明。">
 
 <meta name="keywords" content="Phos, RAW 修图软件, macOS RAW 编辑器, RAW 照片编辑器, RAW editor macOS, 胶片模拟 LUT, photo editing app, Swift, Core Image, 非破坏性编辑">
 
@@ -30,7 +30,7 @@
 
 <meta property="og:title" content="Phos — 安装与下载帮助">
 
-<meta property="og:description" content="下载 Phos 4.8.0，查看 macOS 首次打开步骤、下载渠道、SHA256 校验、零 Python 原生 AI 与 5 槽位 Core ML 模型中心、可选 MLX 大模型及 Windows 实验版说明。">
+<meta property="og:description" content="下载 Phos 4.8.0，查看 macOS 首次打开步骤、下载渠道、SHA256 校验、零 Python 原生 AI 与 5 槽位 Core ML 模型中心、可选 MLX 大模型、精选胶片 LUT 安装包及 Windows 实验版说明。">
 
 <meta property="og:url" content="https://zenodeng.com/help.html">
 
@@ -435,6 +435,30 @@ python3.11 install_model.py --environment /绝对路径/Phos-MLX</code></pre>
 </div>
 
 
+
+      
+
+<div class="channels" id="film-luts" style="margin-top:40px">
+        
+
+<h3>可选：精选胶片 LUT 包（34 款 sRGB 适配）</h3>
+        
+
+<ul>
+          
+
+<li><a href="download/Phos-Optional-LUT-Installer.zip" download="">Phos-Optional-LUT-Installer.zip</a><span>13.8 KB · 含一键安装脚本与授权清单（<code>8ebdcc39…eb71</code>）</span></li>
+        </ul>
+        
+
+<p class="sum">Phos 主程序刻意保持轻量，不随包分发数百兆第三方预设。若希望直接获得一组筛选去重、<strong>即开即用于 sRGB / Rec.709 照片</strong>的常用胶片模拟，可下载这个独立小包。它不含受版权限制的二进制 LUT 文件，运行后通过 macOS 系统内置 Python 3 标准库从原作者公开地址分片拉取（约 30–40 MB 流量），装入 <code>~/Documents/RawTherapee/HaldCLUT</code> 并按 5 个常用场景整理好分类。</p>
+        
+
+<p class="sum" style="margin-top:12px">内含 RawTherapee 经典胶片与拍立得 18 款（Portra / Ektar / Kodachrome / 400H / HP5 / Polaroid）、Stuart Sowerby 富士 X-Trans III 5 款、abpy 富士 X-Trans IV <code>Provia → sRGB</code> 3 款、PictureFX 2 款、IWLTBAP 免费电影调色 4 款，以及本机通过 <code>sRGB → Linear → Cineon Log</code> 重采样烘焙的 <strong>Kodak 2383 D65 / Fujifilm 3513DI D65</strong>（消除直套 Cineon LUT 导致的暗部死黑）。</p>
+        
+
+<p class="sum" style="margin-top:12px"><strong>安装方法：</strong>解压后右键（或双击）打开「<code>安装精选胶片LUT.command</code>」；若原有 <code>HaldCLUT</code> 目录内已有文件，可先完整备份再重建分类（自动保留「<code>我的LUT</code>」）或仅补充写入。完成后在 Phos 右侧「色彩 → 胶片 CLUT」菜单点 <strong>刷新</strong> 即可，独立运行且不改变主程序 MIT 授权（第三方条款见包内 <code>LICENSE-THIRD-PARTY.md</code>，加 <code>--skip-iwltbap</code> 可跳过 IWLTBAP）。</p>
+      </div>
 
       
 

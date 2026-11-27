@@ -87,6 +87,7 @@
 <li><strong>Fixed post-AI preview synchronization &amp; disparity sizing</strong>: added <code>AppState.applyAICandidate</code> to finalize state cleanly, close <code>cropSession</code>/<code>cropMode</code>, dismiss conflicting overlays, reset zoom/pan on geometry changes and refresh <code>previewQueue</code> across Native AI and MLX sheets; added target-extent disparity scaling in <code>NativeAISheet</code>, <code>NativePhotoPlanner</code> and <code>Alignment.resolveBokehDepth</code>.</li>
 <li><strong>Guided Upright, Panorama Stitching &amp; Soft Proofing</strong>: added two-line perspective upright (<code>GuidedUprightEngine</code>), multi-frame projection blending (<code>PanoramaEngine</code>) and ICC target soft proofing / gamut warnings (<code>SoftProofEngine</code>) with full bidirectional XMP round-trip.</li>
 <li><strong>LibRaw decoding, DCP profiles &amp; Colab LoRA pipeline</strong>: added optional LibRaw integration and binary Adobe <code>.dcp</code> camera profile loading (keeping user-imported lens profiles to stay compact), plus Qwen3-VL-4B Phase 1 Colab LoRA training scripts.</li>
+<li><strong>Standalone curated film LUT installer</strong>: shipped <code>Phos-Optional-LUT-Installer.zip</code> (13.8 KB script-only package) alongside this release on the <a href="help.html#film-luts">Help &amp; Downloads</a> page and GitHub Releases to fetch 34 de-duplicated, sRGB-ready film looks upstream (including locally baked sRGB-adapted Kodak 2383 / Fuji 3513DI).</li>
 </ul>
 </article>
 

@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phos — 完整功能介绍</title>
 
-<meta name="description" content="逐项了解 Phos 4.7.2 的 16-bit 线性浮点 Metal/EDR 管线、AgX 与 OKLCH 点颜色、303 种胶片 CLUT、复合布尔蒙版与 8 部位人像分割、单目深度物理散景、LaMa 消除、RAW 降噪与 2x 超分、零 Python 端侧 AI、双向 XMP 及 HDR 导出。">
+<meta name="description" content="逐项了解 Phos 4.8.0 的 16-bit 线性浮点 Metal/EDR 管线、AgX 与 OKLCH 点颜色、303 种胶片 CLUT、复合布尔蒙版与 8 部位人像分割、单目深度物理散景、LaMa 消除、RAW 降噪与 2x 超分、零 Python 端侧 AI、双向 XMP 及 HDR 导出。">
 
 <meta name="keywords" content="Phos, RAW 修图软件, macOS RAW 编辑器, Metal 16-bit, EDR HDR, OKLCH 点颜色, 复合布尔蒙版, 人像分割, 单目深度光学散景, LaMa 消除, Adobe XMP, 82 镜头配置, Core ML 模型中心, 非破坏性编辑">
 
@@ -30,7 +30,7 @@
 
 <meta property="og:title" content="Phos — 完整功能介绍">
 
-<meta property="og:description" content="逐项了解 Phos 4.7.2 的 16-bit 线性浮点 Metal/EDR 管线、OKLCH 点颜色、复合布尔蒙版与 8 部位人像分割、单目深度光学散景、零 Python 端侧 AI 与 5 槽位 Core ML 模型中心。">
+<meta property="og:description" content="逐项了解 Phos 4.8.0 的 16-bit 线性浮点 Metal/EDR 管线、OKLCH 点颜色、复合布尔蒙版与 8 部位人像分割、单目深度光学散景、零 Python 端侧 AI 与 5 槽位 Core ML 模型中心。">
 
 <meta property="og:url" content="https://zenodeng.com/features.html">
 
@@ -47,7 +47,7 @@
 
 <body class="features-page"><a class="skip" href="#main">跳到正文</a>
 
-<nav class="site-nav" aria-label="主导航"><a class="wordmark" href="./" aria-label="Phos"><span class="wordmark-text" translate="no">Phos</span><span class="nav-ver" translate="no">4.7.2</span></a>
+<nav class="site-nav" aria-label="主导航"><a class="wordmark" href="./" aria-label="Phos"><span class="wordmark-text" translate="no">Phos</span><span class="nav-ver" translate="no">4.8.0</span></a>
 <div class="nav-links"><a href="index.html#workspace">工作区</a><a href="features.html" aria-current="page">完整功能</a><a href="index.html#studio">试着修图</a><a href="help.html">安装帮助</a></div>
 
 <div class="nav-actions"><button class="command-trigger" type="button" aria-haspopup="dialog"><span>搜索</span><kbd>⌘ K</kbd></button><a class="language" href="en/features.html" aria-label="Switch to English">EN</a><a class="nav-download" href="download/Phos-macOS-apple-silicon.dmg" download="">下载 Mac 版</a><button class="menu-toggle" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="mobile-menu" hidden="">菜单<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 6h14M3 14h14"></path></svg></button></div>
@@ -104,7 +104,7 @@
 
 <li>色温、色调与灰点吸管，纹理/清晰度/去朦胧，搭配场景识别自动影调作为可继续微调的起点。</li></ul>
 
-<figure class="feature-shot"><img src="images/native-20261031/workspace-a.webp?v=472rel" width="2160" height="1341" loading="lazy" alt="明暗调整工作区"><button type="button" class="image-zoom" data-zoom="feature-light">放大查看</button>
+<figure class="feature-shot"><img src="images/native-20261031/workspace-a.webp?v=480rel" width="2160" height="1341" loading="lazy" alt="明暗调整工作区"><button type="button" class="image-zoom" data-zoom="feature-light">放大查看</button>
 
 <figcaption>明暗调整工作区</figcaption></figure>
 
@@ -134,7 +134,7 @@
 
 <li><strong>参考图 → 全可编辑参数反解</strong>：导入任意参考片，基于 OKLab/OKLCH 统计与坐标下降自动匹配为完全可调的 Phos 参数，支持 0%–150% 强度滑块与肤色保护。</li></ul>
 
-<figure class="feature-shot"><img src="images/workspace-color.webp?v=472rel" width="2160" height="1341" loading="lazy" alt="色彩曲线与颜色分级"><button type="button" class="image-zoom" data-zoom="feature-color">放大查看</button>
+<figure class="feature-shot"><img src="images/workspace-color.webp?v=480rel" width="2160" height="1341" loading="lazy" alt="色彩曲线与颜色分级"><button type="button" class="image-zoom" data-zoom="feature-color">放大查看</button>
 
 <figcaption>色彩曲线与颜色分级</figcaption></figure>
 
@@ -144,7 +144,7 @@
 
 <div>
 
-<figure class="feature-shot"><img src="images/color-detail.webp?v=472rel" width="588" height="1622" alt="当前 Phos 色彩检查器局部，展示曲线、颜色分级与 HSL 调整" class="color-inspector" loading="lazy" decoding="async"><button type="button" class="image-zoom" data-zoom="inspector">放大查看</button>
+<figure class="feature-shot"><img src="images/color-detail.webp?v=480rel" width="588" height="1622" alt="当前 Phos 色彩检查器局部，展示曲线、颜色分级与 HSL 调整" class="color-inspector" loading="lazy" decoding="async"><button type="button" class="image-zoom" data-zoom="inspector">放大查看</button>
 
 <figcaption>色彩检查器局部</figcaption></figure>
 
@@ -194,7 +194,7 @@
 
 <li>支持<strong>加 / 减 / 交布尔子蒙版</strong>与全分辨率 Guided Filter 边缘精修；每个蒙版内置完整影调滑杆、可展开局部曲线编辑器、局部 OKLCH 点颜色与局部 LUT。</li></ul>
 
-<figure class="feature-shot"><img src="images/06-linear-gradient-mask.webp?v=472rel" width="1920" height="1192" loading="lazy" alt="线性渐变蒙版图示"><button type="button" class="image-zoom" data-zoom="feature-masks">放大查看</button>
+<figure class="feature-shot"><img src="images/06-linear-gradient-mask.webp?v=480rel" width="1920" height="1192" loading="lazy" alt="线性渐变蒙版图示"><button type="button" class="image-zoom" data-zoom="feature-masks">放大查看</button>
 
 <figcaption>线性渐变蒙版图示</figcaption></figure>
 
@@ -240,7 +240,7 @@
 
 <li><strong>双向 Adobe XMP 与 Lightroom 预设</strong>：双向读写 XMP 旁档（星级/淘汰/精选、影调、HSL、曲线、颜色分级、裁剪等）并支持持久化自动同步；直接导入 Lightroom <code>.xmp</code> 预设，支持悬停预览与 <strong>0%–200%</strong> 预设强度调节，以及命名快照、同步调整与多重曝光合成。</li></ul>
 
-<figure class="feature-shot"><img src="images/native-20261031/workspace-b.webp?v=472rel" width="2160" height="1341" loading="lazy" alt="连续选片与胶片条"><button type="button" class="image-zoom" data-zoom="feature-workflow">放大查看</button>
+<figure class="feature-shot"><img src="images/native-20261031/workspace-b.webp?v=480rel" width="2160" height="1341" loading="lazy" alt="连续选片与胶片条"><button type="button" class="image-zoom" data-zoom="feature-workflow">放大查看</button>
 
 <figcaption>连续选片与胶片条</figcaption></figure>
 
@@ -272,7 +272,7 @@
 
 <li>完整保留 EXIF / IPTC / 相机元数据，支持一键移除 GPS 位置隐私、写入版权署名，以及九宫格文字/图片水印与并发批量导出。</li></ul>
 
-<figure class="feature-shot"><img src="images/04-export-dialog.webp?v=472rel" width="1920" height="1192" loading="lazy" alt="导出与水印设置"><button type="button" class="image-zoom" data-zoom="feature-export">放大查看</button>
+<figure class="feature-shot"><img src="images/04-export-dialog.webp?v=480rel" width="1920" height="1192" loading="lazy" alt="导出与水印设置"><button type="button" class="image-zoom" data-zoom="feature-export">放大查看</button>
 
 <figcaption>导出与水印设置</figcaption></figure>
 
@@ -302,7 +302,7 @@
 
 <li><strong>可选进阶 Qwen3-VL（MLX）模式</strong>：如需自然语言开放指令理解，仍可按需单独安装约 3.1 GB 底模配合内置 1.3 MB 微调适配器使用；所有建议均先经双图预览确认，照片全程不离开本机。</li></ul>
 
-<figure class="feature-shot"><img src="images/ai-preview.webp?v=472rel" width="1560" height="1240" loading="lazy" alt="本地 AI 建议预览"><button type="button" class="image-zoom" data-zoom="feature-local-ai">放大查看</button>
+<figure class="feature-shot"><img src="images/ai-preview.webp?v=480rel" width="1560" height="1240" loading="lazy" alt="本地 AI 建议预览"><button type="button" class="image-zoom" data-zoom="feature-local-ai">放大查看</button>
 
 <figcaption>本地 AI 建议预览</figcaption></figure>
 
@@ -381,7 +381,7 @@
 <summary>查看原有 AI 工作流示例</summary>
 
 <figure class="legacy-wrap" style="margin-top:56px">
-        <img class="shot" src="images/11-ai-panel.webp?v=472rel" width="1920" height="1192" loading="lazy" alt="Phos AI 修图面板：输入中文要求后给出曝光、色温、鲜艳度等参数建议，左右并排显示当前效果与建议效果，右上角标注「微调实验版」">
+        <img class="shot" src="images/11-ai-panel.webp?v=480rel" width="1920" height="1192" loading="lazy" alt="Phos AI 修图面板：输入中文要求后给出曝光、色温、鲜艳度等参数建议，左右并排显示当前效果与建议效果，右上角标注「微调实验版」">
         
 
 <figcaption>
@@ -546,7 +546,7 @@
 <div class="gallery-panel" id="gallery-panel-0" role="tabpanel" aria-labelledby="gallery-tab-0">
 
 <figure class="legacy-wrap">
-          <img class="shot" src="images/07-color-grading.webp?v=472rel" width="1920" height="1192" loading="lazy" alt="Phos 曲线面板：RGB 合成曲线带五个控制点，下方是饱和度补偿，以及折叠的颜色分级、HSL、黑白、校准与胶片 CLUT">
+          <img class="shot" src="images/07-color-grading.webp?v=480rel" width="1920" height="1192" loading="lazy" alt="Phos 曲线面板：RGB 合成曲线带五个控制点，下方是饱和度补偿，以及折叠的颜色分级、HSL、黑白、校准与胶片 CLUT">
           
 
 <figcaption>
@@ -566,7 +566,7 @@
 <div class="gallery-panel" id="gallery-panel-1" role="tabpanel" aria-labelledby="gallery-tab-1" hidden="">
 
 <figure class="legacy-wrap">
-          <img class="shot" src="images/06-linear-gradient-mask.webp?v=472rel" width="1920" height="1193" loading="lazy" alt="Phos 线性渐变蒙版：画布上三条平行参考线与三个控制点，右侧为蒙版工具与独立调整栈">
+          <img class="shot" src="images/06-linear-gradient-mask.webp?v=480rel" width="1920" height="1193" loading="lazy" alt="Phos 线性渐变蒙版：画布上三条平行参考线与三个控制点，右侧为蒙版工具与独立调整栈">
           
 
 <figcaption>
@@ -586,7 +586,7 @@
 <div class="gallery-panel" id="gallery-panel-2" role="tabpanel" aria-labelledby="gallery-tab-2" hidden="">
 
 <figure class="legacy-wrap">
-          <img class="shot" src="images/08-radial-gradient-mask.webp?v=472rel" width="1920" height="1192" loading="lazy" alt="Phos 径向渐变蒙版：画布上的椭圆选区与三个控制点，右侧为横半径、纵半径、旋转与羽化">
+          <img class="shot" src="images/08-radial-gradient-mask.webp?v=480rel" width="1920" height="1192" loading="lazy" alt="Phos 径向渐变蒙版：画布上的椭圆选区与三个控制点，右侧为横半径、纵半径、旋转与羽化">
           
 
 <figcaption>
@@ -606,7 +606,7 @@
 <div class="gallery-panel" id="gallery-panel-3" role="tabpanel" aria-labelledby="gallery-tab-3" hidden="">
 
 <figure class="legacy-wrap">
-          <img class="shot" src="images/12-b-filmstrip.webp?v=472rel" width="1920" height="1192" loading="lazy" alt="Phos B 胶片布局：底部横向胶片条用于连续选片，上方是画布与右侧检查器">
+          <img class="shot" src="images/12-b-filmstrip.webp?v=480rel" width="1920" height="1192" loading="lazy" alt="Phos B 胶片布局：底部横向胶片条用于连续选片，上方是画布与右侧检查器">
           
 
 <figcaption>
@@ -626,7 +626,7 @@
 <div class="gallery-panel" id="gallery-panel-4" role="tabpanel" aria-labelledby="gallery-tab-4" hidden="">
 
 <figure class="legacy-wrap">
-          <img class="shot" src="images/04-export-dialog.webp?v=472rel" width="1920" height="1192" loading="lazy" alt="Phos 导出面板：格式与位深、色彩空间、长边缩放、水印叠加与导出目录设置">
+          <img class="shot" src="images/04-export-dialog.webp?v=480rel" width="1920" height="1192" loading="lazy" alt="Phos 导出面板：格式与位深、色彩空间、长边缩放、水印叠加与导出目录设置">
           
 
 <figcaption>
@@ -658,7 +658,7 @@
 <li><a href="help.html#download-help">下载渠道与校验</a></li>
 <li><a href="changelog.html">更新日志</a></li></ul>
 
-<p>Phos 4.7.2 · 8.78 MB</p>
+<p>Phos 4.8.0 · 8.77 MB</p>
 <p>macOS 26+ · Apple 芯片</p></div>
 
 <div>

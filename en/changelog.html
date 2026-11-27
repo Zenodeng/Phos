@@ -6,9 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phos — Changelog &amp; Release History</title>
 
-<meta name="description" content="Release history for Phos macOS RAW photo editor from 4.0 workspace redesign to 4.7.2: 16-bit extended linear Metal/EDR pipeline, composite boolean masks, zero-Python on-device AI, monocular depth optical bokeh and bidirectional XMP.">
+<meta name="description" content="Release history for Phos macOS RAW photo editor from 4.0 workspace redesign to 4.8.0: Guided Upright, Panorama Stitching, LibRaw + DCP support, Soft Proofing, and LUT / AI preview fixes.">
 
-<meta name="keywords" content="Phos changelog, Phos release notes, Phos 4.7.2, macOS RAW editor updates, Metal 16-bit, on-device AI photo editing">
+<meta name="keywords" content="Phos changelog, Phos release notes, Phos 4.8.0, macOS RAW editor updates, Metal 16-bit, on-device AI photo editing">
 
 <link rel="canonical" href="https://zenodeng.com/en/changelog.html">
 
@@ -30,7 +30,7 @@
 
 <meta property="og:title" content="Phos — Changelog &amp; Release History">
 
-<meta property="og:description" content="Every Phos milestone from 4.0 to 4.7.2: 16-bit Metal/EDR pipeline, OKLCH Point Color, composite boolean masks, zero-Python on-device AI and 5-slot Core ML Model Hub.">
+<meta property="og:description" content="Every Phos milestone from 4.0 to 4.8.0: 16-bit Metal/EDR pipeline, Guided Upright, Panorama Stitching, LibRaw + DCP support, Soft Proofing and LUT / AI preview fixes.">
 
 <meta property="og:url" content="https://zenodeng.com/en/changelog.html">
 
@@ -47,7 +47,7 @@
 
 <body class="changelog-page"><a class="skip" href="#main">Skip to content</a>
 
-<nav class="site-nav" aria-label="Main navigation"><a class="wordmark" href="./" aria-label="Phos"><span class="wordmark-text" translate="no">Phos</span><span class="nav-ver" translate="no">4.7.2</span></a>
+<nav class="site-nav" aria-label="Main navigation"><a class="wordmark" href="./" aria-label="Phos"><span class="wordmark-text" translate="no">Phos</span><span class="nav-ver" translate="no">4.8.0</span></a>
 <div class="nav-links"><a href="index.html#workspace">Workspace</a><a href="features.html">Features</a><a href="index.html#studio">Try editing</a><a href="help.html">Help</a></div>
 
 <div class="nav-actions"><button class="command-trigger" type="button" aria-haspopup="dialog"><span>Search</span><kbd>⌘ K</kbd></button><a class="language" href="../changelog.html" aria-label="切换到简体中文">中文</a><a class="nav-download" href="../download/Phos-macOS-apple-silicon.dmg" download="">Download Mac</a><button class="menu-toggle" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="mobile-menu" hidden="">Menu<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 6h14M3 14h14"></path></svg></button></div>
@@ -70,15 +70,29 @@
 
 <h1>Every release,<br>grounded in real editing.</h1>
 
-<p>A public, verifiable history of Phos from the 4.0 workspace rebuild through 4.7.2’s 16-bit Metal pipeline and zero-Python on-device AI.</p><a class="button primary" href="../download/Phos-macOS-apple-silicon.dmg" download="">Download v4.7.2<span class="download-icon" aria-hidden="true"><svg class="download-arrow" viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true"><path d="M12 4v16m-6-6 6 6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a><p class="help-back"><a class="text-link" href="help.html#download-help">Mirrors &amp; SHA256 verification</a></p></header>
+<p>A public, verifiable history of Phos from the 4.0 workspace rebuild through 4.8.0’s pro workflows and LUT / AI preview fixes.</p><a class="button primary" href="../download/Phos-macOS-apple-silicon.dmg" download="">Download v4.8.0<span class="download-icon" aria-hidden="true"><svg class="download-arrow" viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true"><path d="M12 4v16m-6-6 6 6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a><p class="help-back"><a class="text-link" href="help.html#download-help">Mirrors &amp; SHA256 verification</a></p></header>
 
 <div class="changelog-main">
 
 <div class="changelog-list">
 
-<article id="v4.7.2" class="release-card is-latest">
+<article id="v4.8.0" class="release-card is-latest">
 <div class="release-head">
-<div class="release-title"><h2>v4.7.2</h2><span class="release-badge">Latest · Mask Fixes &amp; Core ML Upgrade</span></div>
+<div class="release-title"><h2>v4.8.0</h2><span class="release-badge">Latest · Guided Upright, Panorama, Soft Proofing &amp; LUT / AI Fixes</span></div>
+<div class="release-meta"><time datetime="2026-11-27">2026-11-27</time><a href="https://github.com/Zenodeng/Phos/releases/tag/v4.8.0" target="_blank" rel="noopener">GitHub Release ↗</a></div>
+</div>
+<p class="release-summary">Introduces Guided Upright perspective correction, Panorama Stitching, LibRaw decoding with Adobe <code>.dcp</code> camera profiles, Soft Proofing, native <code>NSMenu</code> LUT pickers, and unified AI preview synchronization.</p>
+<ul class="release-items">
+<li><strong>Rebuilt LUT pickers &amp; <code>.cube</code> parser</strong>: replaced SwiftUI <code>Menu</code> in both global and mask LUT pickers with a shared native <code>NSMenu</code> popup <code>CLUTPopupButton</code> (folder submenus, flat search, Import… and None, removing the 80-item mask cap); <code>AppState.applyCLUT</code> resets strength <code>&lt;= 0.001</code> to <code>1.0</code> and exits comparison/upright overlays; <code>CLUT.swift</code> adds UTF-8 BOM, inline <code>#</code> comment, <code>DOMAIN_MIN</code>/<code>DOMAIN_MAX</code>, symlink normalization and <code>importLUT(from:)</code>.</li>
+<li><strong>Fixed post-AI preview synchronization &amp; disparity sizing</strong>: added <code>AppState.applyAICandidate</code> to finalize state cleanly, close <code>cropSession</code>/<code>cropMode</code>, dismiss conflicting overlays, reset zoom/pan on geometry changes and refresh <code>previewQueue</code> across Native AI and MLX sheets; added target-extent disparity scaling in <code>NativeAISheet</code>, <code>NativePhotoPlanner</code> and <code>Alignment.resolveBokehDepth</code>.</li>
+<li><strong>Guided Upright, Panorama Stitching &amp; Soft Proofing</strong>: added two-line perspective upright (<code>GuidedUprightEngine</code>), multi-frame projection blending (<code>PanoramaEngine</code>) and ICC target soft proofing / gamut warnings (<code>SoftProofEngine</code>) with full bidirectional XMP round-trip.</li>
+<li><strong>LibRaw decoding, DCP profiles &amp; Colab LoRA pipeline</strong>: added optional LibRaw integration and binary Adobe <code>.dcp</code> camera profile loading (keeping user-imported lens profiles to stay compact), plus Qwen3-VL-4B Phase 1 Colab LoRA training scripts.</li>
+</ul>
+</article>
+
+<article id="v4.7.2" class="release-card">
+<div class="release-head">
+<div class="release-title"><h2>v4.7.2</h2><span class="release-badge is-muted">Mask Fixes &amp; Core ML Upgrade</span></div>
 <div class="release-meta"><time datetime="2026-11-25">2026-11-25</time><a href="https://github.com/Zenodeng/Phos/releases/tag/v4.7.2" target="_blank" rel="noopener">GitHub Release ↗</a></div>
 </div>
 <p class="release-summary">Fixed macOS mask selection overlay solid-red flooding and rotated radial mask mirroring, added native <code>MLMultiArray</code> Core ML tiled inference, and shipped one-click installers for all 5 Core ML slots.</p>
@@ -203,7 +217,7 @@
 <li><a href="help.html#download-help">Mirrors and checksums</a></li>
 <li><a href="changelog.html" aria-current="page">Changelog</a></li></ul>
 
-<p>Phos 4.7.2 · 8.78 MB</p>
+<p>Phos 4.8.0 · 8.77 MB</p>
 <p>macOS 26+ · Apple silicon</p></div>
 
 <div>

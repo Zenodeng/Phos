@@ -40,9 +40,20 @@ enum Engine {
         decode(url, rawEmbeddedLensCorrection: true)
     }
 
-    static func decode(_ url: URL, rawEmbeddedLensCorrection: Bool) -> CIImage? {
+    static func decode(
+        _ url: URL,
+        rawEmbeddedLensCorrection: Bool,
+        rawDecoderMode: RawDecoderMode = .auto,
+        libRawHighlightMode: Int = 5,
+        useCameraSpace: Bool = false
+    ) -> CIImage? {
         let ext = url.pathExtension.lowercased()
         if rawSet.contains(ext) {
+            if rawDecoderMode == .libRaw,
+               let lrImg = LibRawEngine.shared.decode(url, highlightMode: libRawHighlightMode,
+                                                      linearCameraSpace: useCameraSpace) {
+                return lrImg
+            }
             if let raw = CIRAWFilter(imageURL: url) {
                 raw.isGamutMappingEnabled = true
                 raw.scaleFactor = 1.0
@@ -53,7 +64,13 @@ enum Engine {
                 raw.extendedDynamicRangeAmount = 1.0
                 if let o = raw.outputImage { return o }
             }
-            // RAW 解码失败就退回 ImageIO
+            // Apple RAW 不支持的新机身或解码失败时，自动模式无缝回退可选 LibRaw
+            if rawDecoderMode == .auto,
+               let lrImg = LibRawEngine.shared.decode(url, highlightMode: libRawHighlightMode,
+                                                      linearCameraSpace: useCameraSpace) {
+                return lrImg
+            }
+            // 仍失败则退回 ImageIO
         }
         // 必须带上 applyOrientationProperty：手机出的 JPEG / HEIC 方向写在 EXIF 里，
         // 不应用的话竖拍照片会躺倒（这个坑很常见）。
@@ -108,8 +125,10 @@ enum Engine {
 
     static func geometry(_ source: CIImage, _ p: EditParams, resolvedAuto: ResolvedPerspective? = nil) -> CIImage {
         var img = oriented(source,p)
-        // 1b) 透视校正（自动：Vision 矩形检测；手动：垂直/水平滑块构四边形）
-        if p.perspectiveAuto {
+        // 1b) 透视校正（优先 Guided Upright 2–4 条参考线；其次自动 Vision 矩形检测；再其次手动垂直/水平滑块）
+        if p.uprightGuides.count >= 2 {
+            img = GuidedUprightEngine.apply(img, guides: p.uprightGuides, constrainCrop: p.uprightConstrainCrop)
+        } else if p.perspectiveAuto {
             if let quad = (resolvedAuto ?? resolvedPerspective(source,p))?.quad(in:img.extent) {
                 img = applyPerspective(img, quad)
             }
@@ -191,6 +210,16 @@ enum Engine {
                 "inputTargetNeutral": CIVector(x: CGFloat(6500 - p.temperature * 25),
                                                y: CGFloat(p.tint))
             ])
+        }
+
+        // 3a) 相机配置文件（内置 Flat/Vivid/Portrait 或用户导入的 Adobe .dcp）
+        if !p.cameraProfileName.isEmpty {
+            let dcpHasMatrix = DCPProfileEngine.loadProfile(id: p.cameraProfileName)?.hasCameraMatrix == true
+            let useCamSpace = (p.rawDecoderMode == .libRaw) && LibRawEngine.shared.isAvailable && dcpHasMatrix
+            img = DCPProfileEngine.apply(img, profileID: p.cameraProfileName,
+                                         amount: p.cameraProfileAmount,
+                                         temperatureKelvin: 6500 - p.temperature * 25,
+                                         inputIsCameraRGB: useCamSpace)
         }
 
         // 3b) 校准：改 RGB 三原色的原色（等价于换一套 RGB 基），放最前面定风格基调
@@ -454,10 +483,12 @@ enum Engine {
 
     private static func stageKey(source: CIImage, params p: EditParams) -> String? {
         guard let encodedSpots = try? JSONEncoder().encode(p.retouchSpots),
-              let encodedLens = try? JSONEncoder().encode(p.lensCorrection) else { return nil }
+              let encodedLens = try? JSONEncoder().encode(p.lensCorrection),
+              let encodedGuides = try? JSONEncoder().encode(p.uprightGuides) else { return nil }
         let spotsB64 = encodedSpots.base64EncodedString()
         let lensB64 = encodedLens.base64EncodedString()
-        return "\(Int(source.extent.minX))x\(Int(source.extent.minY))x\(Int(source.extent.width))x\(Int(source.extent.height))|\(p.rotation)|\(p.flipped)|\(p.straighten)|\(p.cropX),\(p.cropY),\(p.cropW),\(p.cropH)|\(p.perspectiveAuto)|\(p.perspectiveV)|\(p.perspectiveH)|\(lensB64)|\(spotsB64)|\(CoreMLInpaintingEngine.shared.cacheToken)"
+        let guidesB64 = encodedGuides.base64EncodedString()
+        return "\(Int(source.extent.minX))x\(Int(source.extent.minY))x\(Int(source.extent.width))x\(Int(source.extent.height))|\(p.rotation)|\(p.flipped)|\(p.straighten)|\(p.cropX),\(p.cropY),\(p.cropW),\(p.cropH)|\(p.perspectiveAuto)|\(p.perspectiveV)|\(p.perspectiveH)|\(p.uprightConstrainCrop)|\(guidesB64)|\(lensB64)|\(spotsB64)|\(CoreMLInpaintingEngine.shared.cacheToken)"
     }
 
     private static func lookupStageCache(source: CIImage, params p: EditParams) -> CIImage? {
@@ -1399,9 +1430,20 @@ enum Engine {
             return
         }
         let format: CIFormat = settings.format == "tiff" && settings.tiffBitDepth == 16 ? .RGBA16 : .RGBA8
-        guard let cg = ctx.createCGImage(out, from: out.extent, format: format,
-                                        colorSpace: settings.colorSpace.cgColorSpace) else {
-            throw NSError(domain: "Phos", code: 12, userInfo: [NSLocalizedDescriptionKey: "无法生成导出图像"])
+        let resolvedCS = SoftProofEngine.exportColorSpace(for: settings)
+        let cg: CGImage
+        if resolvedCS.model == .cmyk && (settings.format == "tiff" || settings.format == "jpg"),
+           let rgbCG = ctx.createCGImage(out, from: out.extent, format: .RGBA8, colorSpace: srgb),
+           let nsTarget = NSColorSpace(cgColorSpace: resolvedCS),
+           let converted = NSBitmapImageRep(cgImage: rgbCG).converting(to: nsTarget, renderingIntent: .perceptual),
+           let cmykCG = converted.cgImage {
+            cg = cmykCG
+        } else {
+            let safeCS = resolvedCS.model == .cmyk ? settings.colorSpace.cgColorSpace : resolvedCS
+            guard let built = ctx.createCGImage(out, from: out.extent, format: format, colorSpace: safeCS) else {
+                throw NSError(domain: "Phos", code: 12, userInfo: [NSLocalizedDescriptionKey: "无法生成导出图像"])
+            }
+            cg = built
         }
         guard let dest = CGImageDestinationCreateWithURL(url as CFURL, ut.identifier as CFString, 1, nil) else {
             throw NSError(domain: "Phos", code: 10, userInfo: [NSLocalizedDescriptionKey: "无法创建输出文件"])

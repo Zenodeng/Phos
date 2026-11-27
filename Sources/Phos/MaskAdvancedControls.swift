@@ -460,23 +460,22 @@ struct MaskLocalExtraControls: View {
                 Text(L10n.tr("局部 LUT"))
                     .font(.system(size: 11)).foregroundStyle(.secondary)
                 Spacer()
-                Menu {
-                    Button(L10n.tr("无")) {
-                        var x = mask; x.adjust.clutName = ""; s.updateMask(x)
-                    }
-                    ForEach(cluts.prefix(80), id: \.self) { name in
-                        Button(name) {
-                            var x = mask; x.adjust.clutName = name; s.updateMask(x)
+                CLUTPopupButton(
+                    title: mask.adjust.clutName.isEmpty ? L10n.tr("无") : mask.adjust.clutName,
+                    selectedName: mask.adjust.clutName,
+                    items: cluts,
+                    noneTitle: L10n.tr("无"),
+                    onSelect: { name in
+                        var x = mask
+                        x.adjust.clutName = name
+                        if !name.isEmpty && x.adjust.clutStrength <= 0.001 {
+                            x.adjust.clutStrength = 1.0
                         }
-                    }
-                } label: {
-                    Text(mask.adjust.clutName.isEmpty ? L10n.tr("无") : mask.adjust.clutName)
-                        .font(.system(size: 10.5))
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
-                .menuStyle(.borderlessButton)
-                .frame(maxWidth: 120, alignment: .trailing)
+                        s.updateMask(x)
+                    },
+                    compact: true
+                )
+                .frame(maxWidth: 132, alignment: .trailing)
             }
             if !mask.adjust.clutName.isEmpty {
                 SliderRow(label: "LUT 浓度", value: Binding(

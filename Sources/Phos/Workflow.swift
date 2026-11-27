@@ -261,6 +261,7 @@ enum EditGroup: String, CaseIterable, Identifiable {
             p.mono = source.mono; p.monoRed = source.monoRed; p.monoGreen = source.monoGreen; p.monoBlue = source.monoBlue
             p.primRed = source.primRed; p.primGreen = source.primGreen; p.primBlue = source.primBlue
             p.calibShadowTint = source.calibShadowTint
+            p.cameraProfileName = source.cameraProfileName; p.cameraProfileAmount = source.cameraProfileAmount
             p.clutName = source.clutName; p.clutStrength = source.clutStrength
         }
         if groups.contains(.detail) {
@@ -283,6 +284,7 @@ enum EditGroup: String, CaseIterable, Identifiable {
             p.rotation = source.rotation; p.flipped = source.flipped; p.straighten = source.straighten
             p.cropX = source.cropX; p.cropY = source.cropY; p.cropW = source.cropW; p.cropH = source.cropH
             p.perspectiveAuto = source.perspectiveAuto; p.perspectiveV = source.perspectiveV; p.perspectiveH = source.perspectiveH
+            p.uprightGuides = source.uprightGuides; p.uprightConstrainCrop = source.uprightConstrainCrop
         }
         if groups.contains(.masks) {
             p.masks = source.masks.map { original in

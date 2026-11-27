@@ -2,6 +2,26 @@
 
 本项目遵循语义化版本。日期为发布日（Asia/Shanghai）。
 
+## [4.8.0] — 2026-11-27
+
+### 新增专业工作流与模型能力
+- **Guided Upright 透视拉直（`GuidedUprightEngine.swift`）**：支持在画布拉出参考线进行垂直、水平或双轴透视矫正。
+- **全景拼接（`PanoramaEngine.swift`）**：支持多张照片投影对齐与融合拼接导出。
+- **LibRaw 解码与 DCP 相机配置（`LibRawEngine.swift`、`DCPProfileEngine.swift`、`RAWProfilePane.swift`）**：支持基于 LibRaw 的 RAW 解码与外部 `.dcp` 相机配置文件加载（随用安装 `Scripts/install_libraw.sh`）；镜头矫正维持用户按需自导入模式以控制安装包体积。
+- **软打样（`SoftProofEngine.swift`）**：支持目标 ICC 色彩配置模拟、超色域警告与打样状态切换。
+- **Qwen3-VL-4B Colab LoRA 训练工作流**：新增 `Scripts/Phos_Qwen3_VL_4B_Colab_1000CU.ipynb`、`build_phase1_colab_dataset.py`、`colab_train_phos_qwen3_vl.py`、`convert_peft_to_phos_mlx.py`、`build_colormatch_worker.sh` 与 `Tools/ColorMatchDataWorker.swift`。
+
+### LUT 与 AI 套用预览修复
+- **重做 LUT 选择器并补全 `.cube` 解析能力**：在 `Inspector.swift`（`ClutPicker`）与 `MaskAdvancedControls.swift` 改用共享原生 `NSMenu` 弹窗组件 `CLUTPopupButton`（支持目录分级子菜单、搜索与「导入…」），移除局部蒙版 `cluts.prefix(80)` 截断；`AppState.applyCLUT(_:)` 在当前强度 `<= 0.001` 时自动重置为 `1.0` 并退出前后对比或透视引导覆盖模式；`CLUT.swift` 新增 `importLUT(from:)`、UTF-8 BOM / 行内 `#` 注释过滤、`DOMAIN_MIN`/`DOMAIN_MAX` 色域归一化与 `resolvingSymlinksInPath()` 路径归一化。
+- **修复 AI 修图套用后预览不同步与视差尺寸错配**：`AppMain.swift` 新增 `AppState.applyAICandidate(_:statusMessage:)` 统一完成参数落盘、关闭 `cropSession`/`cropMode`、退出冲突覆盖层、按裁剪或几何变动重置视口缩放平移并刷新 `previewQueue`；`NativeAISheet.swift` 与 `LocalPhotoAI.swift` 统一接入该收尾流程；同步在 `NativeAISheet.swift`、`NativePhotoPlanner.swift` 与 `Alignment.resolveBokehDepth` 对深度/视差图执行目标尺寸对齐缩放。
+- **测试条件编译与中英文词条补全**：统一 `GuidedUprightEngine.swift`、`SoftProofEngine.swift` 与 `Views.swift` 的 `#if !PHOS_TESTING || PHOS_APP_TESTING` 编译门控，更新 `Resources/Localization/en.json` 与 `LocalizationCatalog.swift`。
+
+## [4.7.2] — 2026-11-25
+
+### 蒙版选区、Core ML 推理与模型安装修复
+- 修复 macOS 蒙版选区预览满屏变红及旋转径向蒙版渲染镜像与手柄坐标互换问题，移除线性渐变/亮度范围无效羽化滑杆。
+- 升级 Core ML 天空/降噪/超分引擎全面兼容 `MLMultiArray` 分块推理，并在模型中心补齐全部 5 个槽位的一键部署脚本（支持 `HF_ENDPOINT` 镜像）。
+
 ## [4.7.1] — 2026-11-24
 
 ### 界面与本地化热修复

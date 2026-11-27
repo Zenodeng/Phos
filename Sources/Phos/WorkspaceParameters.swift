@@ -79,9 +79,14 @@ enum ParameterGroupSchema {
         case "细节": p.grainRoughness = d.grainRoughness; p.retouchSpots = d.retouchSpots; p.aiDenoise = d.aiDenoise; p.aiDenoiseDetail = d.aiDenoiseDetail; p.superResolution = d.superResolution
         case "焦外散景": p.bokehFocusDepth = d.bokehFocusDepth; p.bokehFocusRange = d.bokehFocusRange; p.bokehBlades = d.bokehBlades; p.bokehHighlightBoost = d.bokehHighlightBoost; p.bokehCatEye = d.bokehCatEye; p.bokehAutoDepth = d.bokehAutoDepth
         case "镜头校正": p.lensCorrection = nil; p.rawEmbeddedLensCorrection = d.rawEmbeddedLensCorrection
-        case "校准": p.primRed = d.primRed; p.primGreen = d.primGreen; p.primBlue = d.primBlue
+        case "校准":
+            p.primRed = d.primRed; p.primGreen = d.primGreen; p.primBlue = d.primBlue
+            p.cameraProfileName = d.cameraProfileName; p.cameraProfileAmount = d.cameraProfileAmount
+            p.rawDecoderMode = d.rawDecoderMode; p.libRawHighlightMode = d.libRawHighlightMode
         case "胶片 CLUT": p.clutName = d.clutName
-        case "变换与裁剪": p.rotation = d.rotation; p.flipped = d.flipped; p.perspectiveAuto = d.perspectiveAuto
+        case "变换与裁剪":
+            p.rotation = d.rotation; p.flipped = d.flipped; p.perspectiveAuto = d.perspectiveAuto
+            p.uprightGuides = d.uprightGuides; p.uprightConstrainCrop = d.uprightConstrainCrop
         case "局部调整（蒙版）": p.masks = []
         default: break
         }

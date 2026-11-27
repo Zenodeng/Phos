@@ -527,6 +527,7 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
                     if state.pointColorPicker { state.pointColorPicker = false; return nil }
                     if state.bokehFocusPicker { state.bokehFocusPicker = false; return nil }
                     if state.retouchActive { state.retouchActive = false; return nil }
+                    if state.guidedUprightActive { state.guidedUprightActive = false; return nil }
                 }
                 if !text, (event.keyCode == 51 || event.keyCode == 117),
                    !state.syncRunning, state.retouchActive, let selSpotID = state.selectedRetouchSpotID {
@@ -553,6 +554,8 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
                         }
                     } else if mods == .shift, ch == "r", self.model.enabled(.referenceView) {
                         self.model.perform(.referenceView); return nil
+                    } else if mods == .shift, ch == "s", self.model.enabled(.softProof) {
+                        self.model.perform(.softProof); return nil
                     }
                 }
                 return self.model.selection.handleKey(event, firstResponder: self.window?.firstResponder) ? nil : event
@@ -777,9 +780,9 @@ final class WorkspaceRootView: NSView, NSMenuDelegate {
         presets.addItem(.separator())
         item(L10n.tr("保存当前调整为预设…"), in: presets, enabled: ready) { [weak self] in self?.model.savePreset() }
         let presetItem = NSMenuItem(title: L10n.tr("预设"), action: nil, keyEquivalent: ""); presetItem.submenu = presets; menu.addItem(presetItem)
-        for (name, command) in [("命名快照…", WorkspaceCommandID.snapshots), ("同步调整…", .sync), ("批量导出…", .batch), ("多重曝光合成…", .merge), ("同几何分割对比", .beforeGeometry), ("局部画笔", .brush), ("显示或隐藏当前蒙版", .overlay), ("污点修复画笔", .retouchTool), ("点颜色取样", .pointColorTool), ("高光/暗部溢出警示 (J)", .clipping), ("网格看片视图 (G)", .gridView), ("双图同步对比 (C)", .compareView), ("多图同屏选片 (N)", .surveyView), ("参考锁定视图 (⇧R)", .referenceView), ("创建虚拟副本", .createVirtualCopy), ("删除虚拟副本", .deleteVirtualCopy), ("导出当前 XMP 旁档", .exportXMP), ("从 XMP 旁档读取", .importXMP), ("自动写入 XMP 旁档", .toggleAutoSyncXMP), ("取消当前处理", .cancelJob)] {
+        for (name, command) in [("命名快照…", WorkspaceCommandID.snapshots), ("同步调整…", .sync), ("批量导出…", .batch), ("多重曝光与全景合成…", .merge), ("同几何分割对比", .beforeGeometry), ("参考线透视校正", .guidedUpright), ("局部画笔", .brush), ("显示或隐藏当前蒙版", .overlay), ("污点修复画笔", .retouchTool), ("点颜色取样", .pointColorTool), ("高光/暗部溢出警示 (J)", .clipping), ("软打样 (⇧S)", .softProof), ("网格看片视图 (G)", .gridView), ("双图同步对比 (C)", .compareView), ("多图同屏选片 (N)", .surveyView), ("参考锁定视图 (⇧R)", .referenceView), ("创建虚拟副本", .createVirtualCopy), ("删除虚拟副本", .deleteVirtualCopy), ("导出当前 XMP 旁档", .exportXMP), ("从 XMP 旁档读取", .importXMP), ("自动写入 XMP 旁档", .toggleAutoSyncXMP), ("取消当前处理", .cancelJob)] {
             item(L10n.tr(name), in: menu, enabled: model.enabled(command),
-                 checked: (command == .beforeGeometry && s.splitComparison) || (command == .clipping && s.showClippingWarning) || (command == .retouchTool && s.retouchActive) || (command == .pointColorTool && s.pointColorPicker) || (command == .toggleAutoSyncXMP && s.autoSyncXMP) || (command == .surveyView && s.canvasDisplayMode == .compare && s.compareSubMode == .survey)) { [weak self] in self?.model.perform(command) }
+                 checked: (command == .beforeGeometry && s.splitComparison) || (command == .clipping && s.showClippingWarning) || (command == .softProof && s.softProof.enabled) || (command == .guidedUpright && s.guidedUprightActive) || (command == .retouchTool && s.retouchActive) || (command == .pointColorTool && s.pointColorPicker) || (command == .toggleAutoSyncXMP && s.autoSyncXMP) || (command == .surveyView && s.canvasDisplayMode == .compare && s.compareSubMode == .survey)) { [weak self] in self?.model.perform(command) }
         }
         item(L10n.tr("切换 EDR 动态范围"), in: menu, enabled: true, checked: s.edrEnabled) { s.edrEnabled.toggle() }
         item(L10n.tr("复制调整"), in: menu, enabled: model.enabled(.copy)) { [weak self] in self?.model.perform(.copy) }

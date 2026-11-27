@@ -42,6 +42,8 @@ final class CLUTLibrary: ObservableObject {
     struct CubeLUT {
         let size: Int
         let values: [Float]
+        let domainMin: (Double, Double, Double)
+        let domainMax: (Double, Double, Double)
     }
     private let imageCache = BoundedCache<String, HaldPixels>(capacity: 2)
     private let cubeCache = BoundedCache<String, CubeLUT>(capacity: 6)
@@ -64,8 +66,9 @@ final class CLUTLibrary: ObservableObject {
         var out: [String] = []
         // 解析 root 上的符号链接（macOS 的 /var -> /private/var、iCloud 下的 Documents 等），
         // 否则 enumerator 给出的路径与 root 前缀对不上，相对路径会算错。
-        let rootPath = directory.resolvingSymlinksInPath().path
-        if let e = FileManager.default.enumerator(at: directory,
+        let resolvedRoot = directory.resolvingSymlinksInPath()
+        let rootPath = resolvedRoot.path
+        if let e = FileManager.default.enumerator(at: resolvedRoot,
             includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles]) {
             for case let u as URL in e {
                 let ext = u.pathExtension.lowercased()
@@ -85,21 +88,59 @@ final class CLUTLibrary: ObservableObject {
     }
 
     private func relative(_ u: URL, rootPath: String) -> String {
-        let p = u.path
+        let p = u.resolvingSymlinksInPath().path
         if p.hasPrefix(rootPath + "/") {
             return String(p.dropFirst(rootPath.count + 1))
         }
         return u.lastPathComponent
     }
 
+    /// 支持导入的 LUT 扩展名
+    static let supportedExtensions: Set<String> = ["cube", "png", "tif", "tiff"]
+
+    /// 将外部 .cube 或 HALD LUT 导入到 `~/Documents/RawTherapee/HaldCLUT/我的LUT/已导入/` 并返回相对路径。
+    @discardableResult
+    func importLUT(from sourceURL: URL) throws -> String {
+        let ext = sourceURL.pathExtension.lowercased()
+        guard Self.supportedExtensions.contains(ext) else {
+            throw NSError(domain: "Phos.CLUT", code: 1,
+                          userInfo: [NSLocalizedDescriptionKey: "仅支持 .cube、.png、.tif、.tiff 格式 LUT"])
+        }
+        if ext == "cube" {
+            guard Self.is3DCube(sourceURL), Self.parseCube(url: sourceURL) != nil else {
+                throw NSError(domain: "Phos.CLUT", code: 2,
+                              userInfo: [NSLocalizedDescriptionKey: "未能解析为有效的 3D .cube LUT 文件"])
+            }
+        }
+        let targetDir = root.appendingPathComponent("我的LUT/已导入", isDirectory: true)
+        try FileManager.default.createDirectory(at: targetDir, withIntermediateDirectories: true)
+        let baseName = sourceURL.deletingPathExtension().lastPathComponent
+        var destURL = targetDir.appendingPathComponent(sourceURL.lastPathComponent)
+        if FileManager.default.fileExists(atPath: destURL.path),
+           (try? Data(contentsOf: sourceURL)) != (try? Data(contentsOf: destURL)) {
+            var n = 2
+            while FileManager.default.fileExists(atPath: destURL.path) {
+                destURL = targetDir.appendingPathComponent("\(baseName)-\(n).\(ext)")
+                n += 1
+            }
+        }
+        if !FileManager.default.fileExists(atPath: destURL.path) {
+            try FileManager.default.copyItem(at: sourceURL, to: destURL)
+        }
+        invalidate()
+        let rootPath = root.resolvingSymlinksInPath().path
+        let resolvedDest = destURL.resolvingSymlinksInPath()
+        return relative(resolvedDest, rootPath: rootPath)
+    }
+
     /// 轻量嗅探：只读文件头，确认是 3D LUT（LUT_1D_SIZE 的不要）
     private static func is3DCube(_ url: URL) -> Bool {
         guard let fh = try? FileHandle(forReadingFrom: url) else { return false }
         defer { try? fh.close() }
-        let head = (try? fh.read(upToCount: 8192)) ?? Data()
-        guard let text = String(data: head, encoding: .utf8)
+        let head = (try? fh.read(upToCount: 16384)) ?? Data()
+        guard let rawText = String(data: head, encoding: .utf8)
                 ?? String(data: head, encoding: .isoLatin1) else { return false }
-        let upper = text.uppercased()
+        let upper = rawText.replacingOccurrences(of: "\u{FEFF}", with: "").uppercased()
         return upper.contains("LUT_3D_SIZE") && !upper.contains("LUT_1D_SIZE")
     }
 
@@ -201,19 +242,33 @@ final class CLUTLibrary: ObservableObject {
 
         var size = 0
         var values: [Float] = []
+        var domainMin = (0.0, 0.0, 0.0)
+        var domainMax = (1.0, 1.0, 1.0)
+        let trimChars = CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "\u{FEFF}"))
         for rawLine in text.split(separator: "\n", omittingEmptySubsequences: false) {
-            let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
-            if line.isEmpty || line.hasPrefix("#") { continue }
+            let noComment = rawLine.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false).first ?? ""
+            let line = noComment.trimmingCharacters(in: trimChars)
+            if line.isEmpty { continue }
             let upper = line.uppercased()
-            if upper.hasPrefix("TITLE") { continue }
+            if upper.hasPrefix("TITLE") || upper.hasPrefix("LUT_1D_SIZE") { continue }
             if upper.hasPrefix("LUT_3D_SIZE") {
                 let parts = line.split(whereSeparator: { $0.isWhitespace })
                 size = parts.last.flatMap { Int($0) } ?? 0
                 if size > 1 { values.reserveCapacity(size * size * size * 3) }
                 continue
             }
-            // 1D LUT / 非 [0,1] 定义域：不支持，跳过（DOMAIN 行本身也不是三元组，会被下面滤掉）
-            if upper.hasPrefix("LUT_1D_SIZE") || upper.hasPrefix("DOMAIN_MIN") || upper.hasPrefix("DOMAIN_MAX") {
+            if upper.hasPrefix("DOMAIN_MIN") {
+                let parts = line.split(whereSeparator: { $0.isWhitespace })
+                if parts.count >= 4, let x = Double(parts[1]), let y = Double(parts[2]), let z = Double(parts[3]) {
+                    domainMin = (x, y, z)
+                }
+                continue
+            }
+            if upper.hasPrefix("DOMAIN_MAX") {
+                let parts = line.split(whereSeparator: { $0.isWhitespace })
+                if parts.count >= 4, let x = Double(parts[1]), let y = Double(parts[2]), let z = Double(parts[3]) {
+                    domainMax = (x, y, z)
+                }
                 continue
             }
             let parts = line.split(whereSeparator: { $0.isWhitespace })
@@ -223,7 +278,7 @@ final class CLUTLibrary: ObservableObject {
             }
         }
         guard size > 1, values.count == size * size * size * 3 else { return nil }
-        return CubeLUT(size: size, values: values)
+        return CubeLUT(size: size, values: values, domainMin: domainMin, domainMax: domainMax)
     }
 
     /// 把 .cube 三线性插值重采样到 64 级，strength 以恒等映射为基准烘进立方体
@@ -243,20 +298,28 @@ final class CLUTLibrary: ObservableObject {
         let lastN = Double(N - 1)
         var out = [Float](repeating: 0, count: D * D * D * 4)
 
+        let domMinR = lut.domainMin.0, domMinG = lut.domainMin.1, domMinB = lut.domainMin.2
+        let domSpanR = max(lut.domainMax.0 - domMinR, 1e-6)
+        let domSpanG = max(lut.domainMax.1 - domMinG, 1e-6)
+        let domSpanB = max(lut.domainMax.2 - domMinB, 1e-6)
+
         lut.values.withUnsafeBufferPointer { vals in
             for b in 0..<D {
                 let fb = Double(b) / lastD
-                let cb = fb * lastN
+                let nb = min(max((fb - domMinB) / domSpanB, 0), 1)
+                let cb = nb * lastN
                 let b0 = Int(cb), b1 = min(b0 + 1, N - 1)
                 let tb = cb - Double(b0)
                 for g in 0..<D {
                     let fg = Double(g) / lastD
-                    let cg = fg * lastN
+                    let ng = min(max((fg - domMinG) / domSpanG, 0), 1)
+                    let cg = ng * lastN
                     let g0 = Int(cg), g1 = min(g0 + 1, N - 1)
                     let tg = cg - Double(g0)
                     for r in 0..<D {
                         let fr = Double(r) / lastD
-                        let cr = fr * lastN
+                        let nr = min(max((fr - domMinR) / domSpanR, 0), 1)
+                        let cr = nr * lastN
                         let r0 = Int(cr), r1 = min(r0 + 1, N - 1)
                         let tr = cr - Double(r0)
 

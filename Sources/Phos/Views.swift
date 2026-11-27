@@ -467,7 +467,7 @@ struct CanvasPane: View {
     }
 
     private var preciseTool: Bool {
-        s.cropMode || s.whiteBalancePicker || s.pointColorPicker || s.retouchActive || s.selectedMask != nil || s.maskDrawingKind != nil
+        s.cropMode || s.whiteBalancePicker || s.pointColorPicker || s.retouchActive || s.guidedUprightActive || s.selectedMask != nil || s.maskDrawingKind != nil
     }
     private func layout(_ size: CGSize) -> WorkspaceLayout {
         WorkspaceLayout.resolve(size: size, topInset: session.topInset, browserVisible: session.browserVisible,
@@ -556,6 +556,15 @@ struct CanvasPane: View {
                     .overlay { selectionOverlay(width: rect.width, height: rect.height) }
                     .overlay(alignment: .topLeading) {
                         if let mask = editableMask, !s.temporaryPan { MaskOverlay(mask: mask, frame: CGRect(origin: .zero, size: rect.size)) }
+                        #if !PHOS_TESTING || PHOS_APP_TESTING
+                        if s.guidedUprightActive, !s.cropMode, !s.showBefore, let src = s.source {
+                            let orientedExtent = Engine.oriented(src, s.params).extent
+                            let sol = GuidedUprightEngine.solve(guides: s.params.uprightGuides,
+                                                                extent: orientedExtent,
+                                                                constrainCrop: s.params.uprightConstrainCrop)
+                            GuidedUprightOverlay(frameSize: rect.size, solution: sol)
+                        }
+                        #endif
                         if s.retouchActive, s.showRetouchOverlay, !s.cropMode, !s.showBefore {
                             let spots = retouchDraft.map { s.params.retouchSpots + [$0] } ?? s.params.retouchSpots
                             RetouchOverlay(
@@ -634,6 +643,28 @@ struct CanvasPane: View {
                     .padding(8).background(.regularMaterial,in:Capsule())
                     .position(x:shell.safeCanvas.midX,y:shell.safeCanvas.minY+22).allowsHitTesting(false)
             }
+            if s.guidedUprightActive, displayed != nil, !s.cropMode, !s.showBefore {
+                HStack(spacing: 8) {
+                    Image(systemName: "skew").font(.system(size: 11, weight: .semibold)).foregroundStyle(WorkspaceTokens.accent)
+                    Text(L10n.tr("参考线透视（\(s.params.uprightGuides.count)/4）：沿建筑竖线或横线拖动，至少 2 条自动生效"))
+                        .font(.system(size: 11, weight: .medium))
+                    if !s.params.uprightGuides.isEmpty {
+                        Button(L10n.tr("清除")) { s.set(\.uprightGuides, []); s.endEdit() }.controlSize(.small)
+                    }
+                    Button(L10n.tr("完成")) { s.guidedUprightActive = false }
+                        .controlSize(.small)
+                        .buttonStyle(WorkspaceButtonStyle(prominent: true))
+                }
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                .background(.regularMaterial, in: Capsule())
+                .overlay(Capsule().stroke(Color.white.opacity(0.14), lineWidth: 0.8))
+                .position(x: shell.safeCanvas.midX, y: shell.safeCanvas.minY + 24)
+            } else if s.softProof.enabled, displayed != nil, !s.cropMode {
+                #if !PHOS_TESTING || PHOS_APP_TESTING
+                SoftProofBannerView()
+                    .position(x: shell.safeCanvas.midX, y: shell.safeCanvas.minY + 24)
+                #endif
+            }
             if s.cropMode, displayed != nil, !pixelReady {
                 CropOverlay(frame: rect)
                 CropBar().frame(width: shell.safeCanvas.width, height: shell.safeCanvas.height)
@@ -688,7 +719,7 @@ struct CanvasPane: View {
     func canvasGesture(frame: CGRect, pixelView: Bool = false) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { v in
-                guard !s.cropMode, !s.splitComparison else { return }
+                guard !s.cropMode, !s.splitComparison, !s.guidedUprightActive else { return }
                 guard frame.contains(v.startLocation) else { return }
                 if (s.whiteBalancePicker || s.pointColorPicker || s.bokehFocusPicker) && !s.temporaryPan { return }
                 if !s.showBefore, !s.temporaryPan, s.retouchActive {
@@ -1612,6 +1643,8 @@ struct MergeSheet: View {
     @State private var mergeMode:MergeMode = .fusion
     @State private var alignEnabled = true
     @State private var alignMethod:AlignMethod = .translation
+    @State private var panoramaProjection: PanoramaProjection = .cylindrical
+    @State private var panoramaAutoCrop = true
 
     /// 最终合成顺序：文件夹照片按列表顺序，外部文件追加在后
     var list: [URL] {
@@ -1627,7 +1660,7 @@ struct MergeSheet: View {
                     .foregroundStyle(.white)
                     .frame(width: 30, height: 30)
                     .background(RoundedRectangle(cornerRadius: 8).fill(WorkspaceTokens.accent))
-                Text(L10n.tr("多重曝光合成"))
+                Text(L10n.tr("多重曝光与全景合成"))
                     .font(.system(size: 15, weight: .bold))
             }
 
@@ -1645,25 +1678,44 @@ struct MergeSheet: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            // 对齐选项
-            VStack(alignment: .leading, spacing: 6) {
-                Toggle(L10n.tr("先对齐帧（重叠区 NCC < 0.7 的帧自动剔除）"), isOn: Binding(
-                    get: { alignEnabled || mergeMode == .denoise },
-                    set: { alignEnabled = $0 }))
-                    .font(.system(size: 10.5))
-                    .disabled(mergeMode == .denoise || s.mergeRunning)
-                if alignEnabled || mergeMode == .denoise {
-                    Picker(L10n.tr("对齐方式"), selection: $alignMethod) {
-                        ForEach(AlignMethod.allCases, id: \.self) { m in
-                            Text(L10n.tr(m.label)).tag(m)
+            if mergeMode == .panorama {
+                VStack(alignment: .leading, spacing: 6) {
+                    Picker(L10n.tr("投影方式"), selection: $panoramaProjection) {
+                        ForEach(PanoramaProjection.allCases, id: \.self) { p in
+                            Text(L10n.tr(p.label)).tag(p)
                         }
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
                     .disabled(s.mergeRunning)
-                    Text(L10n.tr("平移：只补偿手持位移，快。透视：额外抗旋转/透视错位，帧歪得厉害时用"))
+                    Text(L10n.tr(panoramaProjection.hint))
                         .font(.system(size: 9.5))
                         .foregroundStyle(.secondary)
+                    Toggle(L10n.tr("自动裁切边缘黑边（最大有效内接矩形）"), isOn: $panoramaAutoCrop)
+                        .font(.system(size: 10.5))
+                        .disabled(s.mergeRunning)
+                }
+            } else {
+                // 对齐选项
+                VStack(alignment: .leading, spacing: 6) {
+                    Toggle(L10n.tr("先对齐帧（重叠区 NCC < 0.7 的帧自动剔除）"), isOn: Binding(
+                        get: { alignEnabled || mergeMode == .denoise },
+                        set: { alignEnabled = $0 }))
+                        .font(.system(size: 10.5))
+                        .disabled(mergeMode == .denoise || s.mergeRunning)
+                    if alignEnabled || mergeMode == .denoise {
+                        Picker(L10n.tr("对齐方式"), selection: $alignMethod) {
+                            ForEach(AlignMethod.allCases, id: \.self) { m in
+                                Text(L10n.tr(m.label)).tag(m)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .disabled(s.mergeRunning)
+                        Text(L10n.tr("平移：只补偿手持位移，快。透视：额外抗旋转/透视错位，帧歪得厉害时用"))
+                            .font(.system(size: 9.5))
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
 
@@ -1736,7 +1788,9 @@ struct MergeSheet: View {
                     Text(L10n.tr(s.mergeProgress)).font(.system(size: 11))
                 }
             }
-            Label(L10n.tr("输出 16 位 TIFF，文件名为「首张_合成.tif」，落在首张所在目录，合成后自动载入继续调色"),
+            Label(L10n.tr(mergeMode == .panorama
+                          ? "输出 16 位全景 TIFF，文件名为「首张_全景.tif」，落在首张所在目录，拼接后自动载入继续调色"
+                          : "输出 16 位 TIFF，文件名为「首张_合成.tif」，落在首张所在目录，合成后自动载入继续调色"),
                   systemImage: "info.circle")
                 .font(.system(size: 10))
                 .foregroundStyle(.secondary)
@@ -1749,9 +1803,10 @@ struct MergeSheet: View {
                 Button {
                     let urls = list
                     s.mergeMode = mergeMode; s.alignEnabled = alignEnabled; s.alignMethod = alignMethod
+                    s.panoramaProjection = panoramaProjection; s.panoramaAutoCrop = panoramaAutoCrop
                     Task { await s.mergeExposures(urls) }
                 } label: {
-                    Label(L10n.tr("开始合成"), systemImage: "play.fill")
+                    Label(L10n.tr(mergeMode == .panorama ? "开始拼接" : "开始合成"), systemImage: "play.fill")
                 }
                 .buttonStyle(WorkspaceButtonStyle(prominent:true))
                 .keyboardShortcut(.defaultAction)
@@ -1762,6 +1817,7 @@ struct MergeSheet: View {
         .padding(20).frame(width: 470).workspaceGlassPanel()
         .onAppear {
             mergeMode = s.mergeMode; alignEnabled = s.alignEnabled; alignMethod = s.alignMethod
+            panoramaProjection = s.panoramaProjection; panoramaAutoCrop = s.panoramaAutoCrop
             // 默认带上之前已标记的照片
             selected = Set(s.items.filter { $0.picked }.map { $0.id })
         }

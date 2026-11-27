@@ -1,8 +1,9 @@
 import Foundation
 
 /// Adobe XMP 旁档双向互通（无外部实体，严防 XXE）。
-/// 支持读写标准 `xmp:Rating`（含 `-1` 淘汰）、`xmpDM:good`（旗标）、`xmp:Label`、`dc:subject` 关键词
-/// 以及 Camera Raw (`crs:`) 全量调色、HSL、分通道曲线、颜色分级、校准、颗粒、裁剪参数与 `.xmp` 预设导入。
+/// 支持读写标准 `xmp:Rating`（含 `-1` 淘汰）、`xmpDM:good`（旗标）、`xmp:Label`、`dc:subject` 关键词、
+/// Camera Raw (`crs:`) 全量调色、HSL、分通道曲线、颜色分级、校准、颗粒、裁剪、透视/参考线、相机配置文件、
+/// 以及 Lightroom Classic / ACR 现代 `<crs:MaskGroupBasedCorrections>` 局部蒙版（含布尔加/减/交子蒙版与全部局部滑杆）。
 enum XMPSidecar {
     struct XMPMetadata {
         var rating: Int = 0
@@ -40,7 +41,7 @@ enum XMPSidecar {
             imageURL.appendingPathExtension("xmp")
         ]
         guard let file = candidates.first(where: { FileManager.default.fileExists(atPath: $0.path) }),
-              let data = try? Data(contentsOf: file), data.count <= 2 * 1024 * 1024 else { return nil }
+              let data = try? Data(contentsOf: file), data.count <= 4 * 1024 * 1024 else { return nil }
         return parse(data: data)
     }
 
@@ -59,7 +60,7 @@ enum XMPSidecar {
     }
 
     static func parsePreset(from url: URL) -> Preset? {
-        guard let data = try? Data(contentsOf: url), data.count <= 2 * 1024 * 1024 else { return nil }
+        guard let data = try? Data(contentsOf: url), data.count <= 4 * 1024 * 1024 else { return nil }
         let baseName = url.deletingPathExtension().lastPathComponent
         return parsePreset(data: data, fallbackName: baseName)
     }
@@ -183,6 +184,23 @@ enum XMPSidecar {
             extraAttrs.append("crs:GrayMixerBlue=\"\(Int((p.monoBlue * 100).rounded()))\"")
         }
 
+        if !p.cameraProfileName.isEmpty {
+            extraAttrs.append("crs:CameraProfile=\"\(esc(p.cameraProfileName))\"")
+        }
+
+        // 透视与 Guided Upright 参考线（兼容 Lightroom crs:UprightFourSegments）
+        if p.perspectiveV != 0 { extraAttrs.append("crs:PerspectiveVertical=\"\(Int(p.perspectiveV.rounded()))\"") }
+        if p.perspectiveH != 0 { extraAttrs.append("crs:PerspectiveHorizontal=\"\(Int(p.perspectiveH.rounded()))\"") }
+        if p.uprightGuides.count >= 2 {
+            extraAttrs.append("crs:PerspectiveUpright=\"5\"")
+            extraAttrs.append("crs:UprightFourSegmentsCount=\"\(min(p.uprightGuides.count, 4))\"")
+            for (i, g) in p.uprightGuides.prefix(4).enumerated() {
+                // LR 坐标系 Y 向下：y_lr = 1 - y_phos
+                let seg = "\(fmt(g.x0, decimals: 6)),\(fmt(1.0 - g.y0, decimals: 6)),\(fmt(g.x1, decimals: 6)),\(fmt(1.0 - g.y1, decimals: 6))"
+                extraAttrs.append("crs:UprightFourSegments\(i)=\"\(seg)\"")
+            }
+        }
+
         let hasCrop = p.cropX > 0.0005 || p.cropY > 0.0005 || p.cropW < 0.9995 || p.cropH < 0.9995 || abs(p.straighten) > 0.005
         if hasCrop {
             let left = min(max(p.cropX, 0), 1)
@@ -199,6 +217,9 @@ enum XMPSidecar {
             }
         }
 
+        // Lightroom Classic / ACR 现代局部蒙版序列化（<crs:MaskGroupBasedCorrections>）
+        let masksXML = serializeMasks(p.masks, esc: esc, fmt: fmt)
+
         let extraXML = extraAttrs.isEmpty ? "" : "\n       " + extraAttrs.joined(separator: "\n       ")
         let labelAttr = labelStr.isEmpty ? "" : "\n       xmp:Label=\"\(labelStr)\""
         return """
@@ -213,7 +234,7 @@ enum XMPSidecar {
                xmp:CreatorTool="Phos"
                xmp:Rating="\(ratingVal)"
                xmpDM:good="\(s.picked ? "True" : "False")"\(labelAttr)
-               crs:Version="15.0"
+               crs:Version="16.0"
                crs:ProcessVersion="11.0"
                crs:IncrementalTemperature="\(Int(p.temperature.rounded()))"
                crs:IncrementalTint="\(crsTint)"
@@ -243,11 +264,207 @@ enum XMPSidecar {
                crs:PostCropVignetteMidpoint="\(Int((p.vignetteStart * 100).rounded()))"
                crs:ConvertToGrayscale="\(p.mono ? "True" : "False")"\(extraXML)
                crs:HasSettings="True">
-        \(subjectXML)\(curvesXML)    </rdf:Description>
+        \(subjectXML)\(curvesXML)\(masksXML)    </rdf:Description>
           </rdf:RDF>
         </x:xmpmeta>
         """
     }
+
+    // MARK: - 蒙版 XMP 序列化（ACR / Lightroom MaskGroupBasedCorrections）
+
+    private static func serializeMasks(
+        _ masks: [Mask],
+        esc: (String) -> String,
+        fmt: (Double, Int) -> String
+    ) -> String {
+        let exportable = masks.filter { $0.kind != .depth }
+        guard !exportable.isEmpty else { return "" }
+
+        var groupEntries: [String] = []
+        for m in exportable {
+            let a = m.adjust
+            var corrAttrs: [String] = [
+                "crs:What=\"Correction\"",
+                "crs:CorrectionAmount=\"1\"",
+                "crs:CorrectionActive=\"\(m.enabled ? "true" : "false")\"",
+                "crs:CorrectionName=\"\(esc(m.name.isEmpty ? m.kind.label : m.name))\"",
+                "crs:CorrectionSyncID=\"\(m.id.uuidString.replacingOccurrences(of: "-", with: ""))\""
+            ]
+            // ACR 局部滑杆归一化范围约定：Exposure 为 EV/4 或直接 EV，其余 -1..1（100 -> 1.0）
+            if abs(a.exposure) > 1e-4    { corrAttrs.append("crs:LocalExposure2012=\"\(fmt(a.exposure / 4.0, 4))\"") }
+            if abs(a.contrast) > 1e-4    { corrAttrs.append("crs:LocalContrast2012=\"\(fmt(a.contrast / 100.0, 4))\"") }
+            if abs(a.highlights) > 1e-4  { corrAttrs.append("crs:LocalHighlights2012=\"\(fmt(a.highlights / 100.0, 4))\"") }
+            if abs(a.shadows) > 1e-4     { corrAttrs.append("crs:LocalShadows2012=\"\(fmt(a.shadows / 100.0, 4))\"") }
+            if abs(a.whites) > 1e-4      { corrAttrs.append("crs:LocalWhites2012=\"\(fmt(a.whites / 100.0, 4))\"") }
+            if abs(a.blacks) > 1e-4      { corrAttrs.append("crs:LocalBlacks2012=\"\(fmt(a.blacks / 100.0, 4))\"") }
+            if abs(a.temperature) > 1e-4 { corrAttrs.append("crs:LocalTemperature=\"\(fmt(a.temperature / 100.0, 4))\"") }
+            if abs(a.tint) > 1e-4        { corrAttrs.append("crs:LocalTint=\"\(fmt(a.tint / 100.0, 4))\"") }
+            if abs(a.saturation) > 1e-4  { corrAttrs.append("crs:LocalSaturation=\"\(fmt(a.saturation / 100.0, 4))\"") }
+            if abs(a.texture) > 1e-4     { corrAttrs.append("crs:LocalTexture=\"\(fmt(a.texture / 100.0, 4))\"") }
+            if abs(a.clarity) > 1e-4     { corrAttrs.append("crs:LocalClarity2012=\"\(fmt(a.clarity / 100.0, 4))\"") }
+            if abs(a.dehaze) > 1e-4      { corrAttrs.append("crs:LocalDehaze=\"\(fmt(a.dehaze / 100.0, 4))\"") }
+            if abs(a.sharpen) > 1e-4     { corrAttrs.append("crs:LocalSharpness=\"\(fmt(a.sharpen / 100.0, 4))\"") }
+            if abs(a.denoise) > 1e-4     { corrAttrs.append("crs:LocalLuminanceNoise=\"\(fmt(a.denoise / 100.0, 4))\"") }
+            if abs(a.hueShift) > 1e-4    { corrAttrs.append("crs:LocalHue=\"\(fmt(a.hueShift / 180.0, 4))\"") }
+
+            var subMasksXML: [String] = []
+            // 主蒙版作为第 0 个 Mask（blendMode = 0 Add）
+            if let primaryXML = serializeSingleMaskComponent(
+                kind: m.kind, enabled: true, inverted: m.inverted, op: .add,
+                x0: m.x0, y0: m.y0, x1: m.x1, y1: m.y1,
+                radius: m.radius, radiusX: m.radiusX, radiusY: m.radiusY,
+                radialAngle: m.radialAngle, feather: m.feather,
+                strokes: m.strokes, sampleRGB: m.sampleRGB, tolerance: m.tolerance,
+                lumLow: m.lumLow, lumHigh: m.lumHigh, lumSoft: m.lumSoft,
+                fmt: fmt
+            ) {
+                subMasksXML.append(primaryXML)
+            }
+            // 布尔子蒙版（加=0 / 减=1 / 交=2）
+            for comp in m.components {
+                if let compXML = serializeSingleMaskComponent(
+                    kind: comp.kind, enabled: comp.enabled, inverted: comp.inverted, op: comp.op,
+                    x0: comp.x0, y0: comp.y0, x1: comp.x1, y1: comp.y1,
+                    radius: comp.radius, radiusX: comp.radiusX, radiusY: comp.radiusY,
+                    radialAngle: comp.radialAngle, feather: comp.feather,
+                    strokes: comp.strokes, sampleRGB: comp.sampleRGB, tolerance: comp.tolerance,
+                    lumLow: comp.lumLow, lumHigh: comp.lumHigh, lumSoft: comp.lumSoft,
+                    fmt: fmt
+                ) {
+                    subMasksXML.append(compXML)
+                }
+            }
+            guard !subMasksXML.isEmpty else { continue }
+
+            let attrsJoined = corrAttrs.joined(separator: "\n                 ")
+            let subsJoined = subMasksXML.joined(separator: "\n")
+            let group = """
+                      <rdf:li>
+                        <rdf:Description
+                         \(attrsJoined)>
+                        <crs:CorrectionMasks>
+                          <rdf:Seq>
+            \(subsJoined)
+                          </rdf:Seq>
+                        </crs:CorrectionMasks>
+                        </rdf:Description>
+                      </rdf:li>
+            """
+            groupEntries.append(group)
+        }
+
+        guard !groupEntries.isEmpty else { return "" }
+        return """
+              <crs:MaskGroupBasedCorrections>
+                <rdf:Seq>
+        \(groupEntries.joined(separator: "\n"))
+                </rdf:Seq>
+              </crs:MaskGroupBasedCorrections>
+        """
+    }
+
+    private static func serializeSingleMaskComponent(
+        kind: MaskKind, enabled: Bool, inverted: Bool, op: MaskBoolOp,
+        x0: Double, y0: Double, x1: Double, y1: Double,
+        radius: Double, radiusX: Double?, radiusY: Double?,
+        radialAngle: Double, feather: Double,
+        strokes: [Stroke], sampleRGB: [Double], tolerance: Double,
+        lumLow: Double, lumHigh: Double, lumSoft: Double,
+        fmt: (Double, Int) -> String
+    ) -> String? {
+        let blendMode: Int = (op == .add ? 0 : op == .subtract ? 1 : 2)
+        let activeStr = enabled ? "true" : "false"
+        let invStr = inverted ? "true" : "false"
+        let baseAttrs = "crs:MaskActive=\"\(activeStr)\" crs:MaskBlendMode=\"\(blendMode)\" crs:MaskInverted=\"\(invStr)\" crs:MaskValue=\"1\""
+
+        switch kind {
+        case .linear:
+            // Phos: (x0,y0) 为选区全白点(Full)，(x1,y1) 为衰减归零点(Zero)，Y 向上；LR Y 向下
+            return """
+                            <rdf:li crs:What="Mask/Gradient" \(baseAttrs)
+                             crs:FullX="\(fmt(x0, 6))" crs:FullY="\(fmt(1.0 - y0, 6))"
+                             crs:ZeroX="\(fmt(x1, 6))" crs:ZeroY="\(fmt(1.0 - y1, 6))"/>
+            """
+        case .radial:
+            let rx = radiusX ?? radius
+            let ry = radiusY ?? radius
+            let cx = x0, cyLR = 1.0 - y0
+            let left = cx - rx, right = cx + rx
+            let top = cyLR - ry, bottom = cyLR + ry
+            let lrFeather = Int((min(max(feather, 0), 1) * 100).rounded())
+            return """
+                            <rdf:li crs:What="Mask/CircularGradient" \(baseAttrs)
+                             crs:Left="\(fmt(left, 6))" crs:Top="\(fmt(top, 6))"
+                             crs:Right="\(fmt(right, 6))" crs:Bottom="\(fmt(bottom, 6))"
+                             crs:Angle="\(fmt(-radialAngle, 3))" crs:Feather="\(lrFeather)" crs:Flipped="true"/>
+            """
+        case .luminanceRange:
+            let lo = min(max(lumLow, 0), 1), hi = min(max(lumHigh, lo), 1)
+            let sLo = max(0, lo - lumSoft), sHi = min(1, hi + lumSoft)
+            let lumStr = "\(fmt(sLo, 4)) \(fmt(lo, 4)) \(fmt(hi, 4)) \(fmt(sHi, 4))"
+            return """
+                            <rdf:li crs:What="Mask/RangeMask" \(baseAttrs)
+                             crs:Type="2" crs:LumRange="\(lumStr)" crs:LuminanceDepthSampleInfo="0 0.5 0.5"/>
+            """
+        case .colorRange:
+            let r = sampleRGB.count >= 3 ? sampleRGB[0] : 0.5
+            let g = sampleRGB.count >= 3 ? sampleRGB[1] : 0.5
+            let b = sampleRGB.count >= 3 ? sampleRGB[2] : 0.5
+            let amt = Int((min(max(tolerance / 0.6, 0), 1) * 100).rounded())
+            return """
+                            <rdf:li crs:What="Mask/RangeMask" \(baseAttrs)
+                             crs:Type="1" crs:ColorAmount="\(amt)"
+                             crs:SampleRGB="\(fmt(r, 4)) \(fmt(g, 4)) \(fmt(b, 4))"/>
+            """
+        case .brush:
+            guard !strokes.isEmpty else { return nil }
+            let st = strokes[0]
+            let dabs = strokes.flatMap { s -> [String] in
+                s.points.prefix(250).map { pt in
+                    "                <rdf:li>d \(fmt(pt.x, 5)) \(fmt(1.0 - pt.y, 5))</rdf:li>"
+                }
+            }.prefix(600).joined(separator: "\n")
+            return """
+                            <rdf:li>
+                              <rdf:Description crs:What="Mask/Paint" \(baseAttrs)
+                               crs:Radius="\(fmt(st.radius, 5))" crs:Feather="\(fmt(st.feather, 4))" crs:Flow="1">
+                                <crs:Dabs>
+                                  <rdf:Seq>
+            \(dabs)
+                                  </rdf:Seq>
+                                </crs:Dabs>
+                              </rdf:Description>
+                            </rdf:li>
+            """
+        case .subject, .foreground, .sky, .background, .person, .faceSkin, .bodySkin, .eyes, .eyebrows, .lips, .teeth, .hair, .clothes:
+            let (subType, subCat): (Int, Int?) = {
+                switch kind {
+                case .subject, .foreground: return (1, nil)
+                case .sky:                  return (2, nil)
+                case .background:           return (4, nil)
+                case .person:               return (3, 1)
+                case .faceSkin:             return (3, 2)
+                case .bodySkin:             return (3, 3)
+                case .eyebrows:             return (3, 4)
+                case .eyes:                 return (3, 5)
+                case .lips:                 return (3, 7)
+                case .teeth:                return (3, 8)
+                case .hair:                 return (3, 9)
+                case .clothes:              return (3, 10)
+                default:                    return (1, nil)
+                }
+            }()
+            let catAttr = subCat.map { " crs:MaskSubCategoryID=\"\($0)\"" } ?? ""
+            return """
+                            <rdf:li crs:What="Mask/Image" \(baseAttrs)
+                             crs:MaskSubType="\(subType)"\(catAttr)/>
+            """
+        case .depth:
+            return nil
+        }
+    }
+
+    // MARK: - XMP 解析器（含 MaskGroupBasedCorrections + UprightFourSegments）
 
     private final class XMPParserDelegate: NSObject, XMLParserDelegate {
         var result = XMPMetadata()
@@ -261,13 +478,73 @@ enum XMPSidecar {
         private var cropRight: Double? = nil
         private var cropTop: Double? = nil
         private var cropBottom: Double? = nil
+        private var uprightSegMap: [Int: UprightGuide] = [:]
+
+        // 局部蒙版解析上下文
+        private struct PendingMaskComponent {
+            var what = ""
+            var active = true
+            var inverted = false
+            var blendMode = 0
+            var attrs: [String: String] = [:]
+            var dabs: [CGPoint] = []
+        }
+        private struct PendingMaskGroup {
+            var name = ""
+            var active = true
+            var adjust = LocalAdjust()
+            var masks: [PendingMaskComponent] = []
+        }
+        private var inMaskGroups = false
+        private var inCorrectionMasks = false
+        private var inDabs = false
+        private var currentGroup: PendingMaskGroup? = nil
+        private var currentComp: PendingMaskComponent? = nil
 
         func parser(_ parser: XMLParser, didStartElement elementName: String,
                     namespaceURI: String?, qualifiedName qName: String?, attributes: [String: String]) {
             elementCount += 1
-            if elementCount > 5000 || stack.count > 32 { rejected = true; parser.abortParsing(); return }
+            if elementCount > 25000 || stack.count > 40 { rejected = true; parser.abortParsing(); return }
             stack.append(elementName)
             text = ""
+
+            if elementName == "crs:MaskGroupBasedCorrections" {
+                inMaskGroups = true
+                return
+            }
+            if inMaskGroups {
+                if elementName == "crs:CorrectionMasks" {
+                    inCorrectionMasks = true
+                    return
+                }
+                if elementName == "crs:Dabs" {
+                    inDabs = true
+                    return
+                }
+                if inCorrectionMasks {
+                    if let what = attributes["crs:What"], what.hasPrefix("Mask/") {
+                        var comp = PendingMaskComponent()
+                        comp.what = what
+                        comp.active = (attributes["crs:MaskActive"]?.lowercased() ?? "true") != "false"
+                        comp.inverted = (attributes["crs:MaskInverted"]?.lowercased() ?? "false") == "true"
+                        comp.blendMode = Int(attributes["crs:MaskBlendMode"] ?? "0") ?? 0
+                        comp.attrs = attributes
+                        currentComp = comp
+                    }
+                    return
+                } else {
+                    if attributes["crs:What"] == "Correction" || (elementName == "rdf:Description" && currentGroup != nil) {
+                        if currentGroup == nil { currentGroup = PendingMaskGroup() }
+                        parseCorrectionAttributes(attributes)
+                    } else if elementName == "rdf:li", stack.dropLast().last == "rdf:Seq",
+                              stack.contains("crs:MaskGroupBasedCorrections"), !inCorrectionMasks {
+                        currentGroup = PendingMaskGroup()
+                        if !attributes.isEmpty { parseCorrectionAttributes(attributes) }
+                    }
+                    return
+                }
+            }
+
             if elementName == "rdf:Description" || elementName == "Description" {
                 applyAttributes(attributes)
             }
@@ -278,12 +555,40 @@ enum XMPSidecar {
 
         func parser(_ parser: XMLParser, foundCharacters string: String) {
             text += string
-            if text.count > 8192 { rejected = true; parser.abortParsing() }
+            if text.count > 16384 { rejected = true; parser.abortParsing() }
         }
 
         func parser(_ parser: XMLParser, didEndElement elementName: String,
                     namespaceURI: String?, qualifiedName qName: String?) {
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if inMaskGroups {
+                if inDabs && elementName == "rdf:li" && !trimmed.isEmpty {
+                    let parts = trimmed.split(separator: " ")
+                    if parts.count >= 3, let x = Double(parts[1]), let y = Double(parts[2]),
+                       x.isFinite, y.isFinite {
+                        currentComp?.dabs.append(CGPoint(x: min(max(x, 0), 1), y: min(max(1.0 - y, 0), 1)))
+                    }
+                } else if elementName == "crs:Dabs" {
+                    inDabs = false
+                } else if inCorrectionMasks && elementName == "rdf:li", let comp = currentComp {
+                    currentGroup?.masks.append(comp)
+                    currentComp = nil
+                } else if elementName == "crs:CorrectionMasks" {
+                    inCorrectionMasks = false
+                } else if !inCorrectionMasks && elementName == "rdf:li",
+                          let grp = currentGroup,
+                          stack.dropLast().last == "rdf:Seq" {
+                    finalizeMaskGroup(grp)
+                    currentGroup = nil
+                } else if elementName == "crs:MaskGroupBasedCorrections" {
+                    inMaskGroups = false
+                }
+                if !stack.isEmpty { stack.removeLast() }
+                text = ""
+                return
+            }
+
             if !trimmed.isEmpty {
                 if stack.contains("dc:subject") && elementName == "rdf:li" {
                     if !result.keywords.contains(trimmed) { result.keywords.append(trimmed) }
@@ -314,7 +619,146 @@ enum XMPSidecar {
             text = ""
         }
 
+        private func parseCorrectionAttributes(_ attrs: [String: String]) {
+            guard var g = currentGroup else { return }
+            func num(_ k: String) -> Double? { attrs[k].flatMap { Double($0) }.flatMap { $0.isFinite ? $0 : nil } }
+            func clamp(_ v: Double, _ lo: Double, _ hi: Double) -> Double { min(max(v, lo), hi) }
+            if let name = attrs["crs:CorrectionName"], !name.isEmpty { g.name = name }
+            if let act = attrs["crs:CorrectionActive"] { g.active = act.lowercased() != "false" }
+            if let v = num("crs:LocalExposure2012")    { g.adjust.exposure    = clamp(v * 4.0, -4, 4) }
+            if let v = num("crs:LocalContrast2012")    { g.adjust.contrast    = clamp(v * 100.0, -100, 100) }
+            if let v = num("crs:LocalHighlights2012")  { g.adjust.highlights  = clamp(v * 100.0, -100, 100) }
+            if let v = num("crs:LocalShadows2012")     { g.adjust.shadows     = clamp(v * 100.0, -100, 100) }
+            if let v = num("crs:LocalWhites2012")      { g.adjust.whites      = clamp(v * 100.0, -100, 100) }
+            if let v = num("crs:LocalBlacks2012")      { g.adjust.blacks      = clamp(v * 100.0, -100, 100) }
+            if let v = num("crs:LocalTemperature")     { g.adjust.temperature = clamp(v * 100.0, -100, 100) }
+            if let v = num("crs:LocalTint")            { g.adjust.tint        = clamp(v * 100.0, -100, 100) }
+            if let v = num("crs:LocalSaturation")      { g.adjust.saturation  = clamp(v * 100.0, -100, 100) }
+            if let v = num("crs:LocalTexture")         { g.adjust.texture     = clamp(v * 100.0, -100, 100) }
+            if let v = num("crs:LocalClarity2012")     { g.adjust.clarity     = clamp(v * 100.0, -100, 100) }
+            if let v = num("crs:LocalDehaze")          { g.adjust.dehaze      = clamp(v * 100.0, -100, 100) }
+            if let v = num("crs:LocalSharpness")       { g.adjust.sharpen     = clamp(v * 100.0, 0, 100) }
+            if let v = num("crs:LocalLuminanceNoise")  { g.adjust.denoise     = clamp(v * 100.0, 0, 100) }
+            if let v = num("crs:LocalHue")             { g.adjust.hueShift    = clamp(v * 180.0, -180, 180) }
+            currentGroup = g
+        }
+
+        private func buildMaskComponent(from c: PendingMaskComponent) -> MaskComponent? {
+            func num(_ k: String) -> Double? { c.attrs[k].flatMap { Double($0) }.flatMap { $0.isFinite ? $0 : nil } }
+            let op: MaskBoolOp = c.blendMode == 1 ? .subtract : c.blendMode == 2 ? .intersect : .add
+            var comp = MaskComponent(op: op, kind: .linear)
+            comp.enabled = c.active
+            comp.inverted = c.inverted
+
+            switch c.what {
+            case "Mask/Gradient":
+                guard let fx = num("crs:FullX"), let fy = num("crs:FullY"),
+                      let zx = num("crs:ZeroX"), let zy = num("crs:ZeroY") else { return nil }
+                comp.kind = .linear
+                comp.x0 = fx; comp.y0 = 1.0 - fy
+                comp.x1 = zx; comp.y1 = 1.0 - zy
+                comp.gradientVersion = 2
+                return comp
+
+            case "Mask/CircularGradient":
+                guard let l = num("crs:Left"), let r = num("crs:Right"),
+                      let t = num("crs:Top"), let b = num("crs:Bottom") else { return nil }
+                comp.kind = .radial
+                comp.x0 = (l + r) * 0.5
+                comp.y0 = 1.0 - (t + b) * 0.5
+                comp.radiusX = max(0.01, abs(r - l) * 0.5)
+                comp.radiusY = max(0.01, abs(b - t) * 0.5)
+                comp.radialAngle = -(num("crs:Angle") ?? 0)
+                let fVal = num("crs:Feather") ?? 50
+                comp.feather = min(max(fVal > 1.0 ? fVal / 100.0 : fVal, 0), 1)
+                comp.gradientVersion = 1
+                // LR Flipped == false 表示选区在圆外，与 Phos 默认圆内相反
+                if (c.attrs["crs:Flipped"]?.lowercased() ?? "true") == "false" {
+                    comp.inverted = !comp.inverted
+                }
+                return comp
+
+            case "Mask/RangeMask":
+                let typ = Int(c.attrs["crs:Type"] ?? "0") ?? 0
+                if typ == 2 {
+                    comp.kind = .luminanceRange
+                    let vals = (c.attrs["crs:LumRange"] ?? "").split(separator: " ").compactMap { Double($0) }
+                    if vals.count >= 4 {
+                        comp.lumLow = min(max(vals[1], 0), 1)
+                        comp.lumHigh = min(max(vals[2], comp.lumLow), 1)
+                        comp.lumSoft = min(max(max(vals[1] - vals[0], vals[3] - vals[2]), 0.01), 0.5)
+                    }
+                    return comp
+                } else {
+                    comp.kind = .colorRange
+                    let amt = num("crs:ColorAmount") ?? 50
+                    comp.tolerance = min(max(amt / 100.0 * 0.6, 0.02), 0.8)
+                    let rgb = (c.attrs["crs:SampleRGB"] ?? "").split(separator: " ").compactMap { Double($0) }
+                    if rgb.count >= 3 { comp.sampleRGB = Array(rgb.prefix(3)) }
+                    return comp
+                }
+
+            case "Mask/Paint":
+                comp.kind = .brush
+                let rad = num("crs:Radius") ?? 0.05
+                let fth = num("crs:Feather") ?? 0.5
+                if !c.dabs.isEmpty {
+                    comp.strokes = [Stroke(pts: c.dabs.map { [Double($0.x), Double($0.y)] },
+                                           radius: min(max(rad, 0.005), 0.35),
+                                           feather: min(max(fth, 0), 1))]
+                }
+                return comp
+
+            case "Mask/Image":
+                let sub = Int(c.attrs["crs:MaskSubType"] ?? "1") ?? 1
+                let cat = Int(c.attrs["crs:MaskSubCategoryID"] ?? "0") ?? 0
+                switch sub {
+                case 2: comp.kind = .sky
+                case 4: comp.kind = .background
+                case 3:
+                    switch cat {
+                    case 2:  comp.kind = .faceSkin
+                    case 3:  comp.kind = .bodySkin
+                    case 4:  comp.kind = .eyebrows
+                    case 5, 6: comp.kind = .eyes
+                    case 7:  comp.kind = .lips
+                    case 8:  comp.kind = .teeth
+                    case 9:  comp.kind = .hair
+                    case 10: comp.kind = .clothes
+                    default: comp.kind = .person
+                    }
+                default:
+                    comp.kind = .subject
+                }
+                return comp
+
+            default:
+                return nil
+            }
+        }
+
+        private func finalizeMaskGroup(_ grp: PendingMaskGroup) {
+            let comps = grp.masks.compactMap { buildMaskComponent(from: $0) }
+            guard let first = comps.first else { return }
+            var m = first.asMask()
+            m.enabled = grp.active
+            m.name = grp.name.isEmpty ? first.kind.label : grp.name
+            m.adjust = grp.adjust
+            if comps.count > 1 {
+                m.components = Array(comps.dropFirst())
+            }
+            result.params.masks.append(m)
+            result.hasEdits = true
+        }
+
         func applyCropResult() {
+            if !uprightSegMap.isEmpty {
+                let ordered = uprightSegMap.keys.sorted().compactMap { uprightSegMap[$0] }
+                if ordered.count >= 2 {
+                    result.params.uprightGuides = Array(ordered.prefix(4))
+                    result.hasEdits = true
+                }
+            }
             if hasCropFlag == false { return }
             if let l = cropLeft, let r = cropRight, let t = cropTop, let b = cropBottom,
                r > l + 0.02, b > t + 0.02 {
@@ -339,16 +783,25 @@ enum XMPSidecar {
         private func applyPair(key: String, value: String) {
             func num() -> Double? { Double(value).flatMap { $0.isFinite ? $0 : nil } }
             func clamp(_ v: Double, _ lo: Double, _ hi: Double) -> Double { min(max(v, lo), hi) }
+            if key.hasPrefix("crs:UprightFourSegments"),
+               let idx = Int(key.dropFirst("crs:UprightFourSegments".count)),
+               (0...3).contains(idx) {
+                let nums = value.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
+                if nums.count == 4 {
+                    uprightSegMap[idx] = UprightGuide(
+                        x0: clamp(nums[0], 0, 1), y0: clamp(1.0 - nums[1], 0, 1),
+                        x1: clamp(nums[2], 0, 1), y1: clamp(1.0 - nums[3], 0, 1)
+                    )
+                }
+                return
+            }
             switch key {
             case "xmp:Rating":
                 if let r = Int(value) {
                     if r < 0 {
-                        result.rejected = true
-                        result.rating = 0
-                        result.picked = false
+                        result.rejected = true; result.rating = 0; result.picked = false
                     } else {
-                        result.rejected = false
-                        result.rating = min(max(r, 0), 5)
+                        result.rejected = false; result.rating = min(max(r, 0), 5)
                     }
                 }
             case "xmpDM:good":
@@ -366,6 +819,18 @@ enum XMPSidecar {
                 }
             case "crs:Name":
                 if result.presetName.isEmpty && !value.isEmpty { result.presetName = value }
+            case "crs:CameraProfile":
+                if !value.isEmpty {
+                    let available = DCPProfileEngine.availableProfiles()
+                    if let hit = available.first(where: { $0.id == value || $0.name == value }) {
+                        result.params.cameraProfileName = hit.id
+                        result.hasEdits = true
+                    }
+                }
+            case "crs:PerspectiveVertical":
+                if let v = num() { result.params.perspectiveV = clamp(v, -100, 100); result.hasEdits = true }
+            case "crs:PerspectiveHorizontal":
+                if let v = num() { result.params.perspectiveH = clamp(v, -100, 100); result.hasEdits = true }
             case "crs:IncrementalTemperature":
                 if let v = num() { result.params.temperature = clamp(v, -100, 100); result.hasEdits = true }
             case "crs:Temperature":

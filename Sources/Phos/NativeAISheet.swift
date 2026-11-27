@@ -72,6 +72,7 @@ struct NativeAISheet: View {
 
             HStack {
                 Button(L10n.tr("打开旧版 MLX-VLM 实验窗口…")) {
+                    s.showNativeAI = false
                     dismiss()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                         s.showPhotoAI = true
@@ -130,10 +131,8 @@ struct NativeAISheet: View {
                     .disabled(planBusy || s.source == nil)
                 Button(L10n.tr("应用参数")) {
                     guard let res = planResult else { return }
-                    s.showBefore = false
-                    s.cropMode = false
-                    s.commit(res.params)
-                    s.status = L10n.tr("已应用原生 AI 参数，全部滑杆可继续微调")
+                    s.applyAICandidate(res.params,
+                                       statusMessage: L10n.tr("已应用原生 AI 参数，全部滑杆可继续微调"))
                     dismiss()
                 }
                 .buttonStyle(WorkspaceButtonStyle(prominent: true))
@@ -197,8 +196,8 @@ struct NativeAISheet: View {
                     .disabled(matchBusy || s.source == nil || refURL == nil)
                 Button(L10n.tr("应用到照片")) {
                     guard let res = matchResult else { return }
-                    s.commit(res.params)
-                    s.status = L10n.tr("已完成参考图对色（全部滑杆与曲线可继续微调）")
+                    s.applyAICandidate(res.params,
+                                       statusMessage: L10n.tr("已完成参考图对色（全部滑杆与曲线可继续微调）"))
                     dismiss()
                 }
                 .buttonStyle(WorkspaceButtonStyle(prominent: true))
@@ -292,7 +291,8 @@ struct NativeAISheet: View {
             let res = NativePhotoPlanner.plan(instruction: instr, source: src, base: baseParams, disparityMask: disp)
             let scale = min(1.0, 640.0 / max(src.extent.width, src.extent.height, 1.0))
             let small = src.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-            let rendered = Engine.render(small, res.params, disparityMask: disp)
+            let smallDisp = url.flatMap { Engine.disparityBokehMask(for: $0, target: small.extent) }
+            let rendered = Engine.render(small, res.params, disparityMask: smallDisp)
             let cg = Engine.ctx.createCGImage(rendered, from: rendered.extent, format: .RGBA8, colorSpace: Engine.srgb)
             await MainActor.run {
                 planResult = res

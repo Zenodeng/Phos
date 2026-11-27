@@ -322,6 +322,16 @@ extension Engine {
             return painted.cropped(to: e)
         }
         if let d = disparityMask {
+            if abs(d.extent.width - e.width) > 0.5 || abs(d.extent.height - e.height) > 0.5
+                || abs(d.extent.minX - e.minX) > 0.5 || abs(d.extent.minY - e.minY) > 0.5 {
+                let sx = e.width / max(d.extent.width, 1)
+                let sy = e.height / max(d.extent.height, 1)
+                return d
+                    .transformed(by: CGAffineTransform(translationX: -d.extent.minX, y: -d.extent.minY))
+                    .transformed(by: CGAffineTransform(scaleX: sx, y: sy))
+                    .transformed(by: CGAffineTransform(translationX: e.minX, y: e.minY))
+                    .cropped(to: e)
+            }
             return d.cropped(to: e)
         }
         if p.bokehAutoDepth {

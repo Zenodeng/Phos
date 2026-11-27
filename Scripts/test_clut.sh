@@ -37,6 +37,11 @@ swiftc -O -suppress-warnings -D PHOS_TESTING -sdk "$SDK" \
     Sources/Phos/RetouchEngine.swift \
     Sources/Phos/DepthEngine.swift \
     Sources/Phos/NeuralDenoiseEngine.swift \
+    Sources/Phos/GuidedUprightEngine.swift \
+    Sources/Phos/PanoramaEngine.swift \
+    Sources/Phos/LibRawEngine.swift \
+    Sources/Phos/DCPProfileEngine.swift \
+    Sources/Phos/SoftProofEngine.swift \
     Sources/Phos/AutoTone.swift \
     Sources/Phos/SceneClassifier.swift \
     Tools/CLUTTest.swift -o "$BUILD/cluttest"

@@ -102,7 +102,9 @@ struct SnapshotSheet: View {
 
 struct OutputPrecisionControls: View {
     @ObservedObject private var interfaceLanguage = AppLanguage.shared
+    @EnvironmentObject var s: AppState
     @Binding var settings: ExportSettings
+    @State private var iccChoices: [SoftProofEngine.ProfileChoice] = SoftProofEngine.availableProfiles()
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if settings.format == "tiff" {
@@ -114,7 +116,23 @@ struct OutputPrecisionControls: View {
             Picker(L10n.tr("色彩空间"), selection: $settings.colorSpace) {
                 ForEach(ExportColorSpace.allCases, id: \.self) { color in Text(L10n.tr(color.label)).tag(color) }
             }
+            HStack(spacing: 6) {
+                Picker(L10n.tr("印刷 ICC"), selection: $settings.customICCProfilePath) {
+                    Text(L10n.tr("跟随上方色彩空间")).tag("")
+                    Text(L10n.tr("Generic CMYK（四色胶印）")).tag("genericCMYK")
+                    ForEach(iccChoices.filter { $0.isCustom }) { p in
+                        Text(p.name).tag(p.id)
+                    }
+                }
+                Button(L10n.tr("导入…")) {
+                    s.importICCProfile {
+                        iccChoices = SoftProofEngine.availableProfiles()
+                    }
+                }
+                .controlSize(.small)
+            }
         }
+        .onAppear { iccChoices = SoftProofEngine.availableProfiles() }
     }
 }
 

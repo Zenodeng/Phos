@@ -678,6 +678,14 @@ struct EditParams: Codable, Equatable {
     var perspectiveAuto: Bool = false  // 自动透视（Vision 矩形检测）
     var perspectiveV: Double = 0       // 垂直透视 -100...100
     var perspectiveH: Double = 0       // 水平透视 -100...100
+    var uprightGuides: [UprightGuide] = []    // Guided Upright 2–4 条参考线
+    var uprightConstrainCrop: Bool = true     // 参考线校正后自动内接裁切去黑边
+
+    // 可选 RAW 解码与相机配置文件（.dcp）
+    var rawDecoderMode: RawDecoderMode = .auto
+    var libRawHighlightMode: Int = 5          // 0=裁剪 1=保留无裁 2=混合 5=色彩重建
+    var cameraProfileName: String = ""        // 空=默认，__flat__/__vivid__/__portrait__ 或导入的 .dcp 文件名
+    var cameraProfileAmount: Double = 1.0     // 配置文件强度 0...2.0
 
     // 校准：改 RGB 三原色的原色（定风格的隐藏武器）
     var primRed = PrimaryAdj()
@@ -847,6 +855,8 @@ struct EditParams: Codable, Equatable {
         case clutName, clutStrength
         case rotation, flipped, straighten
         case perspectiveAuto, perspectiveV, perspectiveH
+        case uprightGuides, uprightConstrainCrop
+        case rawDecoderMode, libRawHighlightMode, cameraProfileName, cameraProfileAmount
         case cropX, cropY, cropW, cropH
         case masks
     }
@@ -927,6 +937,12 @@ struct EditParams: Codable, Equatable {
         perspectiveAuto = try c.decodeIfPresent(Bool.self, forKey: .perspectiveAuto) ?? base.perspectiveAuto
         perspectiveV   = try c.decodeIfPresent(Double.self, forKey: .perspectiveV)   ?? base.perspectiveV
         perspectiveH   = try c.decodeIfPresent(Double.self, forKey: .perspectiveH)   ?? base.perspectiveH
+        uprightGuides  = try c.decodeIfPresent([UprightGuide].self, forKey: .uprightGuides) ?? base.uprightGuides
+        uprightConstrainCrop = try c.decodeIfPresent(Bool.self, forKey: .uprightConstrainCrop) ?? base.uprightConstrainCrop
+        rawDecoderMode = try c.decodeIfPresent(RawDecoderMode.self, forKey: .rawDecoderMode) ?? base.rawDecoderMode
+        libRawHighlightMode = try c.decodeIfPresent(Int.self, forKey: .libRawHighlightMode) ?? base.libRawHighlightMode
+        cameraProfileName = try c.decodeIfPresent(String.self, forKey: .cameraProfileName) ?? base.cameraProfileName
+        cameraProfileAmount = try c.decodeIfPresent(Double.self, forKey: .cameraProfileAmount) ?? base.cameraProfileAmount
         clutName       = try c.decodeIfPresent(String.self, forKey: .clutName)       ?? base.clutName
         clutStrength   = try c.decodeIfPresent(Double.self, forKey: .clutStrength)   ?? base.clutStrength
         rotation       = try c.decodeIfPresent(Int.self, forKey: .rotation)          ?? base.rotation
@@ -956,6 +972,7 @@ struct ExportSettings: Codable, Equatable {
     var sharpenForOutput: Bool = false
     var tiffBitDepth: Int = 16
     var colorSpace: ExportColorSpace = .sRGB
+    var customICCProfilePath: String = ""     // 可选自定义印刷/显示器 .icc/.icm 配置文件路径（非空时覆盖 colorSpace）
     var preserveMetadata: Bool = true
     var stripGPS: Bool = false
     var copyrightText: String = ""
@@ -976,7 +993,7 @@ struct ExportSettings: Codable, Equatable {
     init() {}
 
     enum CodingKeys: String, CodingKey {
-        case format, quality, maxLongEdge, sharpenForOutput, tiffBitDepth, colorSpace
+        case format, quality, maxLongEdge, sharpenForOutput, tiffBitDepth, colorSpace, customICCProfilePath
         case preserveMetadata, stripGPS, copyrightText, exportHDR
         case watermarkEnabled, watermarkKind, watermarkText, watermarkDarkText
         case watermarkImagePath, watermarkPosition, watermarkScale
@@ -992,6 +1009,7 @@ struct ExportSettings: Codable, Equatable {
         sharpenForOutput  = try c.decodeIfPresent(Bool.self, forKey: .sharpenForOutput) ?? d.sharpenForOutput
         tiffBitDepth      = try c.decodeIfPresent(Int.self, forKey: .tiffBitDepth) ?? d.tiffBitDepth
         colorSpace        = try c.decodeIfPresent(ExportColorSpace.self, forKey: .colorSpace) ?? d.colorSpace
+        customICCProfilePath = try c.decodeIfPresent(String.self, forKey: .customICCProfilePath) ?? d.customICCProfilePath
         preserveMetadata  = try c.decodeIfPresent(Bool.self, forKey: .preserveMetadata) ?? d.preserveMetadata
         stripGPS          = try c.decodeIfPresent(Bool.self, forKey: .stripGPS) ?? d.stripGPS
         copyrightText     = try c.decodeIfPresent(String.self, forKey: .copyrightText) ?? d.copyrightText
@@ -1051,21 +1069,65 @@ enum ExportPaths {
     }
 }
 
-// MARK: - 多重曝光合成模式
-enum MergeMode: String, Codable, CaseIterable {
-    case average, fusion, denoise
+// MARK: - Guided Upright 参考线
+struct UprightGuide: Codable, Equatable, Identifiable {
+    var id: UUID = UUID()
+    /// 定向后源图归一化坐标（原点左下，0...1）
+    var x0: Double
+    var y0: Double
+    var x1: Double
+    var y1: Double
+    var isHorizontal: Bool { abs(x1 - x0) >= abs(y1 - y0) }
+}
+
+// MARK: - 可选 RAW 解码后端
+enum RawDecoderMode: String, Codable, CaseIterable {
+    case auto, appleRAW, libRaw
     var label: String {
         switch self {
-        case .average: return "平均合成"
-        case .fusion:  return "曝光融合"
-        case .denoise: return "手持降噪"
+        case .auto:     return "自动（默认 Apple RAW）"
+        case .appleRAW: return "Apple RAW"
+        case .libRaw:   return "LibRaw（可选）"
+        }
+    }
+}
+
+// MARK: - 全景投影方式
+enum PanoramaProjection: String, Codable, CaseIterable {
+    case cylindrical, planar, spherical
+    var label: String {
+        switch self {
+        case .cylindrical: return "柱面投影"
+        case .planar:      return "平面透视"
+        case .spherical:   return "球面投影"
         }
     }
     var hint: String {
         switch self {
-        case .average: return "所有帧等权叠加：适合降噪、流水/星轨，张数越多越干净"
-        case .fusion:  return "按每像素的曝光合适度加权：每张取它曝光最好的部分，适合大光比的包围曝光"
-        case .denoise: return "对齐后逐像素平均：偏离参考帧 kσ 的像素按参考值取，压手持噪点与移动物体鬼影（自动开启帧对齐）"
+        case .cylindrical: return "最适合水平广角/多张接片，保持垂直线条笔直"
+        case .planar:      return "适合 2–4 张建筑正立面或小视场拼接，保留直线几何"
+        case .spherical:   return "适合超广角或多排全景，兼顾水平与垂直大视角"
+        }
+    }
+}
+
+// MARK: - 多重曝光与全景合成模式
+enum MergeMode: String, Codable, CaseIterable {
+    case average, fusion, denoise, panorama
+    var label: String {
+        switch self {
+        case .average:  return "平均合成"
+        case .fusion:   return "曝光融合"
+        case .denoise:  return "手持降噪"
+        case .panorama: return "全景拼接"
+        }
+    }
+    var hint: String {
+        switch self {
+        case .average:  return "所有帧等权叠加：适合降噪、流水/星轨，张数越多越干净"
+        case .fusion:   return "按每像素的曝光合适度加权：每张取它曝光最好的部分，适合大光比的包围曝光"
+        case .denoise:  return "对齐后逐像素平均：偏离参考帧 kσ 的像素按参考值取，压手持噪点与移动物体鬼影（自动开启帧对齐）"
+        case .panorama: return "柱面/球面/平面投影 + 粗到精重叠配准 + 曝光均衡 + 拉普拉斯多频段融合，输出 16 位全景 TIFF"
         }
     }
 }

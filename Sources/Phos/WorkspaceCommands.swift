@@ -8,6 +8,7 @@ enum WorkspaceCommandID: String, CaseIterable {
     case createVirtualCopy, deleteVirtualCopy, exportXMP, importXMP, exportFolderXMP, toggleAutoSyncXMP
     case retouchTool, pointColorTool
     case nativeAIWorkspace, colorMatchTool, smartCulling, modelHub
+    case softProof, guidedUpright
 }
 @MainActor extension WorkspaceWindowModel {
     func enabled(_ command:WorkspaceCommandID) -> Bool {
@@ -20,7 +21,7 @@ enum WorkspaceCommandID: String, CaseIterable {
         case .export,.batch: return ready && !s.jobRunning && s.cropSession == nil
         case .sync: return ready && !s.jobRunning && !s.selectedPhotos.isEmpty && s.cropSession == nil
         case .merge: return ready && !s.mergeRunning && s.cropSession == nil
-        case .pixel100,.beforeOriginal,.beforeGeometry,.clipping,.compareView,.referenceView,.retouchTool,.pointColorTool:
+        case .pixel100,.beforeOriginal,.beforeGeometry,.clipping,.compareView,.referenceView,.retouchTool,.pointColorTool,.softProof,.guidedUpright:
             return ready && !s.cropMode
         case .reject,.createVirtualCopy,.exportXMP,.importXMP:
             return s.current != nil && !s.syncRunning
@@ -101,6 +102,11 @@ enum WorkspaceCommandID: String, CaseIterable {
             else { state.runSmartCulling() }
         case .modelHub:
             finishEditing(); state.nativeAITab = .models; state.showNativeAI = true
+        case .softProof:
+            state.softProof.enabled.toggle()
+        case .guidedUpright:
+            finishEditing(); session.inspectorVisible = true; state.inspectorUI.category = .geometry
+            state.guidedUprightActive.toggle()
         }
     }
 }
@@ -166,6 +172,8 @@ struct WorkspaceMenuCommands: Commands {
             Button(L10n.tr("多图同屏选片 (N)")) { run(.surveyView) }.disabled(!available(.surveyView))
             Button(L10n.tr("参考锁定视图 (⇧R)")) { run(.referenceView) }.disabled(!available(.referenceView))
             Button(L10n.tr("高光/暗部溢出警示 (J)")) { run(.clipping) }.disabled(!available(.clipping))
+            Button(L10n.tr("软打样 (⇧S)")) { run(.softProof) }.disabled(!available(.softProof))
+            Button(L10n.tr("参考线透视校正")) { run(.guidedUpright) }.disabled(!available(.guidedUpright))
             Button(L10n.tr("切换 EDR 动态范围")) { run(.toggleEDR) }.disabled(!available(.toggleEDR))
             Button(L10n.tr("污点修复画笔")) { run(.retouchTool) }.disabled(!available(.retouchTool))
             Button(L10n.tr("点颜色取样")) { run(.pointColorTool) }.disabled(!available(.pointColorTool))

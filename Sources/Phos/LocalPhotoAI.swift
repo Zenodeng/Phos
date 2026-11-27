@@ -471,8 +471,8 @@ struct PhotoAISheet: View {
                 Button(L10n.tr("应用调整")) {
                     state.parameterEdits.finishCurrent()
                     guard let candidate = editor.candidate, state.current?.id == editor.photoID, state.params == editor.base, !state.syncRunning else { editor.candidate = nil; editor.message = "照片或参数已变化，请重新生成建议。"; return }
-                    state.showBefore = false; state.cropMode = false; state.selectedMask = nil
-                    state.clearAutoTone(); state.commit(candidate); state.status = "已应用 AI 修图，可撤销"; dismiss()
+                    state.applyAICandidate(candidate, statusMessage: "已应用 AI 修图，可撤销")
+                    dismiss()
                 }.buttonStyle(WorkspaceButtonStyle(prominent:true)).disabled(editor.busy || editor.candidate == nil || state.current?.id != editor.photoID || state.params != editor.base || state.syncRunning)
             }
         }.padding(22).frame(width:720).onDisappear { editor.cancel() }

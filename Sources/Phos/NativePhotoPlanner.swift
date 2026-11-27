@@ -20,8 +20,20 @@ enum NativePhotoPlanner {
         let small = scale < 1
             ? source.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
             : source
+        let smallDisparity: CIImage? = disparityMask.map { d in
+            if abs(d.extent.width - small.extent.width) <= 0.5 && abs(d.extent.height - small.extent.height) <= 0.5 {
+                return d
+            }
+            let sx = small.extent.width / max(d.extent.width, 1)
+            let sy = small.extent.height / max(d.extent.height, 1)
+            return d
+                .transformed(by: CGAffineTransform(translationX: -d.extent.minX, y: -d.extent.minY))
+                .transformed(by: CGAffineTransform(scaleX: sx, y: sy))
+                .transformed(by: CGAffineTransform(translationX: small.extent.minX, y: small.extent.minY))
+                .cropped(to: small.extent)
+        }
 
-        let preStats = measureStats(Engine.render(small, base, disparityMask: disparityMask))
+        let preStats = measureStats(Engine.render(small, base, disparityMask: smallDisparity))
         var cand = base
         var actions: [String] = []
         var addedMasks = 0
@@ -134,7 +146,7 @@ enum NativePhotoPlanner {
         }
 
         // 像素闭环核对
-        let postStats = measureStats(Engine.render(small, cand, disparityMask: disparityMask))
+        let postStats = measureStats(Engine.render(small, cand, disparityMask: smallDisparity))
         let lumaShift = postStats.medianY - preStats.medianY
         let chromaShift = postStats.meanC - preStats.meanC
 

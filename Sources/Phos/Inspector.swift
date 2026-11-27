@@ -1,5 +1,7 @@
 import SwiftUI
 import CoreImage
+import AppKit
+import UniformTypeIdentifiers
 
 @MainActor
 func bind(_ kp: WritableKeyPath<EditParams, Double>, _ s: AppState) -> Binding<Double> {
@@ -346,6 +348,8 @@ struct GroupBox<Content: View>: View {
                 }
 
                 GroupBox(title: "校准") {
+                    RAWProfilePane()
+                    Divider().padding(.vertical, 4)
                     CalibrationPane()
                 }
 
@@ -377,19 +381,64 @@ struct GroupBox<Content: View>: View {
                             s.set(\.straighten, 0); s.set(\.rotation, 0); s.set(\.flipped, false)
                             s.set(\.perspectiveAuto, false)
                             s.set(\.perspectiveV, 0); s.set(\.perspectiveH, 0)
+                            s.set(\.uprightGuides, []); s.set(\.uprightConstrainCrop, true)
+                            s.guidedUprightActive = false
                             s.endEdit()
                         }
                     }
                     .controlSize(.small)
                     WorkspacePhotoParameter(id: "straighten")
                     Divider().padding(.vertical, 2)
+                    // Guided Upright（2–4 条参考线透视校正）
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack(spacing: 6) {
+                            Button {
+                                s.guidedUprightActive.toggle()
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "skew")
+                                    Text(L10n.tr(s.guidedUprightActive ? "完成参考线" : "参考线透视"))
+                                }
+                                .font(.system(size: 11, weight: .medium))
+                            }
+                            .controlSize(.small)
+                            .buttonStyle(WorkspaceButtonStyle(prominent: s.guidedUprightActive))
+                            .disabled(s.source == nil || s.cropMode)
+                            .help(L10n.tr("在画布沿建筑竖线或横线画 2–4 条参考线，精确拉直透视"))
+
+                            if !s.params.uprightGuides.isEmpty {
+                                Text(L10n.tr("已画 \(s.params.uprightGuides.count)/4"))
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundStyle(.secondary)
+                                Spacer(minLength: 0)
+                                Button(L10n.tr("清除")) {
+                                    s.set(\.uprightGuides, [])
+                                    s.endEdit()
+                                }
+                                .controlSize(.small)
+                            }
+                        }
+                        if !s.params.uprightGuides.isEmpty || s.guidedUprightActive {
+                            Toggle(L10n.tr("自动去黑边（内接裁切）"),
+                                   isOn: Binding(get: { s.params.uprightConstrainCrop },
+                                                 set: { s.set(\.uprightConstrainCrop, $0); s.endEdit() }))
+                                .font(.system(size: 10.5))
+                        }
+                    }
+                    Divider().padding(.vertical, 2)
                     Toggle(L10n.tr("自动透视（Vision 检测画面内四边形）"),
                            isOn: Binding(get: { s.params.perspectiveAuto },
                                          set: { s.set(\.perspectiveAuto, $0); s.endEdit() }))
                         .font(.system(size: 11))
-                    if !s.params.perspectiveAuto {
+                        .disabled(s.params.uprightGuides.count >= 2)
+                    if !s.params.perspectiveAuto && s.params.uprightGuides.count < 2 {
                         WorkspacePhotoParameter(id: "perspectiveV")
                         WorkspacePhotoParameter(id: "perspectiveH")
+                    } else if s.params.uprightGuides.count >= 2 {
+                        Text(L10n.tr("当前由 Guided Upright 参考线接管透视；清除参考线后可恢复手动/自动滑块"))
+                            .font(.system(size: 9.5)).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     } else {
                         Text(L10n.tr("已按画面内检测到的四边形自动校正；手动滑块仅在关闭自动时生效"))
                             .font(.system(size: 9.5)).foregroundStyle(.secondary)
@@ -869,31 +918,31 @@ struct ClutPicker: View {
     @State private var scanRevision = 0
     var body: some View {
         VStack(spacing: 4) {
-            HStack {
-                TextField(L10n.tr("搜索胶片…"), text: $ui.clutQuery).textFieldStyle(.roundedBorder).controlSize(.small)
-                Button(L10n.tr("清除")) { s.set(\.clutName, ""); s.endEdit() }.controlSize(.small)
+            TextField(L10n.tr("搜索胶片…"), text: $ui.clutQuery).textFieldStyle(.roundedBorder).controlSize(.small)
+            HStack(spacing: 4) {
+                Button(L10n.tr("清除")) { s.applyCLUT("") }
+                    .controlSize(.small)
+                    .disabled(s.params.clutName.isEmpty)
+                Button(L10n.tr("导入…")) { importExternalLUTs() }
+                    .controlSize(.small)
+                    .help(L10n.tr("从磁盘导入外部 .cube / HALD LUT 到「我的LUT/已导入」并立即应用"))
+                Spacer(minLength: 0)
                 Button(L10n.tr("刷新")) { s.cluts.invalidate(); scanRevision &+= 1 }.controlSize(.small).disabled(scanning)
                     .help(L10n.tr("重新扫描 HaldCLUT 目录：往 ~/Documents/RawTherapee/HaldCLUT 里放了新 LUT 后点这里（HALD 的 PNG/TIF 与 .cube 都认）"))
             }
             let all = available
-            // 不再截断到前 60 个：LUT 超过 300 个时，新放进去的会排在后头，不搜索就永远看不到
-            let shown = q.isEmpty ? all
-                : all.filter { $0.localizedCaseInsensitiveContains(q) }
-            Menu {
-                ForEach(shown, id: \.self) { name in
-                    Button(name) { s.set(\.clutName, name); s.endEdit() }
-                }
-            } label: {
-                HStack {
-                    Text(s.params.clutName.isEmpty ? L10n.tr("选择胶片…") : s.params.clutName)
-                        .font(.system(size: 11)).lineLimit(1)
-                    Spacer()
-                    Image(systemName: "chevron.down").font(.system(size: 9))
-                }
-                .padding(.horizontal, 6).padding(.vertical, 4)
-                .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 4))
-            }
-            .buttonStyle(.plain)
+            let trimmedQuery = q.trimmingCharacters(in: .whitespacesAndNewlines)
+            let shown = trimmedQuery.isEmpty ? all
+                : all.filter { $0.localizedCaseInsensitiveContains(trimmedQuery) }
+            CLUTPopupButton(
+                title: s.params.clutName.isEmpty ? L10n.tr("选择胶片…") : s.params.clutName,
+                selectedName: s.params.clutName,
+                items: shown,
+                flatList: !trimmedQuery.isEmpty,
+                noneTitle: L10n.tr("无（不使用 LUT）"),
+                onSelect: { name in s.applyCLUT(name) },
+                onImport: { importExternalLUTs() }
+            )
             if scanning { HStack { ProgressView().controlSize(.mini); Text(L10n.tr("正在扫描胶片…")).font(.caption) } }
             Text(L10n.tr(all.isEmpty ? "暂无胶片 LUT，可添加 HALD 或 cube 文件后刷新" : shown.isEmpty ? "没有匹配的胶片" : "共 \(all.count) 个可用 · 搜索结果 \(shown.count) 个")).font(.system(size: 9.5)).foregroundStyle(.secondary).opacity(scanning ? 0 : 1)
         }
@@ -903,6 +952,212 @@ struct ClutPicker: View {
             guard !Task.isCancelled else { return }
             available = result; scanning = false
         }
+    }
+
+    private func importExternalLUTs() {
+        let panel = NSOpenPanel()
+        panel.title = L10n.tr("导入外部 LUT (.cube / HALD)…")
+        panel.message = L10n.tr("选择要导入的 3D .cube 或 HALD LUT 文件")
+        panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = false
+        panel.allowedContentTypes = [
+            UTType(filenameExtension: "cube") ?? .data,
+            .png,
+            .tiff
+        ]
+        guard panel.runModal() == .OK, !panel.urls.isEmpty else { return }
+        var lastImported: String?
+        do {
+            for url in panel.urls {
+                lastImported = try s.cluts.importLUT(from: url)
+            }
+            scanRevision &+= 1
+            if let name = lastImported {
+                s.applyCLUT(name)
+                s.status = L10n.tr("已导入 LUT：\(name)")
+            }
+        } catch {
+            s.workflowError = L10n.tr("导入 LUT 失败：\(error.localizedDescription)")
+        }
+    }
+}
+
+private final class CLUTMenuAnchorBox: ObservableObject {
+    weak var view: NSView?
+}
+
+private struct CLUTMenuAnchor: NSViewRepresentable {
+    let box: CLUTMenuAnchorBox
+    func makeNSView(context: Context) -> NSView {
+        let v = NSView(frame: .zero)
+        DispatchQueue.main.async { box.view = v }
+        return v
+    }
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async { box.view = nsView }
+    }
+}
+
+private final class CLUTMenuActionTarget: NSObject {
+    private let onSelect: (String) -> Void
+    private let onImport: (() -> Void)?
+    init(onSelect: @escaping (String) -> Void, onImport: (() -> Void)?) {
+        self.onSelect = onSelect
+        self.onImport = onImport
+    }
+    @objc func pick(_ sender: NSMenuItem) {
+        onSelect((sender.representedObject as? String) ?? "")
+    }
+    @objc func importExternal(_ sender: NSMenuItem) {
+        onImport?()
+    }
+}
+
+struct CLUTPopupButton: View {
+    let title: String
+    let selectedName: String
+    let items: [String]
+    var flatList: Bool = false
+    var noneTitle: String = L10n.tr("无")
+    let onSelect: (String) -> Void
+    var onImport: (() -> Void)? = nil
+    var compact: Bool = false
+    @StateObject private var anchorBox = CLUTMenuAnchorBox()
+
+    var body: some View {
+        Button {
+            popUp()
+        } label: {
+            HStack(spacing: 4) {
+                Text(title)
+                    .font(.system(size: compact ? 10.5 : 11))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8.5, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, compact ? 6 : 8)
+            .padding(.vertical, compact ? 3 : 4)
+            .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 4))
+            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.primary.opacity(0.14), lineWidth: 0.6))
+            .contentShape(RoundedRectangle(cornerRadius: 4))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .background(CLUTMenuAnchor(box: anchorBox))
+    }
+
+    private func popUp() {
+        guard let view = anchorBox.view else { return }
+        let target = CLUTMenuActionTarget(onSelect: onSelect, onImport: onImport)
+        let menu = Self.buildMenu(
+            items: items,
+            selectedName: selectedName,
+            flatList: flatList,
+            noneTitle: noneTitle,
+            target: target,
+            includeImport: onImport != nil
+        )
+        withExtendedLifetime(target) {
+            _ = menu.popUp(positioning: nil, at: NSPoint(x: 0, y: view.bounds.height + 2), in: view)
+        }
+    }
+
+    private final class FolderNode {
+        var dirs: [String: FolderNode] = [:]
+        var files: [(label: String, fullName: String)] = []
+    }
+
+    private static func buildMenu(
+        items: [String],
+        selectedName: String,
+        flatList: Bool,
+        noneTitle: String,
+        target: CLUTMenuActionTarget,
+        includeImport: Bool
+    ) -> NSMenu {
+        let menu = NSMenu()
+        let clearItem = NSMenuItem(title: noneTitle, action: #selector(CLUTMenuActionTarget.pick(_:)), keyEquivalent: "")
+        clearItem.target = target
+        clearItem.representedObject = "" as NSString
+        clearItem.state = selectedName.isEmpty ? .on : .off
+        menu.addItem(clearItem)
+
+        if includeImport {
+            let imp = NSMenuItem(title: L10n.tr("导入外部 LUT (.cube / HALD)…"),
+                                 action: #selector(CLUTMenuActionTarget.importExternal(_:)),
+                                 keyEquivalent: "")
+            imp.target = target
+            if let img = NSImage(systemSymbolName: "folder.badge.plus", accessibilityDescription: nil) {
+                imp.image = img.withSymbolConfiguration(.init(pointSize: 12, weight: .regular))
+            }
+            menu.addItem(imp)
+        }
+        guard !items.isEmpty else { return menu }
+        menu.addItem(.separator())
+
+        if flatList {
+            for name in items {
+                let it = NSMenuItem(title: name, action: #selector(CLUTMenuActionTarget.pick(_:)), keyEquivalent: "")
+                it.target = target
+                it.representedObject = name as NSString
+                it.state = (name == selectedName) ? .on : .off
+                menu.addItem(it)
+            }
+            return menu
+        }
+
+        let root = FolderNode()
+        for name in items {
+            let comps = name.split(separator: "/").map(String.init)
+            var node = root
+            for dir in comps.dropLast() {
+                let next = node.dirs[dir] ?? FolderNode()
+                node.dirs[dir] = next
+                node = next
+            }
+            node.files.append((label: comps.last ?? name, fullName: name))
+        }
+
+        let priorityOrder = ["常用推荐": 0, "我的LUT": 1]
+        func populate(_ node: FolderNode, into parentMenu: NSMenu, topLevel: Bool) -> Bool {
+            var containsSelection = false
+            let sortedDirs = node.dirs.keys.sorted { a, b in
+                if topLevel {
+                    let pa = priorityOrder[a] ?? 100
+                    let pb = priorityOrder[b] ?? 100
+                    if pa != pb { return pa < pb }
+                }
+                return a.localizedCaseInsensitiveCompare(b) == .orderedAscending
+            }
+            for dir in sortedDirs {
+                guard let child = node.dirs[dir] else { continue }
+                let sub = NSMenu(title: dir)
+                let childHasSel = populate(child, into: sub, topLevel: false)
+                let item = NSMenuItem(title: dir, action: nil, keyEquivalent: "")
+                item.submenu = sub
+                if childHasSel {
+                    item.state = .mixed
+                    containsSelection = true
+                }
+                parentMenu.addItem(item)
+            }
+            for file in node.files {
+                let it = NSMenuItem(title: file.label, action: #selector(CLUTMenuActionTarget.pick(_:)), keyEquivalent: "")
+                it.target = target
+                it.representedObject = file.fullName as NSString
+                if file.fullName == selectedName {
+                    it.state = .on
+                    containsSelection = true
+                }
+                parentMenu.addItem(it)
+            }
+            return containsSelection
+        }
+        _ = populate(root, into: menu, topLevel: true)
+        return menu
     }
 }
 

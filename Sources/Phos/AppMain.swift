@@ -93,6 +93,9 @@ final class AppState: ObservableObject {
     @Published var currentKeywords: [String] = []
     private var currentVirtualCopies: [VirtualCopy] = []
     private var lastDecodedRawLensCorrection: Bool?
+    private var lastDecodedRawMode: RawDecoderMode = .auto
+    private var lastDecodedLibRawHL: Int = 5
+    private var lastDecodedUseCameraSpace: Bool = false
     var availableCameras: [String] {
         Array(Set(items.map(\.cameraModel).filter { !$0.isEmpty })).sorted()
     }
@@ -169,6 +172,18 @@ final class AppState: ObservableObject {
     @Published var localPointColorMaskID: UUID? = nil
     @Published var edrEnabled = true
     @Published var showClippingWarning = false
+    @Published var softProof = SoftProofConfig() {
+        didSet { if oldValue != softProof { previewQueue.invalidate(); render() } }
+    }
+    @Published var guidedUprightActive = false {
+        didSet {
+            if guidedUprightActive {
+                whiteBalancePicker = false; pointColorPicker = false; bokehFocusPicker = false
+                retouchActive = false; showBefore = false; splitComparison = false; cancelMaskDrawing()
+                selectedMask = nil
+            }
+        }
+    }
     @Published var canvasDisplayMode: CanvasDisplayMode = .single
     @Published var compareSubMode: CompareSubMode = .sideBySide
     @Published var comparePrimaryID: UUID? = nil
@@ -310,13 +325,15 @@ final class AppState: ObservableObject {
     var jobCancellation: WorkspaceCancellation?
     var batchTask: Task<Void,Never>?
 
-    // 多重曝光合成
+    // 多重曝光与全景合成
     @Published var showMerge = false
     @Published var mergeMode: MergeMode = .fusion
     @Published var mergeRunning = false
     @Published var mergeProgress: String = ""
     @Published var alignEnabled = true        // 合成前先做帧对齐
     @Published var alignMethod: AlignMethod = .translation
+    @Published var panoramaProjection: PanoramaProjection = .cylindrical
+    @Published var panoramaAutoCrop: Bool = true
 
     // 当前照片是否带人像深度辅助数据
     @Published var hasDisparity = false
@@ -344,6 +361,9 @@ final class AppState: ObservableObject {
     private struct CachedSource {
         let image: CIImage
         let rawLensCorrection: Bool
+        let rawDecoderMode: RawDecoderMode
+        let libRawHighlightMode: Int
+        let useCameraSpace: Bool
     }
     private let sourceCache = BoundedCache<URL, CachedSource>(capacity: 5)
     private var prefetchTask: Task<Void, Never>?
@@ -356,6 +376,9 @@ final class AppState: ObservableObject {
         let url: URL
         let cached: CIImage?
         let rawEmbeddedLensCorrection: Bool
+        let rawDecoderMode: RawDecoderMode
+        let libRawHighlightMode: Int
+        let useCameraSpace: Bool
     }
     private struct PreviewRequest {
         let key: PreviewFrameKey
@@ -368,6 +391,7 @@ final class AppState: ObservableObject {
         let overlayMask: UUID?
         let split: Bool
         var showDepthOverlay: Bool = false
+        var softProof: SoftProofConfig = SoftProofConfig()
     }
     nonisolated private static func lightweightCameraLens(_ url: URL) -> (camera: String, lens: String) {
         guard let src = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
@@ -445,7 +469,13 @@ final class AppState: ObservableObject {
     private lazy var sourceQueue = LatestWorkQueue<PhotoLoad, (CIImage?, Bool)>(
         operation: { [workMetrics] request in
             if request.cached == nil { workMetrics.increment("decode") }
-            return (request.cached ?? Engine.decode(request.url, rawEmbeddedLensCorrection: request.rawEmbeddedLensCorrection),
+            return (request.cached ?? Engine.decode(
+                        request.url,
+                        rawEmbeddedLensCorrection: request.rawEmbeddedLensCorrection,
+                        rawDecoderMode: request.rawDecoderMode,
+                        libRawHighlightMode: request.libRawHighlightMode,
+                        useCameraSpace: request.useCameraSpace
+                    ),
                     Engine.hasDisparity(request.url))
         },
         completion: { [weak self] request, result in
@@ -454,8 +484,17 @@ final class AppState: ObservableObject {
             self.sourceSize = result.0?.extent.size ?? .zero
             self.hasDisparity = result.1
             self.lastDecodedRawLensCorrection = request.rawEmbeddedLensCorrection
+            self.lastDecodedRawMode = request.rawDecoderMode
+            self.lastDecodedLibRawHL = request.libRawHighlightMode
+            self.lastDecodedUseCameraSpace = request.useCameraSpace
             if let img = result.0 {
-                self.sourceCache[request.url] = CachedSource(image: img, rawLensCorrection: request.rawEmbeddedLensCorrection)
+                self.sourceCache[request.url] = CachedSource(
+                    image: img,
+                    rawLensCorrection: request.rawEmbeddedLensCorrection,
+                    rawDecoderMode: request.rawDecoderMode,
+                    libRawHighlightMode: request.libRawHighlightMode,
+                    useCameraSpace: request.useCameraSpace
+                )
             } else {
                 self.sourceCache[request.url] = nil
             }
@@ -669,24 +708,97 @@ final class AppState: ObservableObject {
         }
         history.stack = [params]; history.index = 0
         selectedMask = nil
+        guidedUprightActive = false
         let rawLens = params.rawEmbeddedLensCorrection
-        let cachedImg = sourceCache[u].flatMap { $0.rawLensCorrection == rawLens ? $0.image : nil }
-        sourceQueue.submit(PhotoLoad(url: u, cached: cachedImg, rawEmbeddedLensCorrection: rawLens))
+        let rawMode = params.rawDecoderMode
+        let hlMode = params.libRawHighlightMode
+        let useCamSpace = shouldUseCameraSpace(for: params)
+        let cachedImg = sourceCache[u].flatMap {
+            ($0.rawLensCorrection == rawLens && $0.rawDecoderMode == rawMode
+             && $0.libRawHighlightMode == hlMode && $0.useCameraSpace == useCamSpace) ? $0.image : nil
+        }
+        sourceQueue.submit(PhotoLoad(url: u, cached: cachedImg, rawEmbeddedLensCorrection: rawLens,
+                                     rawDecoderMode: rawMode, libRawHighlightMode: hlMode, useCameraSpace: useCamSpace))
         return true
     }
 
+    private func shouldUseCameraSpace(for p: EditParams) -> Bool {
+        p.rawDecoderMode == .libRaw && LibRawEngine.shared.isAvailable
+            && (DCPProfileEngine.loadProfile(id: p.cameraProfileName)?.hasCameraMatrix == true)
+    }
+
     // MARK: - 参数改动
+    func applyCLUT(_ name: String) {
+        guard !syncRunning else { return }
+        parameterEdits.finishCurrent()
+        if cropSession != nil { finishCrop() }
+        showBefore = false
+        splitComparison = false
+        lensCompare = false
+        guidedUprightActive = false
+        var next = params
+        next.clutName = name
+        if !name.isEmpty && next.clutStrength <= 0.001 {
+            next.clutStrength = 1.0
+        }
+        commit(next)
+    }
+
+    func applyAICandidate(_ proposed: EditParams, statusMessage: String) {
+        guard !syncRunning else { return }
+        parameterEdits.finishCurrent()
+        cropSession = nil
+        cropMode = false
+        showBefore = false
+        splitComparison = false
+        lensCompare = false
+        guidedUprightActive = false
+        whiteBalancePicker = false
+        pointColorPicker = false
+        bokehFocusPicker = false
+        retouchActive = false
+        showMaskOverlay = false
+        selectedMask = nil
+        clearAutoTone()
+        let geometryChanged =
+            proposed.cropX != params.cropX || proposed.cropY != params.cropY
+            || proposed.cropW != params.cropW || proposed.cropH != params.cropH
+            || proposed.rotation != params.rotation || proposed.flipped != params.flipped
+            || proposed.straighten != params.straighten
+            || proposed.perspectiveAuto != params.perspectiveAuto
+            || proposed.perspectiveV != params.perspectiveV || proposed.perspectiveH != params.perspectiveH
+            || proposed.uprightGuides != params.uprightGuides
+            || proposed.uprightConstrainCrop != params.uprightConstrainCrop
+        if geometryChanged {
+            oneToOne = false
+            zoom = 1
+            if workspaceSession?.viewport.mode == .manual {
+                workspaceSession?.viewport.mode = .automatic
+            }
+            canvasResetID = UUID()
+        }
+        previewQueue.invalidate()
+        commit(proposed)
+        status = statusMessage
+    }
+
     func commit(_ p: EditParams) {
         guard !syncRunning else { return }
         parameterEdits.invalidate()
-        let rawLensChanged = p.rawEmbeddedLensCorrection != lastDecodedRawLensCorrection
+        let useCamSpace = shouldUseCameraSpace(for: p)
+        let decodeChanged = p.rawEmbeddedLensCorrection != lastDecodedRawLensCorrection
+            || p.rawDecoderMode != lastDecodedRawMode
+            || (p.rawDecoderMode == .libRaw && p.libRawHighlightMode != lastDecodedLibRawHL)
+            || useCamSpace != lastDecodedUseCameraSpace
         params = p
         if let cid = current?.id { multiViewFrames.removeValue(forKey: cid) }
         if cropSession != nil { render(); return }
         history.push(p)
-        if rawLensChanged, let u = current?.url {
+        if decodeChanged, let u = current?.url {
             sourceCache[u] = nil
-            sourceQueue.submit(PhotoLoad(url: u, cached: nil, rawEmbeddedLensCorrection: p.rawEmbeddedLensCorrection))
+            sourceQueue.submit(PhotoLoad(url: u, cached: nil, rawEmbeddedLensCorrection: p.rawEmbeddedLensCorrection,
+                                         rawDecoderMode: p.rawDecoderMode, libRawHighlightMode: p.libRawHighlightMode,
+                                         useCameraSpace: useCamSpace))
         } else {
             render()
         }
@@ -993,14 +1105,16 @@ final class AppState: ObservableObject {
         guard let photoID = current?.id else { return }
         previewRevision &+= 1
         let depthVis = showDepthOverlay && !cropMode
+        let sp = cropMode ? SoftProofConfig() : softProof
+        let spTag = sp.enabled ? "|sp:\(sp.profileID):\(sp.intent.rawValue):\(sp.simulatePaperAndInk ? 1 : 0):\(sp.gamutWarning ? 1 : 0)" : ""
         let key = PreviewFrameKey(photoID: photoID, revision: previewRevision,
                                   purpose: cropMode ? .cropReference : .edited,
-                                  paramsFingerprint: PreviewFrame.fingerprint(parameters) + (depthVis ? "|depthVis" : ""))
+                                  paramsFingerprint: PreviewFrame.fingerprint(parameters) + (depthVis ? "|depthVis" : "") + spTag)
         expectedPreview = key
         previewQueue.submit(PreviewRequest(key: key, source: source, params: parameters,
                                            url: current?.url, fullResolution: fullResPreview || oneToOne,
                                            cropMode: cropMode, longEdge: previewLongEdge, overlayMask: mask,
-                                           split: splitComparison, showDepthOverlay: depthVis))
+                                           split: splitComparison, showDepthOverlay: depthVis, softProof: sp))
     }
     nonisolated private static func makePreview(_ request: PreviewRequest) -> (edited:PreviewFrame,before:PreviewFrame?)? {
         let src = request.source, p = request.params, e = src.extent
@@ -1016,6 +1130,9 @@ final class AppState: ObservableObject {
         var out = Engine.render(base, p, disparityMask: disparity, selectedMask: request.overlayMask, resolvedAuto:resolved) { mask = $0 }
         if request.showDepthOverlay && !request.cropMode {
             out = Engine.applyDepthVisualization(out, p, disparityMask: disparity)
+        }
+        if request.softProof.enabled && !request.cropMode {
+            out = SoftProofEngine.apply(out, config: request.softProof)
         }
         guard let image = Engine.ctx.createCGImage(out, from: out.extent, format: .RGBA8,
                                                    colorSpace: Engine.srgb) else { return nil }
@@ -1265,8 +1382,25 @@ final class AppState: ObservableObject {
         // 降噪模式必须对齐；其余按开关
         let doAlign = alignEnabled || mode == .denoise
         let am = alignMethod
+        let panoProj = panoramaProjection
+        let panoCrop = panoramaAutoCrop
 
         let dest: (url: URL, dropped: Int, used: Int)? = await Task.detached(priority: .userInitiated) {
+            if mode == .panorama {
+                guard let res = PanoramaEngine.stitch(
+                    urls: urls,
+                    projection: panoProj,
+                    autoCrop: panoCrop,
+                    progress: { msg in
+                        Task { @MainActor in self.mergeProgress = msg }
+                    }
+                ) else { return nil }
+                let first = urls[0].deletingPathExtension()
+                let out = first.deletingLastPathComponent()
+                    .appendingPathComponent(first.lastPathComponent + "_全景.tif")
+                do { try Engine.write16(res.image, to: out) } catch { return nil }
+                return (out, res.droppedFrames, res.usedFrames)
+            }
             var frames: [CIImage] = []
             for u in urls {
                 autoreleasepool {
@@ -1465,7 +1599,12 @@ final class AppState: ObservableObject {
                 } else {
                     params = sidecar?.params ?? XMPSidecar.read(for: url)?.params ?? EditParams()
                 }
-                guard let src = Engine.decode(url, rawEmbeddedLensCorrection: params.rawEmbeddedLensCorrection) else {
+                let useCamSpace = params.rawDecoderMode == .libRaw && LibRawEngine.shared.isAvailable
+                    && (DCPProfileEngine.loadProfile(id: params.cameraProfileName)?.hasCameraMatrix == true)
+                guard let src = Engine.decode(url, rawEmbeddedLensCorrection: params.rawEmbeddedLensCorrection,
+                                              rawDecoderMode: params.rawDecoderMode,
+                                              libRawHighlightMode: params.libRawHighlightMode,
+                                              useCameraSpace: useCamSpace) else {
                     return "无法解码"
                 }
                 let rendered = Engine.render(src, params, forExport: true)
@@ -1490,26 +1629,71 @@ final class AppState: ObservableObject {
         return
         #else
         let rawLens = params.rawEmbeddedLensCorrection
+        let rawMode = params.rawDecoderMode
+        let hlMode = params.libRawHighlightMode
+        let useCamSpace = shouldUseCameraSpace(for: params)
         var neighbors: [URL] = []
         if let n = nextVisiblePhotoIndex, items.indices.contains(n) { neighbors.append(items[n].url) }
         if let p = previousVisiblePhotoIndex, items.indices.contains(p) { neighbors.append(items[p].url) }
         let unique = Array(Set(neighbors)).filter { u in
-            if let hit = sourceCache[u], hit.rawLensCorrection == rawLens { return false }
+            if let hit = sourceCache[u], hit.rawLensCorrection == rawLens,
+               hit.rawDecoderMode == rawMode, hit.libRawHighlightMode == hlMode,
+               hit.useCameraSpace == useCamSpace { return false }
             return true
         }
         guard !unique.isEmpty else { return }
         prefetchTask = Task.detached(priority: .utility) { [weak self] in
             for u in unique {
                 if Task.isCancelled { return }
-                if let ci = Engine.decode(u, rawEmbeddedLensCorrection: rawLens) {
+                if let ci = Engine.decode(u, rawEmbeddedLensCorrection: rawLens, rawDecoderMode: rawMode,
+                                          libRawHighlightMode: hlMode, useCameraSpace: useCamSpace) {
                     await MainActor.run { [weak self] in
                         guard let self, !Task.isCancelled else { return }
-                        self.sourceCache[u] = CachedSource(image: ci, rawLensCorrection: rawLens)
+                        self.sourceCache[u] = CachedSource(image: ci, rawLensCorrection: rawLens,
+                                                           rawDecoderMode: rawMode, libRawHighlightMode: hlMode,
+                                                           useCameraSpace: useCamSpace)
                     }
                 }
             }
         }
         #endif
+    }
+
+    func importDCPProfile(onDone: (() -> Void)? = nil) {
+        let panel = NSOpenPanel()
+        panel.title = L10n.tr("导入 Adobe 相机配置文件（.dcp）")
+        panel.allowedContentTypes = [UTType(filenameExtension: "dcp") ?? .data]
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let prof = try DCPProfileEngine.importDCP(from: url)
+            set(\.cameraProfileName, prof.id)
+            endEdit()
+            status = "已导入相机配置文件：\(prof.name)"
+            onDone?()
+        } catch {
+            workflowError = "导入 DCP 失败：\(error.localizedDescription)"
+        }
+    }
+
+    func importICCProfile(onDone: (() -> Void)? = nil) {
+        let panel = NSOpenPanel()
+        panel.title = L10n.tr("导入 ICC 色彩配置文件（.icc / .icm）")
+        panel.allowedContentTypes = [
+            UTType(filenameExtension: "icc") ?? .data,
+            UTType(filenameExtension: "icm") ?? .data
+        ]
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let choice = try SoftProofEngine.importICC(from: url)
+            softProof.profileID = choice.id
+            softProof.enabled = true
+            status = "已导入并启用 ICC 软打样：\(choice.name)"
+            onDone?()
+        } catch {
+            workflowError = "导入 ICC 失败：\(error.localizedDescription)"
+        }
     }
 
     func createVirtualCopy() {
@@ -1648,7 +1832,12 @@ final class AppState: ObservableObject {
             } else {
                 rp = sidecar?.params ?? EditParams()
             }
-            let src = Engine.decode(url, rawEmbeddedLensCorrection: rp.rawEmbeddedLensCorrection)
+            let useCamSpace = rp.rawDecoderMode == .libRaw && LibRawEngine.shared.isAvailable
+                && (DCPProfileEngine.loadProfile(id: rp.cameraProfileName)?.hasCameraMatrix == true)
+            let src = Engine.decode(url, rawEmbeddedLensCorrection: rp.rawEmbeddedLensCorrection,
+                                    rawDecoderMode: rp.rawDecoderMode,
+                                    libRawHighlightMode: rp.libRawHighlightMode,
+                                    useCameraSpace: useCamSpace)
             let frame: PreviewFrame?
             if let src {
                 let key = PreviewFrameKey(photoID: targetID, revision: 0, purpose: .edited,
@@ -1704,7 +1893,12 @@ final class AppState: ObservableObject {
         Task.detached(priority: .userInitiated) {
             let sidecar = SidecarStore.load(for: url) ?? XMPSidecar.read(for: url)?.toSidecar()
             let rp = sidecar?.params ?? EditParams()
-            guard let src = Engine.decode(url, rawEmbeddedLensCorrection: rp.rawEmbeddedLensCorrection) else { return }
+            let useCamSpace = rp.rawDecoderMode == .libRaw && LibRawEngine.shared.isAvailable
+                && (DCPProfileEngine.loadProfile(id: rp.cameraProfileName)?.hasCameraMatrix == true)
+            guard let src = Engine.decode(url, rawEmbeddedLensCorrection: rp.rawEmbeddedLensCorrection,
+                                          rawDecoderMode: rp.rawDecoderMode,
+                                          libRawHighlightMode: rp.libRawHighlightMode,
+                                          useCameraSpace: useCamSpace) else { return }
             let req = PreviewRequest(key: key, source: src, params: rp, url: url,
                                      fullResolution: false, cropMode: false, longEdge: longEdge,
                                      overlayMask: nil, split: false)
@@ -1864,8 +2058,8 @@ final class AppState: ObservableObject {
             return nil
         }
         let res = ColorMatchEngine.solve(source: src, reference: refCI, base: params, options: options)
-        commit(res.params)
-        status = String(format: "已匹配参考色调（ΔE %.1f → %.1f，可在面板继续微调）", res.initialDeltaE, res.finalDeltaE)
+        applyAICandidate(res.params,
+                         statusMessage: String(format: "已匹配参考色调（ΔE %.1f → %.1f，可在面板继续微调）", res.initialDeltaE, res.finalDeltaE))
         return res
     }
 

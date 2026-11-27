@@ -221,6 +221,28 @@ import ImageIO
         let changed=await Task.detached { library.list() }.value
         check(changed.isEmpty,"LUT cache cannot leak results across configured directories")
         s.undo(); check(s.params==prior,"lens correction is undoable")
+        s.set(\.clutStrength, 0); s.endEdit()
+        s.showBefore=true; s.splitComparison=true
+        s.applyCLUT("a.cube")
+        check(s.params.clutName=="a.cube" && abs(s.params.clutStrength-1.0)<1e-6,"applyCLUT restores full strength when strength was zero")
+        check(!s.showBefore && !s.splitComparison && !s.lensCompare,"applyCLUT exits before and comparison modes")
+        s.toggleCropMode()
+        check(s.cropSession != nil,"entering crop mode opens cropSession")
+        s.showBefore=true; s.splitComparison=true
+        let preAICanvasID=s.canvasResetID
+        var aiCandidate=s.params; aiCandidate.exposure=0.45; aiCandidate.cropW=0.82; aiCandidate.cropH=0.85
+        let preAIHist=s.history.stack.count
+        s.applyAICandidate(aiCandidate, statusMessage: "AI Applied Test")
+        try await wait { !s.previewing }
+        check(s.cropSession == nil && !s.cropMode,"applyAICandidate closes active cropSession instead of blocking commit")
+        check(!s.showBefore && !s.splitComparison && !s.lensCompare,"applyAICandidate clears conflicting comparison overlays")
+        check(s.params == aiCandidate && s.history.stack.count > preAIHist,"applyAICandidate commits params and records undo history")
+        check(s.canvasResetID != preAICanvasID,"applyAICandidate resets viewport when crop changes")
+        check(s.previewFrame != nil,"applyAICandidate produces valid preview frame")
+        let fullDisp=CIImage(color:CIColor(red:0.7,green:0.7,blue:0.7,alpha:1)).cropped(to:CGRect(x:0,y:0,width:400,height:300))
+        let smallImg=CIImage(color:CIColor(red:0.2,green:0.3,blue:0.4,alpha:1)).cropped(to:CGRect(x:0,y:0,width:100,height:75))
+        let resolvedDisp=Engine.resolveBokehDepth(smallImg,EditParams(),disparityMask:fullDisp)
+        check(resolvedDisp?.extent == smallImg.extent,"resolveBokehDepth scales disparity mask to match target render extent")
         var result = previous;result["r4Checks"] = checks;result["checks"] = (previous["checks"] as! Int)+checks
         try JSONSerialization.data(withJSONObject:result,options:[.prettyPrinted,.sortedKeys]).write(to:reportURL)
         print("R4 complete: \(checks) checks")

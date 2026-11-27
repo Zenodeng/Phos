@@ -281,6 +281,35 @@ struct CLUTTest {
             check(false, "端到端渲染失败")
         }
 
+        // MARK: 5. BOM / inline 注释 / DOMAIN_MIN-MAX / importLUT
+
+        section("BOM / inline 注释 / DOMAIN / importLUT")
+        let bomCube = tmp.appendingPathComponent("bom_domain.cube")
+        let bomText = "\u{FEFF}TITLE \"Domain\"\nLUT_3D_SIZE 2\nDOMAIN_MIN 0.1 0.1 0.1\nDOMAIN_MAX 0.9 0.9 0.9\n"
+            + "0 0 0 # black\n1 0 0\n0 1 0\n1 1 0\n"
+            + "0 0 1\n1 0 1\n0 1 1\n1 1 1\n"
+        try! Data(bomText.utf8).write(to: bomCube)
+        CLUTLibrary.shared.invalidate()
+        let listedWithBOM = CLUTLibrary.shared.list()
+        check(listedWithBOM.contains("bom_domain.cube"), "含 BOM 的 .cube 能被正常收录")
+        if let domParsed = CLUTLibrary.parseCube(url: bomCube) {
+            check(abs(domParsed.domainMin.0 - 0.1) < 1e-6 && abs(domParsed.domainMax.0 - 0.9) < 1e-6, "DOMAIN_MIN/MAX 正确解析")
+        } else {
+            check(false, "含 BOM 与 inline # 注释的 .cube 解析失败")
+        }
+        let externalDir = tmp.appendingPathComponent("external")
+        try! FileManager.default.createDirectory(at: externalDir, withIntermediateDirectories: true)
+        let extCube = externalDir.appendingPathComponent("custom_ext.cube")
+        try! Data(bomText.utf8).write(to: extCube)
+        do {
+            let relPath = try CLUTLibrary.shared.importLUT(from: extCube)
+            check(relPath == "我的LUT/已导入/custom_ext.cube", "importLUT 返回相对路径：\(relPath)")
+            check(CLUTLibrary.shared.list().contains(relPath), "importLUT 后立即可在列表中找到")
+            check(CLUTLibrary.shared.cubeFilter(name: relPath, strength: 1.0) != nil, "importLUT 后可直接生成滤镜")
+        } catch {
+            check(false, "importLUT 失败：\(error)")
+        }
+
         // MARK: - 收尾
 
         try? FileManager.default.removeItem(at: tmp)
